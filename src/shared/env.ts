@@ -31,6 +31,12 @@ export const backendEnvSchema = z.object({
     .string()
     .min(1, 'obrigatoria')
     .refine(placeholderFree, PLACEHOLDER_MESSAGE),
+
+  // Obrigatoria mesmo sem conta Resend conectada ainda: em dev vale o valor
+  // dummy do `.env.example` (`RESEND_DUMMY_API_KEY` em `lib/email.ts`), que
+  // faz o envio ser um no-op. So precisa virar uma key de verdade quando uma
+  // conta Resend existir.
+  BACKEND_RESEND_API_KEY: z.string().min(1, 'obrigatoria'),
 })
 
 export const frontendEnvSchema = z.object({

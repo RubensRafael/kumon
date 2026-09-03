@@ -16,12 +16,12 @@ export async function hashSenha(senha: string): Promise<string> {
 
 /**
  * `false` tanto para senha errada quanto para um hash que nao e bcrypt (o
- * caso do `SENHA_PLACEHOLDER`) — `bcrypt.compare` lanca nesse segundo caso, e
- * aqui isso vira apenas "nao autenticado", nunca um erro 500.
+ * caso do `SENHA_PLACEHOLDER`) — o proprio `bcryptjs` ja devolve `false` sem
+ * lancar quando o hash nao tem 60 chars (caso do placeholder), e lanca só se
+ * for um hash de 60 chars com prefixo de salt invalido; o `catch` cobre esse
+ * segundo caso, nunca vira um erro 500.
  */
 export async function verificarSenha(senha: string, hash: string): Promise<boolean> {
-  if (!hash.startsWith('$2')) return false
-
   try {
     return await bcrypt.compare(senha, hash)
   } catch {
