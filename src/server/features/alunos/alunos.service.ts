@@ -1,8 +1,6 @@
 import { HTTPException } from 'hono/http-exception'
 
-import type { SituacaoAluno as SituacaoAlunoApi } from '../../../shared/dto/enums'
 import { formatarData, parseData } from '../../lib/data'
-import { paraApi, paraBanco } from '../../lib/db-enum'
 import type { PrismaClient, SituacaoAluno } from '../../db/generated/client'
 import type { AlunoCreateInputType, AlunoOutputType, AlunoUpdateInputType } from './alunos.dto'
 
@@ -16,7 +14,7 @@ interface AlunoRow {
   dataNascimento: Date | null
   observacoes: string | null
   dataMatricula: Date
-  situacao: string
+  situacao: SituacaoAluno
   zonaVermelha: boolean
   connect: boolean
 }
@@ -32,7 +30,7 @@ function paraAlunoOutput(aluno: AlunoRow): AlunoOutputType {
     dataNascimento: aluno.dataNascimento ? formatarData(aluno.dataNascimento) : null,
     observacoes: aluno.observacoes,
     dataMatricula: formatarData(aluno.dataMatricula),
-    situacao: paraApi<SituacaoAlunoApi>(aluno.situacao),
+    situacao: aluno.situacao,
     zonaVermelha: aluno.zonaVermelha,
     connect: aluno.connect,
   }
@@ -90,7 +88,7 @@ export async function criarAluno(prisma: PrismaClient, input: AlunoCreateInputTy
       dataNascimento: input.dataNascimento ? parseData(input.dataNascimento, 'dataNascimento') : null,
       observacoes: input.observacoes ?? null,
       dataMatricula: parseData(input.dataMatricula, 'dataMatricula'),
-      situacao: paraBanco<SituacaoAluno>(input.situacao),
+      situacao: input.situacao,
       zonaVermelha: input.zonaVermelha,
       connect: input.connect,
     },
@@ -124,7 +122,7 @@ export async function atualizarAluno(
       ...(input.dataMatricula !== undefined
         ? { dataMatricula: parseData(input.dataMatricula, 'dataMatricula') }
         : {}),
-      ...(input.situacao !== undefined ? { situacao: paraBanco<SituacaoAluno>(input.situacao) } : {}),
+      ...(input.situacao !== undefined ? { situacao: input.situacao } : {}),
       ...(input.zonaVermelha !== undefined ? { zonaVermelha: input.zonaVermelha } : {}),
       ...(input.connect !== undefined ? { connect: input.connect } : {}),
     },

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { AlunoOutputType } from '../../src/server/features/alunos/alunos.dto'
-import { authHeader, obterToken } from '../helpers/auth'
+import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
   criarMateria,
@@ -14,9 +14,9 @@ import { app, resetDb, testEnv } from '../helpers/setup'
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
-async function tokenAdmin() {
+async function cookieAdmin() {
   const { usuario, senha } = await criarUsuarioAdmin()
-  return obterToken(usuario.email, senha)
+  return obterCookie(usuario.email, senha)
 }
 
 describe('alunos', () => {
@@ -28,9 +28,9 @@ describe('alunos', () => {
     it('admin ve todos os alunos, sem filtro', async () => {
       await criarAluno({ nome: 'Ana' })
       await criarAluno({ nome: 'Bruno' })
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
 
-      const response = await app.request('/api/alunos', { headers: authHeader(token) }, testEnv)
+      const response = await app.request('/api/alunos', { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as AlunoOutputType[]
       expect(body.length).toBe(2)
     })
@@ -46,8 +46,8 @@ describe('alunos', () => {
       const alunoDeOutro = await criarAluno({ nome: 'Aluno de outro professor' })
       await criarMatricula({ alunoId: alunoDeOutro.id, professorId: outroProfessor.id, materiaId: materia.id })
 
-      const token = await obterToken(usuario.email, senha)
-      const response = await app.request('/api/alunos', { headers: authHeader(token) }, testEnv)
+      const cookie = await obterCookie(usuario.email, senha)
+      const response = await app.request('/api/alunos', { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as AlunoOutputType[]
 
       expect(body.map((a) => a.id)).toEqual([alunoDoProfessor.id])
@@ -64,8 +64,8 @@ describe('alunos', () => {
         situacao: 'ENCERRADA',
       })
 
-      const token = await obterToken(usuario.email, senha)
-      const response = await app.request('/api/alunos', { headers: authHeader(token) }, testEnv)
+      const cookie = await obterCookie(usuario.email, senha)
+      const response = await app.request('/api/alunos', { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as AlunoOutputType[]
       expect(body).toEqual([])
     })
@@ -78,8 +78,8 @@ describe('alunos', () => {
       await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia1.id })
       await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia2.id })
 
-      const token = await obterToken(usuario.email, senha)
-      const response = await app.request('/api/alunos', { headers: authHeader(token) }, testEnv)
+      const cookie = await obterCookie(usuario.email, senha)
+      const response = await app.request('/api/alunos', { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as AlunoOutputType[]
       expect(body.length).toBe(1)
     })
@@ -93,27 +93,27 @@ describe('alunos', () => {
       const aluno = await criarAluno()
       await criarMatricula({ alunoId: aluno.id, professorId: outroProfessor.id, materiaId: materia.id })
 
-      const token = await obterToken(usuario.email, senha)
-      const response = await app.request(`/api/alunos/${aluno.id}`, { headers: authHeader(token) }, testEnv)
+      const cookie = await obterCookie(usuario.email, senha)
+      const response = await app.request(`/api/alunos/${aluno.id}`, { headers: authHeader(cookie) }, testEnv)
       expect(response.status).toBe(404)
     })
 
     it('admin encontra qualquer aluno por id', async () => {
       const aluno = await criarAluno()
-      const token = await tokenAdmin()
-      const response = await app.request(`/api/alunos/${aluno.id}`, { headers: authHeader(token) }, testEnv)
+      const cookie = await cookieAdmin()
+      const response = await app.request(`/api/alunos/${aluno.id}`, { headers: authHeader(cookie) }, testEnv)
       expect(response.status).toBe(200)
     })
   })
 
   describe('POST /api/alunos', () => {
     it('admin cria aluno sem criar matricula', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const response = await app.request(
         '/api/alunos',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
           body: JSON.stringify({ nome: 'Novo Aluno', dataMatricula: '2026-01-15' }),
         },
         testEnv,
@@ -121,12 +121,12 @@ describe('alunos', () => {
 
       expect(response.status).toBe(201)
       const body = (await response.json()) as AlunoOutputType
-      expect(body.situacao).toBe('ativo')
+      expect(body.situacao).toBe('ATIVO')
       expect(body.dataMatricula).toBe('2026-01-15')
 
       const matriculas = await app.request(
         `/api/alunos/${body.id}`,
-        { headers: authHeader(token) },
+        { headers: authHeader(cookie) },
         testEnv,
       )
       expect(matriculas.status).toBe(200)
@@ -134,12 +134,12 @@ describe('alunos', () => {
 
     it('professor nao pode criar aluno -> 403', async () => {
       const { usuario, senha } = await criarUsuarioProfessor()
-      const token = await obterToken(usuario.email, senha)
+      const cookie = await obterCookie(usuario.email, senha)
       const response = await app.request(
         '/api/alunos',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
           body: JSON.stringify({ nome: 'X', dataMatricula: '2026-01-15' }),
         },
         testEnv,
@@ -148,12 +148,12 @@ describe('alunos', () => {
     })
 
     it('data invalida -> 400 legivel, nao erro cru do banco', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const response = await app.request(
         '/api/alunos',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
           body: JSON.stringify({ nome: 'X', dataMatricula: 'nao-e-uma-data' }),
         },
         testEnv,
@@ -169,13 +169,13 @@ describe('alunos', () => {
       const aluno = await criarAluno()
       await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
 
-      const token = await obterToken(usuario.email, senha)
+      const cookie = await obterCookie(usuario.email, senha)
       const response = await app.request(
         `/api/alunos/${aluno.id}`,
         {
           method: 'PUT',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ situacao: 'trancado' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ situacao: 'TRANCADO' }),
         },
         testEnv,
       )
@@ -184,19 +184,19 @@ describe('alunos', () => {
 
     it('admin atualiza aluno', async () => {
       const aluno = await criarAluno()
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const response = await app.request(
         `/api/alunos/${aluno.id}`,
         {
           method: 'PUT',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ situacao: 'trancado', zonaVermelha: true }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ situacao: 'TRANCADO', zonaVermelha: true }),
         },
         testEnv,
       )
       expect(response.status).toBe(200)
       const body = (await response.json()) as AlunoOutputType
-      expect(body.situacao).toBe('trancado')
+      expect(body.situacao).toBe('TRANCADO')
       expect(body.zonaVermelha).toBe(true)
     })
   })
