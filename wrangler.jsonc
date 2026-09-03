@@ -1,0 +1,42 @@
+/**
+ * Configuracao do Cloudflare Worker.
+ * Referencia completa: https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kumon",
+
+  // Entrypoint do servidor Hono. O bundler do Wrangler resolve o TSX e o WASM
+  // do Prisma Query Compiler automaticamente.
+  "main": "./src/server.tsx",
+
+  "compatibility_date": "2025-11-01",
+
+  // Necessario para @neondatabase/serverless (WebSocket/Buffer) e para o
+  // runtime do Prisma Client.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Build do React (vite build) servido como assets estaticos pela Cloudflare.
+  // `not_found_handling: "none"` faz qualquer rota sem arquivo correspondente
+  // cair no Worker, onde o Hono devolve o index.html da SPA.
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  },
+
+  // Sem esta flag o Wrangler trata este arquivo como fonte da verdade e apaga,
+  // a cada deploy, as variaveis de texto criadas no dashboard. Secrets nunca
+  // sao apagados por um deploy.
+  "keep_vars": true,
+
+  "observability": {
+    "enabled": true
+  }
+
+  // As variaveis BACKEND_* nao ficam aqui. Em desenvolvimento o Wrangler as le
+  // do `.env` (o que ele faz automaticamente quando nao existe um `.dev.vars`);
+  // em producao elas vem do dashboard, em Settings > Variables and Secrets.
+  // Use o tipo "Secret" para a BACKEND_DATABASE_URL: como "Text" a senha do
+  // banco fica legivel para quem tiver acesso a conta.
+}

@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.wrangler/
+.vite/
+
+# Segredos locais
+.env
+.env.*
+!.env.example
+
+# Artefatos gerados pelo `postinstall`
+# (`prisma generate` + `wrangler types`)
+src/server/db/generated/
+worker-configuration.d.ts
+
+# Logs / SO / editor
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

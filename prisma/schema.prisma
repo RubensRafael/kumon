@@ -1,0 +1,54 @@
+// Prisma 7 + Neon (PostgreSQL) rodando na Edge da Cloudflare.
+//
+// Duas mudancas em relacao ao Prisma 6 valem nota:
+//   - o datasource nao declara mais `url`; a connection string do CLI vive em
+//     `prisma.config.ts` e a de runtime vem do Driver Adapter;
+//   - `driverAdapters` deixou de ser preview feature — e o unico modo de
+//     operacao, entao nao ha flag para ativar.
+
+generator client {
+  provider = "prisma-client"
+
+  // Client gerado em TypeScript dentro do projeto (fora de node_modules),
+  // o que evita problemas de resolucao no bundle do Worker.
+  output = "../src/server/db/generated"
+
+  // `cloudflare` gera o client para o runtime dos Workers, que bloqueia a
+  // instanciacao de `WebAssembly.Module()` em tempo de execucao.
+  runtime      = "cloudflare"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Modelos de exemplo — troque pelos seus.
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  posts Post[]
+
+  @@map("users")
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  authorId String @map("author_id")
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@map("posts")
+}
