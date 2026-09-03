@@ -241,7 +241,7 @@ describe('auth', () => {
       expect(response.status).toBe(400)
     })
 
-    it('papel=admin com professorId -> 400', async () => {
+    it('papel=admin com professorId cria o vinculo normalmente (admin tambem pode dar aula)', async () => {
       const token = await tokenAdmin()
       const professor = await criarProfessor()
       const response = await app.request(
@@ -258,7 +258,10 @@ describe('auth', () => {
         },
         testEnv,
       )
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(201)
+      const body = (await response.json()) as UsuarioOutputType
+      expect(body.papel).toBe('ADMIN')
+      expect(body.professorId).toBe(professor.id)
     })
 
     it('professorId inexistente -> 400', async () => {

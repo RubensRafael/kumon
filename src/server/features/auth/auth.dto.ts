@@ -22,10 +22,15 @@ export const LoginOutput = z.object({
 })
 
 /**
- * `professorId` e obrigatorio quando `papel === 'professor'` e proibido
- * quando `papel === 'admin'` — um admin nao tem vinculo de professor, e um
- * professor sem `professorId` ficaria sem `AuthContext.professorId`, quebrando
- * `scopeToProfessor` desde o primeiro login.
+ * `professorId` e obrigatorio quando `papel === 'PROFESSOR'` — sem ele o
+ * `AuthContext.professorId` ficaria vazio, quebrando `scopeToProfessor` desde
+ * o primeiro login. Um `ADMIN` pode opcionalmente ter `professorId`
+ * tambem: a pessoa administra E da aula, e em toda checagem de permissao
+ * (`requireAdmin`, `scopeToProfessor`, `restrictProfessorSelf`) `papel`
+ * sozinho ja decide tudo — nenhuma delas olha para a presenca de
+ * `professorId`, entao um admin com o vinculo preenchido nao ganha nem perde
+ * nada: continua sem filtro nenhum, só passa a poder ser referenciado como
+ * professor (`Matricula.professorId` etc.) sem precisar de um segundo login.
  */
 export const UsuarioCreateInput = z
   .object({
@@ -34,8 +39,8 @@ export const UsuarioCreateInput = z
     papel: PapelEnum,
     professorId: z.uuid().optional(),
   })
-  .refine((data) => (data.papel === 'PROFESSOR') === (data.professorId !== undefined), {
-    message: 'professorId e obrigatorio quando papel = "PROFESSOR" (e nao deve vir quando papel = "ADMIN").',
+  .refine((data) => data.papel !== 'PROFESSOR' || data.professorId !== undefined, {
+    message: 'professorId e obrigatorio quando papel = "PROFESSOR".',
     path: ['professorId'],
   })
 

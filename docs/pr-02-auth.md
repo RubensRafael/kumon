@@ -39,14 +39,10 @@ Seção 1 da spec (`plan.md`), completa:
   `findUnique({ where: { usuarioId } })` em `Professor`. `POST /usuarios` com
   `papel: 'professor'` faz, numa transação: cria o `Usuario`, depois
   atualiza `Professor.usuarioId` para apontar pra ele.
-- **`professorId` obrigatório quando `papel === 'professor'` E proibido
-  quando `papel === 'admin'`.** A spec só falava da obrigatoriedade no
-  primeiro sentido ("obrigatório se papel === 'professor'"). Adicionei a
-  direção oposta como validação explícita (`400`) porque um `admin` com
-  `professorId` preenchido não tem sentido no domínio e o silêncio do Zod
-  aqui esconderia um erro real de quem está chamando a API — diferente dos
-  casos documentados no apêndice "Erros preveníveis pela UI", que são só
-  sobre esconder controle de edição, não sobre dado sem sentido.
+- **`professorId` obrigatório quando `papel === 'PROFESSOR'`; opcional (não
+  mais proibido) quando `papel === 'ADMIN'`.** A validação original também
+  proibia `professorId` para admin — revista num commit seguinte, ver
+  "Atualizações pós-revisão".
 - **`POST /usuarios` valida a existência do `professorId`** (`400` se não
   existir) **e que o professor ainda não tem usuário vinculado** (`409` se já
   tiver). Nenhum dos dois está listado nas "regras de negócio" da seção 1,
@@ -124,3 +120,17 @@ abaixo corresponde a um commit isolado.
   query extra (`Professor.findMany` + `Map`), evitando N+1 numa listagem.
   Sem paginação, mesma convenção do resto da API (`plan.md`: "Sem paginação
   por agora").
+- **Admin pode ter `professorId` vinculado.** A validação original proibia
+  a combinação (`papel === 'ADMIN'` com `professorId` preenchido → `400`).
+  Revista: a pessoa administrar E dar aula é um caso real (comum numa
+  unidade pequena), e nada na camada de permissão depende da ausência de
+  `professorId` num admin — `requireAdmin` só olha `papel`,
+  `scopeToProfessor` e `restrictProfessorSelf` (das próximas PRs) só
+  auto-filtram/bloqueiam quando `papel === 'PROFESSOR'`, nenhuma olha para
+  `professorId` isoladamente. `criarUsuario` já vinculava pelo
+  `input.professorId` sem checar `papel`, então nenhuma mudança de service
+  foi necessária — só o `.refine()` de `UsuarioCreateInput`, que passou a
+  exigir `professorId` só no sentido `PROFESSOR → obrigatório`, sem mais
+  proibir do lado do `ADMIN`. Ainda não dá pra vincular `professorId` a um
+  admin já existente — só `POST /usuarios` faz esse link, na criação;
+  `PUT /usuarios/:id` continua sem tocar nesse campo.
