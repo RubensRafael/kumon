@@ -54,7 +54,24 @@ Seção 4 da spec, completa:
   isso muda o filtro — vale confirmar com o time antes do PR 06 (matrículas)
   fixar esse mesmo padrão em mais lugares.
 - Não há endpoint de exclusão de aluno na spec (nem físico, nem soft
-  delete) — só `situacao` como enum (`ativo`/`trancado`/`desistente`) sinaliza
+  delete) — só `situacao` como enum (`ATIVO`/`TRANCADO`/`DESISTENTE`) sinaliza
   o "fim" de um aluno. Comportamento implementado exatamente como
   especificado, só registrando que não há como remover um cadastro de
   teste/erro de digitação por essa API.
+
+## Atualizações pós-revisão
+
+Merge em cascata de `feat/04-materias-conteudos` (que já trouxe o merge do
+PR 02, ver `docs/pr-03-professores.md`):
+
+- **`SituacaoAlunoEnum` uppercase**, mesma decisão já aplicada a `PapelEnum`
+  (PR 02) e `DiaSemanaEnum` (propagada no PR 03): `['ATIVO', 'TRANCADO',
+  'DESISTENTE']` em vez de minúsculo, sem `paraApi`/`paraBanco`.
+  `alunos.service.ts` perdeu esse import; `AlunoRow.situacao` passou a usar o
+  tipo `SituacaoAluno` gerado pelo Prisma direto, em vez de `string` com cast
+  manual. `AlunoCreateInput.situacao.default('ativo')` virou `.default('ATIVO')`.
+- **`scope-to-professor.middleware.ts`**: `usuario.papel === 'professor'` virou
+  `=== 'PROFESSOR'`.
+- **`tests/e2e/alunos.e2e.test.ts`** migrado para `obterCookie`/`authHeader`
+  (auth por cookie) e os literais de `situacao` (`'ativo'`/`'trancado'`) para
+  maiúsculo.
