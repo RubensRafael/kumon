@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs'
-import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import devServer from '@hono/vite-dev-server'
@@ -14,6 +12,7 @@ import {
   frontendEnvSchema,
   parseEnv,
 } from './src/shared/env.ts'
+import { workerdWasmModules } from './vite-plugins/workerd-wasm-modules.ts'
 
 const resolvePath = (relative: string) => fileURLToPath(new URL(relative, import.meta.url))
 
@@ -30,50 +29,6 @@ const API_PREFIX = '/api'
  * estaticos, o `/@vite/client`, os source maps e o websocket de HMR.
  */
 const HONO_EXCLUDE = [new RegExp(`^(?!${API_PREFIX}/).*`)]
-
-const WASM_MODULE_QUERY = '?module'
-const VIRTUAL_PREFIX = '\0wasm-module:'
-
-/**
- * O Prisma Client gerado para `runtime = "cloudflare"` carrega o Query Compiler
- * com `import('./query_compiler_bg.wasm?module')` — a sintaxe de WASM module do
- * Cloudflare Workers, que o Wrangler entende nativamente no build.
- *
- * O dev-server do Vite executa esse mesmo codigo em Node e nao conhece o sufixo
- * `?module`, entao aqui o import e redirecionado para um modulo virtual que
- * compila o binario e devolve um `WebAssembly.Module` — exatamente o que o
- * workerd entregaria em producao.
- */
-function workerdWasmModules(): Plugin {
-  return {
-    name: 'workerd-wasm-modules',
-    enforce: 'pre',
-    apply: 'serve',
-
-    resolveId(source, importer) {
-      if (!importer || !source.endsWith(`.wasm${WASM_MODULE_QUERY}`)) return null
-
-      const filePath = source.slice(0, -WASM_MODULE_QUERY.length)
-      return VIRTUAL_PREFIX + path.resolve(path.dirname(importer), filePath)
-    },
-
-    load(id) {
-      if (!id.startsWith(VIRTUAL_PREFIX)) return null
-
-      const filePath = id.slice(VIRTUAL_PREFIX.length)
-
-      if (!existsSync(filePath)) {
-        this.error(`WASM nao encontrado: ${filePath}. Rode \`npm run db:generate\`.`)
-      }
-
-      // O binario e lido em tempo de execucao para nao inflar o grafo de modulos.
-      return [
-        `import { readFileSync } from 'node:fs'`,
-        `export default new WebAssembly.Module(readFileSync(${JSON.stringify(filePath)}))`,
-      ].join('\n')
-    },
-  }
-}
 
 /**
  * Valida as variaveis de ambiente antes de qualquer coisa subir.

@@ -2,7 +2,6 @@ import type { ReactElement } from 'react'
 
 import { AboutPage } from '../app/routes/about.page'
 import { HomePage } from '../app/routes/home.page'
-import { UsersPage } from '../app/routes/users.page'
 import { NotFoundPage } from '../app/routes/not-found.page'
 
 export interface AppRoute {
@@ -18,7 +17,6 @@ export interface AppRoute {
  */
 export const appRoutes: AppRoute[] = [
   { path: '/', element: <HomePage />, label: 'Inicio' },
-  { path: '/usuarios', element: <UsersPage />, label: 'Usuarios' },
   { path: '/sobre', element: <AboutPage />, label: 'Sobre' },
   { path: '*', element: <NotFoundPage /> },
 ]

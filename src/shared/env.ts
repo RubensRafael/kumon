@@ -26,6 +26,11 @@ export const backendEnvSchema = z.object({
     .refine(placeholderFree, PLACEHOLDER_MESSAGE),
 
   BACKEND_ENVIRONMENT: z.enum(['development', 'production']).default('development'),
+
+  BACKEND_JWT_SECRET: z
+    .string()
+    .min(1, 'obrigatoria')
+    .refine(placeholderFree, PLACEHOLDER_MESSAGE),
 })
 
 export const frontendEnvSchema = z.object({

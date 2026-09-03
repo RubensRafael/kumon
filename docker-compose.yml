@@ -1,0 +1,29 @@
+# Postgres local para desenvolvimento e para os testes e2e (Vitest).
+#
+# So e usado quando o app roda em Node puro (`npm run dev`, `npm test`) — o
+# Prisma fala com ele via `@prisma/adapter-pg` (TCP normal). Producao e
+# `wrangler dev` continuam batendo no Neon via `@prisma/adapter-neon`, que e o
+# unico transporte que o Cloudflare Workers permite. Ver `src/server/db/client.ts`.
+#
+# Porta 54329 escolhida de proposito, fora do padrao 5432/5433, para nao
+# colidir com outros projetos locais.
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kflow
+      POSTGRES_PASSWORD: kflow
+      POSTGRES_DB: kflow
+    ports:
+      - '54329:5432'
+    volumes:
+      - kumon_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kflow -d kflow']
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  kumon_postgres_data:
