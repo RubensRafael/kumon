@@ -69,3 +69,22 @@ export async function criarUsuarioProfessor(opcoes: CriarUsuarioOpcoes = {}) {
   await prisma.professor.update({ where: { id: professor.id }, data: { usuarioId: usuario.id } })
   return { usuario, professor, senha }
 }
+
+interface CriarMateriaOpcoes {
+  nome?: string
+  ativo?: boolean
+}
+
+/**
+ * A feature de materias so chega no PR 04 — ate la, os testes que precisam
+ * de um `materiaId` valido (ex.: `POST /professores`) semeiam a linha
+ * direto pelo Prisma, do mesmo jeito que `criarProfessor` fez pro PR 02.
+ */
+export async function criarMateria(opcoes: CriarMateriaOpcoes = {}) {
+  return prisma.materia.create({
+    data: {
+      nome: opcoes.nome ?? unico('Materia'),
+      ativo: opcoes.ativo ?? true,
+    },
+  })
+}
