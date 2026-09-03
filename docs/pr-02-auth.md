@@ -64,33 +64,16 @@ Seção 1 da spec (`plan.md`), completa:
   na seção 1, mas é a única leitura que dá algum efeito real a
   `PUT /usuarios/:id { ativo: false }` — sem essa checagem, "desativar" um
   usuário não desativaria nada.
-- **`authMiddleware` não consulta o banco — confia inteiramente no JWT.**
-  Implementado exatamente como o pseudocódigo de `authMiddleware` na seção
-  "Middlewares" do `plan.md`, que só decodifica o token. `GET /me` é a
-  exceção deliberada: busca o usuário fresco no banco, então reflete
-  `ativo`/`papel` atualizados mesmo com um token antigo. Consequência
-  registrada abaixo, em "Pontos para revisão".
+- **`authMiddleware` não consultava o banco — confiava inteiramente no
+  JWT** (implementado originalmente ao pé da letra do pseudocódigo de
+  `authMiddleware` no `plan.md`). Revisto num commit seguinte: ver
+  "Atualizações pós-revisão".
 - **`BACKEND_JWT_SECRET` (não `JWT_SECRET`)** — decisão já registrada no
   PR 01, aqui é onde a variável passa a ser efetivamente usada
   (`sign`/`verify` do `hono/jwt`, algoritmo `HS256` explícito).
 
 ## Pontos para revisão
 
-- **Janela de até 7 dias entre desativar um usuário e o token dele parar de
-  funcionar.** Como `authMiddleware` não bate no banco, um `admin` que faz
-  `PUT /usuarios/:id { ativo: false }` não revoga imediatamente tokens já
-  emitidos para esse usuário — eles continuam validando em qualquer rota
-  protegida (exceto `GET /me`, que rebusca o estado) até expirar
-  naturalmente. Isso é uma consequência direta de seguir o pseudocódigo da
-  spec ao pé da letra; se isso for inaceitável para o produto (ex.: um caso
-  de admin comprometido precisando ser desligado na hora), a correção é
-  fazer `authMiddleware` também consultar `ativo` no banco — o que reintroduz
-  uma query por request em toda rota protegida.
-- **Não existe endpoint de listagem de usuários** (a spec também não define
-  um) — hoje só é possível criar e atualizar um usuário pelo `id`, então
-  administrar usuários via API exige guardar o `id` retornado na criação.
-  Vale confirmar se isso é intencional antes do front-end de gestão de
-  usuários ser construído.
 - Nenhum provedor de e-mail real está integrado — o "envio" de
   `solicitar-reset` é, hoje, sempre um no-op (silencioso em produção, com
   `console.log` do token em dev). Isso é o que a spec pede explicitamente,
@@ -123,3 +106,14 @@ abaixo corresponde a um commit isolado.
   já cobre o caso geral (hash de 60 chars com prefixo de salt inválido), que
   é quando `bcryptjs` de fato lança. Confirmado lendo
   `node_modules/bcryptjs/index.js:226-232` antes de remover.
+- **`authMiddleware` passa a revalidar `ativo`/`papel` no banco a cada
+  request**, fechando a janela de até 7 dias descrita na versão original
+  deste doc (usuário desativado ou com papel trocado continuando a
+  autenticar com um token emitido antes da mudança). Decisão registrada em
+  `discussao-pr-02.md`: o custo é uma query HTTP a mais no Neon por rota
+  protegida (o adapter é via `fetch`, não pool TCP — não é risco de esgotar
+  conexão, só um round-trip a mais e mais leitura). `professorId` continua
+  vindo do token sem revalidação — não existe endpoint que altere esse
+  vínculo depois da criação, então não há o que ficar velho. Testes novos em
+  `tests/e2e/auth.e2e.test.ts`, describe `authMiddleware revalida o usuario
+  no banco`.

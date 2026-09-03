@@ -101,6 +101,46 @@ describe('auth', () => {
     })
   })
 
+  describe('authMiddleware revalida o usuario no banco', () => {
+    it('usuario desativado depois do login -> 401 mesmo com token ainda valido', async () => {
+      const { usuario, senha } = await criarUsuarioAdmin()
+      const { body } = await login(usuario.email, senha)
+
+      await prisma.usuario.update({ where: { id: usuario.id }, data: { ativo: false } })
+
+      const response = await app.request(
+        '/api/usuarios',
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, authorization: `Bearer ${body.token}` },
+          body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'ADMIN' }),
+        },
+        testEnv,
+      )
+
+      expect(response.status).toBe(401)
+    })
+
+    it('papel alterado depois do login -> 403 numa rota admin-only, ignora o papel do token', async () => {
+      const { usuario, senha } = await criarUsuarioAdmin()
+      const { body } = await login(usuario.email, senha)
+
+      await prisma.usuario.update({ where: { id: usuario.id }, data: { papel: 'PROFESSOR' } })
+
+      const response = await app.request(
+        '/api/usuarios',
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, authorization: `Bearer ${body.token}` },
+          body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'ADMIN' }),
+        },
+        testEnv,
+      )
+
+      expect(response.status).toBe(403)
+    })
+  })
+
   describe('POST /api/usuarios', () => {
     async function tokenAdmin() {
       const { usuario, senha } = await criarUsuarioAdmin()
