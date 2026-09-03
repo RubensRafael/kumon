@@ -1,7 +1,0 @@
-# Variaveis de ambiente do Worker em desenvolvimento (`vite` / `wrangler dev`).
-# Este arquivo e um TEMPLATE com placeholders. Ao colocar credenciais reais,
-# remova-o do controle de versao: `git rm --cached .dev.vars`.
-#
-# Use a connection string do POOLER do Neon (host com sufixo `-pooler`),
-# obtida em: Neon Console > Project > Connect > "Connection pooling".
-DATABASE_URL="postgresql://<user>:<password>@<endpoint>-pooler.<region>.aws.neon.tech/<database>?sslmode=require"

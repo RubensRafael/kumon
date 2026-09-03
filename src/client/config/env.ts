@@ -1,11 +1,19 @@
+import type { FrontendEnv } from '../../shared/env'
+
 /**
  * Variaveis de ambiente do front-end.
  *
- * Apenas o que tem prefixo `VITE_` chega ao bundle do navegador. Segredos
- * (como a DATABASE_URL) ficam exclusivamente do lado do Worker.
+ * Sao validadas pelo plugin `validateEnv` do `vite.config.ts`, que roda em dev
+ * e no build — antes que qualquer valor chegue aqui. Por isso este modulo nao
+ * importa zod: o schema fica fora do bundle e o browser recebe apenas os
+ * valores, ja substituidos estaticamente pelo Vite.
+ *
+ * `envPrefix: 'FRONTEND_'` garante que nenhuma variavel `BACKEND_*` seja
+ * embutida no bundle, mesmo estando no mesmo `.env`.
  */
-export const clientEnv = {
-  /** Base das chamadas de API. Mesma origem por padrao — Vite em dev, Worker em producao. */
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '/api',
-  isDev: import.meta.env.DEV,
-} as const
+export const clientEnv: FrontendEnv = {
+  FRONTEND_API_BASE_URL: import.meta.env.FRONTEND_API_BASE_URL,
+  FRONTEND_APP_NAME: import.meta.env.FRONTEND_APP_NAME,
+}
+
+export const isDev = import.meta.env.DEV

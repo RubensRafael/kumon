@@ -3,7 +3,9 @@ import { Card } from '../components/ui/card'
 const STACK = [
   ['Front-end', 'React 19 + Vite, navegacao 100% client-side com React Router.'],
   ['Back-end', 'Hono no Cloudflare Workers, servido pelo @hono/vite-dev-server em dev.'],
-  ['Banco', 'PostgreSQL do Neon via Prisma Driver Adapters (@prisma/adapter-neon).'],
+  ['Banco', 'PostgreSQL do Neon via Prisma 7 e o adapter @prisma/adapter-neon.'],
+  ['Contrato', 'DTOs em zod compartilhados: o front-end nunca ve o schema do banco.'],
+  ['Validacao', '@hono/zod-validator na entrada; env validada no build e no Worker.'],
   ['Estilo', 'Tailwind CSS v4 pelo plugin oficial do Vite.'],
 ] as const
 

@@ -1,5 +1,10 @@
-// Prisma + Neon (PostgreSQL) rodando na Edge da Cloudflare via Driver Adapters.
-// Docs: https://www.prisma.io/docs/orm/prisma-client/deployment/edge/deploy-to-cloudflare
+// Prisma 7 + Neon (PostgreSQL) rodando na Edge da Cloudflare.
+//
+// Duas mudancas em relacao ao Prisma 6 valem nota:
+//   - o datasource nao declara mais `url`; a connection string do CLI vive em
+//     `prisma.config.ts` e a de runtime vem do Driver Adapter;
+//   - `driverAdapters` deixou de ser preview feature — e o unico modo de
+//     operacao, entao nao ha flag para ativar.
 
 generator client {
   provider = "prisma-client"
@@ -8,23 +13,14 @@ generator client {
   // o que evita problemas de resolucao no bundle do Worker.
   output = "../src/server/db/generated"
 
-  // `workerd` faz o client importar o runtime compativel com Cloudflare Workers.
-  runtime      = "workerd"
+  // `cloudflare` gera o client para o runtime dos Workers, que bloqueia a
+  // instanciacao de `WebAssembly.Module()` em tempo de execucao.
+  runtime      = "cloudflare"
   moduleFormat = "esm"
-
-  // `client` usa o Query Compiler em WASM: nao ha Query Engine nativo,
-  // toda a comunicacao passa pelo Driver Adapter do Neon.
-  engineType = "client"
-
-  // Driver Adapters: exigido pelo setup serverless/edge.
-  // Obs.: a partir do Prisma 6.6 a funcionalidade e GA e o CLI emite um aviso
-  // de "deprecated preview feature" — a linha pode ser removida sem impacto.
-  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ---------------------------------------------------------------------------

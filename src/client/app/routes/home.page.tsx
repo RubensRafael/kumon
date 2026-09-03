@@ -49,6 +49,7 @@ export function HomePage() {
                 Neon {data.database.connected ? `${data.database.latencyMs} ms` : 'sem conexao'}
               </StatusBadge>
               <StatusBadge tone="neutral">{data.runtime}</StatusBadge>
+              <StatusBadge tone="neutral">{data.environment}</StatusBadge>
             </div>
 
             {data.database.error ? (

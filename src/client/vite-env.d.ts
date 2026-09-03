@@ -1,9 +1,11 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_API_BASE_URL?: string
-}
+import type { FrontendEnv } from '../shared/env'
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv
+declare global {
+  /**
+   * `import.meta.env` tipado a partir do mesmo schema zod que valida as
+   * variaveis no build — nao ha uma segunda lista de chaves para manter em dia.
+   */
+  interface ImportMetaEnv extends FrontendEnv {}
 }

@@ -33,6 +33,8 @@
     "enabled": true
   }
 
-  // DATABASE_URL nao fica aqui: em desenvolvimento vem de `.dev.vars` e em
-  // producao de `wrangler secret put DATABASE_URL` ou do dashboard.
+  // As variaveis BACKEND_* nao ficam aqui. Em desenvolvimento o Wrangler as le
+  // do `.env` (o que ele faz automaticamente quando nao existe um `.dev.vars`);
+  // em producao venham de `wrangler secret put BACKEND_DATABASE_URL` ou do
+  // dashboard.
 }

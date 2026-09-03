@@ -4,7 +4,6 @@ dist/
 .vite/
 
 # Segredos locais
-.dev.vars.local
 .env
 .env.*
 !.env.example

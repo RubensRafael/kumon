@@ -1,9 +1,8 @@
 import { Hono } from 'hono'
 
-import type { DatabaseHealth, HealthResponse } from '../../shared/api'
+import type { ApiResponse } from '../../shared/api/contract'
+import type { DatabaseHealth } from '../../shared/dto'
 import type { AppEnv } from '../types'
-
-export const healthRoute = new Hono<AppEnv>()
 
 /**
  * GET /api/health
@@ -12,12 +11,15 @@ export const healthRoute = new Hono<AppEnv>()
  * Adapter — e o jeito mais barato de provar que Worker, adapter e banco estao
  * conversando de ponta a ponta.
  */
-healthRoute.get('/', async (c) => {
+export const healthRoute = new Hono<AppEnv>().get('/', async (c) => {
   const database = await checkDatabase(c.get('prisma'))
 
-  const body: HealthResponse = {
+  // A anotacao e o que amarra a rota ao contrato: devolver qualquer outra
+  // coisa quebra a compilacao do servidor.
+  const body: ApiResponse<'health'> = {
     status: database.connected ? 'ok' : 'degraded',
     runtime: 'cloudflare-workers',
+    environment: c.get('env').BACKEND_ENVIRONMENT,
     timestamp: new Date().toISOString(),
     database,
   }

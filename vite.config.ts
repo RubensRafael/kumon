@@ -6,7 +6,14 @@ import devServer from '@hono/vite-dev-server'
 import cloudflareAdapter from '@hono/vite-dev-server/cloudflare'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type Plugin } from 'vite'
+import { type Plugin, defineConfig, loadEnv } from 'vite'
+
+import {
+  FRONTEND_ENV_PREFIX,
+  backendEnvSchema,
+  frontendEnvSchema,
+  parseEnv,
+} from './src/shared/env.ts'
 
 const resolvePath = (relative: string) => fileURLToPath(new URL(relative, import.meta.url))
 
@@ -28,7 +35,7 @@ const WASM_MODULE_QUERY = '?module'
 const VIRTUAL_PREFIX = '\0wasm-module:'
 
 /**
- * O Prisma Client gerado para `runtime = "workerd"` carrega o Query Compiler
+ * O Prisma Client gerado para `runtime = "cloudflare"` carrega o Query Compiler
  * com `import('./query_compiler_bg.wasm?module')` — a sintaxe de WASM module do
  * Cloudflare Workers, que o Wrangler entende nativamente no build.
  *
@@ -68,8 +75,41 @@ function workerdWasmModules(): Plugin {
   }
 }
 
+/**
+ * Valida as variaveis de ambiente antes de qualquer coisa subir.
+ *
+ * Roda no `configResolved`, que dispara tanto no `vite dev` quanto no
+ * `vite build` — entao um `.env` incompleto derruba o processo na hora, com a
+ * lista do que falta, em vez de virar `undefined` no browser ou um erro
+ * obscuro em producao.
+ *
+ * As `FRONTEND_*` sao sempre validadas. As `BACKEND_*` sao validadas apenas
+ * localmente: em producao elas vivem nos secrets da Cloudflare, fora do
+ * alcance do build, e quem as valida e o `envMiddleware` do Hono.
+ */
+function validateEnv(): Plugin {
+  return {
+    name: 'validate-env',
+    configResolved(config) {
+      const env = loadEnv(config.mode, config.root, '')
+
+      parseEnv(frontendEnvSchema, env, 'frontend')
+
+      if (config.command === 'serve') {
+        parseEnv(backendEnvSchema, env, 'backend')
+      }
+    },
+  }
+}
+
 export default defineConfig({
+  // Substitui o `VITE_` padrao: so as `FRONTEND_*` sao embutidas no bundle do
+  // browser. Uma `BACKEND_DATABASE_URL` no mesmo `.env` fica inacessivel ao
+  // codigo do cliente, mesmo por engano.
+  envPrefix: [FRONTEND_ENV_PREFIX],
+
   plugins: [
+    validateEnv(),
     react(),
     tailwindcss(),
     workerdWasmModules(),

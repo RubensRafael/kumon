@@ -20,17 +20,13 @@ if (typeof WebSocket !== 'undefined') {
 /**
  * Cria um PrismaClient por requisicao.
  *
- * Um Worker nao mantem estado entre invocacoes de forma confiavel e a conexao
- * pertence ao ciclo de vida da requisicao, entao instanciar por request e o
- * padrao correto na Edge — o pooling real fica com o pooler do Neon.
+ * No Prisma 7 nao ha mais `url` no datasource: a conexao chega exclusivamente
+ * pelo Driver Adapter. Instanciar o client nao abre conexao — isso so acontece
+ * na primeira query —, e um Worker nao mantem estado confiavel entre
+ * invocacoes, entao um client por request e o padrao correto na Edge. O
+ * pooling real fica com o pooler do Neon.
  */
-export function createPrismaClient(connectionString: string | undefined): PrismaClient {
-  if (!connectionString) {
-    throw new Error(
-      'DATABASE_URL nao definida. Preencha o `.dev.vars` em desenvolvimento ou rode `wrangler secret put DATABASE_URL` para producao.',
-    )
-  }
-
+export function createPrismaClient(connectionString: string): PrismaClient {
   const adapter = new PrismaNeon({ connectionString })
 
   return new PrismaClient({ adapter })

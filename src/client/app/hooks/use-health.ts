@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { API_ROUTES, type HealthResponse } from '../../../shared/api'
-import { ApiError, apiFetch } from '../../config/api'
+import type { ApiResponse } from '../../../shared/api/contract'
+import { ApiError, callApi } from '../../config/api'
 
 type State =
   | { status: 'loading'; data: null; error: null }
-  | { status: 'success'; data: HealthResponse; error: null }
+  | { status: 'success'; data: ApiResponse<'health'>; error: null }
   | { status: 'error'; data: null; error: string }
 
 /** Consome `GET /api/health` — o handshake entre a SPA e o Worker. */
@@ -16,7 +16,8 @@ export function useHealth() {
     setState({ status: 'loading', data: null, error: null })
 
     try {
-      const data = await apiFetch<HealthResponse>(API_ROUTES.health, { signal })
+      // `data` ja chega como HealthResponse: o tipo vem do contrato.
+      const data = await callApi('health', { signal })
       setState({ status: 'success', data, error: null })
     } catch (error) {
       if (signal?.aborted) return
