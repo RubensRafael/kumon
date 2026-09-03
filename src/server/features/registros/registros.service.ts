@@ -1,27 +1,7 @@
 import { HTTPException } from 'hono/http-exception'
 
-import type {
-  AtividadeCasa as AtividadeCasaApi,
-  Autonomia as AutonomiaApi,
-  Boletim as BoletimApi,
-  Chegada as ChegadaApi,
-  Comportamento as ComportamentoApi,
-  Desempenho as DesempenhoApi,
-  Foco as FocoApi,
-} from '../../../shared/dto/enums'
 import { diaDaSemana, formatarData, parseData } from '../../lib/data'
-import { paraApi, paraBanco } from '../../lib/db-enum'
-import type {
-  AtividadeCasa,
-  Autonomia,
-  Boletim,
-  Chegada,
-  Comportamento,
-  Desempenho,
-  Foco,
-  Prisma,
-  PrismaClient,
-} from '../../db/generated/client'
+import type { Prisma, PrismaClient } from '../../db/generated/client'
 import { Prisma as PrismaNamespace } from '../../db/generated/client'
 import type {
   RegistroDetalheOutputType,
@@ -38,11 +18,6 @@ const INCLUDE_DETALHE = {
 
 type RegistroRow = Prisma.RegistroAulaGetPayload<{ include: typeof INCLUDE_DETALHE }>
 
-/** `valor ? paraApi<T>(valor) : null` — repetido pra cada um dos 6 enums opcionais do registro. */
-function apiOuNulo<TApi extends string>(valor: string | null): TApi | null {
-  return valor ? paraApi<TApi>(valor) : null
-}
-
 function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
   return {
     id: registro.id,
@@ -55,15 +30,15 @@ function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
     data: formatarData(registro.data),
     horarioPrevisto: registro.horario.horario,
     // Nunca vem de nenhum input — sempre derivado aqui na hora de montar o output.
-    status: registro.fechado ? 'concluido' : 'em_andamento',
+    status: registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
     estagio: registro.estagio,
-    chegada: apiOuNulo<ChegadaApi>(registro.chegada),
-    boletim: apiOuNulo<BoletimApi>(registro.boletim),
-    atividadeCasa: apiOuNulo<AtividadeCasaApi>(registro.atividadeCasa),
-    foco: apiOuNulo<FocoApi>(registro.foco),
-    autonomia: apiOuNulo<AutonomiaApi>(registro.autonomia),
-    comportamento: apiOuNulo<ComportamentoApi>(registro.comportamento),
-    desempenho: apiOuNulo<DesempenhoApi>(registro.desempenho),
+    chegada: registro.chegada,
+    boletim: registro.boletim,
+    atividadeCasa: registro.atividadeCasa,
+    foco: registro.foco,
+    autonomia: registro.autonomia,
+    comportamento: registro.comportamento,
+    desempenho: registro.desempenho,
     conteudoIds: registro.conteudos.map((c) => c.conteudoId),
     anotacao: registro.anotacao,
     fechado: registro.fechado,
@@ -115,7 +90,7 @@ async function validarConteudoIds(
  * Nunca cria linha nenhuma: `LEFT JOIN` (aqui, um `include` filtrado) entre
  * `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana
  * de `data`) e `REGISTRO_AULA` existente pra aquela data. Sem linha -> `id:
- * null`, `status: 'nao_iniciado'`.
+ * null`, `status: 'NAO_INICIADO'`.
  */
 export async function listarRegistrosDoDia(
   prisma: PrismaClient,
@@ -150,7 +125,7 @@ export async function listarRegistrosDoDia(
       materiaId: horario.matricula.materiaId,
       data: formatarData(data),
       horarioPrevisto: horario.horario,
-      status: !registro ? 'nao_iniciado' : registro.fechado ? 'concluido' : 'em_andamento',
+      status: !registro ? 'NAO_INICIADO' : registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
     }
   })
 }
@@ -194,15 +169,13 @@ export async function criarRegistro(
         // Unica copia (snapshot) intencional do schema: nunca vem do input.
         estagio: horario.matricula.estagio,
         horaInicio: new Date(),
-        chegada: input.chegada !== undefined ? paraBanco<Chegada>(input.chegada) : undefined,
-        boletim: input.boletim !== undefined ? paraBanco<Boletim>(input.boletim) : undefined,
-        atividadeCasa:
-          input.atividadeCasa !== undefined ? paraBanco<AtividadeCasa>(input.atividadeCasa) : undefined,
-        foco: input.foco !== undefined ? paraBanco<Foco>(input.foco) : undefined,
-        autonomia: input.autonomia !== undefined ? paraBanco<Autonomia>(input.autonomia) : undefined,
-        comportamento:
-          input.comportamento !== undefined ? paraBanco<Comportamento>(input.comportamento) : undefined,
-        desempenho: input.desempenho !== undefined ? paraBanco<Desempenho>(input.desempenho) : undefined,
+        chegada: input.chegada,
+        boletim: input.boletim,
+        atividadeCasa: input.atividadeCasa,
+        foco: input.foco,
+        autonomia: input.autonomia,
+        comportamento: input.comportamento,
+        desempenho: input.desempenho,
         anotacao: input.anotacao,
         conteudos: conteudoIds ? { create: conteudoIds.map((conteudoId) => ({ conteudoId })) } : undefined,
       },
@@ -237,17 +210,13 @@ export async function atualizarRegistro(
     return tx.registroAula.update({
       where: { id },
       data: {
-        ...(input.chegada !== undefined ? { chegada: paraBanco<Chegada>(input.chegada) } : {}),
-        ...(input.boletim !== undefined ? { boletim: paraBanco<Boletim>(input.boletim) } : {}),
-        ...(input.atividadeCasa !== undefined
-          ? { atividadeCasa: paraBanco<AtividadeCasa>(input.atividadeCasa) }
-          : {}),
-        ...(input.foco !== undefined ? { foco: paraBanco<Foco>(input.foco) } : {}),
-        ...(input.autonomia !== undefined ? { autonomia: paraBanco<Autonomia>(input.autonomia) } : {}),
-        ...(input.comportamento !== undefined
-          ? { comportamento: paraBanco<Comportamento>(input.comportamento) }
-          : {}),
-        ...(input.desempenho !== undefined ? { desempenho: paraBanco<Desempenho>(input.desempenho) } : {}),
+        ...(input.chegada !== undefined ? { chegada: input.chegada } : {}),
+        ...(input.boletim !== undefined ? { boletim: input.boletim } : {}),
+        ...(input.atividadeCasa !== undefined ? { atividadeCasa: input.atividadeCasa } : {}),
+        ...(input.foco !== undefined ? { foco: input.foco } : {}),
+        ...(input.autonomia !== undefined ? { autonomia: input.autonomia } : {}),
+        ...(input.comportamento !== undefined ? { comportamento: input.comportamento } : {}),
+        ...(input.desempenho !== undefined ? { desempenho: input.desempenho } : {}),
         ...(input.anotacao !== undefined ? { anotacao: input.anotacao } : {}),
         ...(conteudoIds ? { conteudos: { create: conteudoIds.map((conteudoId) => ({ conteudoId })) } } : {}),
       },
