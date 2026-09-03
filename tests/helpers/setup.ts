@@ -1,5 +1,6 @@
 import { createApp } from '../../src/server/app'
 import { createPrismaClient } from '../../src/server/db/client'
+import { RESEND_DUMMY_API_KEY } from '../../src/server/lib/email'
 import type { Bindings } from '../../src/server/types'
 
 /**
@@ -17,6 +18,7 @@ export const testEnv: Bindings = {
     process.env.BACKEND_DATABASE_URL ?? 'postgresql://kflow:kflow@localhost:54329/kflow',
   BACKEND_ENVIRONMENT: 'development',
   BACKEND_JWT_SECRET: 'segredo-de-teste-nao-usar-em-producao',
+  BACKEND_RESEND_API_KEY: RESEND_DUMMY_API_KEY,
   // As rotas de API nunca alcancam o fallback da SPA nos testes e2e.
   ASSETS: { fetch: async () => new Response(null, { status: 404 }) },
 }

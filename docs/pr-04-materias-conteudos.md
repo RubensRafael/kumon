@@ -46,3 +46,11 @@ Seção 3 da spec, completa:
   simples (tudo). Se a tela de detalhe de matéria precisar esconder
   conteúdo inativo por padrão, isso teria que ser filtrado no front-end ou
   esse endpoint ganharia o mesmo parâmetro no futuro.
+
+## Atualizações pós-revisão
+
+Merge em cascata de `feat/03-professores` (que já trouxe o merge do PR 02,
+ver `docs/pr-03-professores.md`): `tests/e2e/materias.e2e.test.ts` migrado
+para o novo helper `obterCookie`/`authHeader` (auth por cookie, não Bearer
+token) — sem mudança de código de produção nesta feature, já que
+`materias`/`conteudos` não usa `PapelEnum` nem `DiaSemanaEnum` diretamente.
