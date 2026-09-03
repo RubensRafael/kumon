@@ -126,3 +126,22 @@ export async function criarMatricula(opcoes: CriarMatriculaOpcoes) {
     },
   })
 }
+
+interface CriarHorarioOpcoes {
+  matriculaId: string
+  diaSemana?: 'DOM' | 'SEG' | 'TER' | 'QUA' | 'QUI' | 'SEX' | 'SAB'
+  horario?: string
+  ativo?: boolean
+}
+
+/** A feature de registro de aula (PR 08) precisa de horarios ja existentes pra semear seus proprios testes. */
+export async function criarHorario(opcoes: CriarHorarioOpcoes) {
+  return prisma.matriculaHorario.create({
+    data: {
+      matriculaId: opcoes.matriculaId,
+      diaSemana: opcoes.diaSemana ?? 'SEG',
+      horario: opcoes.horario ?? '14:00',
+      ativo: opcoes.ativo ?? true,
+    },
+  })
+}
