@@ -74,3 +74,31 @@ Seção 7 da spec, completa — a feature mais complexa da API até aqui:
 - `duracaoMin` é arredondado pro minuto mais próximo
   (`Math.round(...).60_000`); uma finalização a menos de 30s da criação
   arredonda pra `0`. A spec não define a granularidade esperada.
+
+## Atualizações pós-revisão
+
+Merge em cascata de `feat/07-horarios` (que já trouxe o merge do PR 02/03,
+ver `docs/pr-03-professores.md`). Esta branch introduz 8 enums novos
+(`StatusRegistro`, `Chegada`, `Boletim`, `AtividadeCasa`, `Foco`,
+`Autonomia`, `Comportamento`, `Desempenho`) — todos vieram minúsculo, então
+foi a maior propagação da decisão de uppercase até aqui:
+
+- Todos os 8 viraram maiúsculo em `src/shared/dto/enums.ts`, mesmo padrão
+  dos anteriores. `StatusRegistroEnum` é o único caso sem coluna nativa no
+  Postgres (é sempre derivado em `paraDetalheOutput`/`listarRegistrosDoDia`,
+  nunca persistido) — ainda assim uppercased, por consistência com o resto
+  do arquivo, já que não havia razão pra esse ser o único minúsculo.
+- `registros.service.ts` perdeu o import de `paraApi`/`paraBanco` e o
+  helper local `apiOuNulo` (delegava pra `paraApi`); `chegada`/`boletim`/
+  `atividadeCasa`/`foco`/`autonomia`/`comportamento`/`desempenho` agora
+  passam direto do Prisma pro output, sem cast — os tipos gerados batem
+  estruturalmente com os enums Zod agora que o casing é o mesmo. As
+  ternárias `x !== undefined ? paraBanco<T>(x) : undefined` em `criarRegistro`
+  (um `create`, onde `undefined` já é ignorado pelo Prisma) viraram
+  atribuição direta.
+- `tests/e2e/registros.e2e.test.ts` migrado para `obterCookie`/`authHeader`
+  (auth por cookie) e todos os literais de enum nos corpos de request/
+  asserts para maiúsculo. O array `DIAS_API` (minúsculo) do helper local
+  `diaSemanaDe` ficou órfão — `DiaSemanaEnum` já era uppercase desde o
+  PR 03, então a API nunca usou esse valor — removido, junto com o campo
+  `.api` que ele alimentava.

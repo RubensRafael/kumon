@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { RegistroDetalheOutputType, RegistroResumoOutputType } from '../../src/server/features/registros/registros.dto'
-import { authHeader, obterToken } from '../helpers/auth'
+import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
   criarHorario,
@@ -14,17 +14,15 @@ import { app, prisma, resetDb, testEnv } from '../helpers/setup'
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
-const DIAS_API = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'] as const
-const DIAS_BANCO = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
+const DIAS_SEMANA = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
 
 function diaSemanaDe(dataISO: string) {
-  const indice = new Date(`${dataISO}T00:00:00.000Z`).getUTCDay()
-  return { api: DIAS_API[indice], banco: DIAS_BANCO[indice] }
+  return DIAS_SEMANA[new Date(`${dataISO}T00:00:00.000Z`).getUTCDay()]
 }
 
-async function tokenAdmin() {
+async function cookieAdmin() {
   const { usuario, senha } = await criarUsuarioAdmin()
-  return obterToken(usuario.email, senha)
+  return obterCookie(usuario.email, senha)
 }
 
 /** Monta professor + aluno + materia + matricula (com estagio) + horario num dia especifico, prontos pra um registro. */
@@ -35,9 +33,9 @@ async function montarCenario(dataISO: string, estagio = 'Unidade 5') {
   const dia = diaSemanaDe(dataISO)
   const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
   await prismaAtualizarEstagio(matricula.id, estagio)
-  const horario = await criarHorario({ matriculaId: matricula.id, diaSemana: dia.banco, horario: '14:00' })
-  const token = await obterToken(usuario.email, senha)
-  return { usuario, professor, senha, token, aluno, materia, matricula, horario, dia }
+  const horario = await criarHorario({ matriculaId: matricula.id, diaSemana: dia, horario: '14:00' })
+  const cookie = await obterCookie(usuario.email, senha)
+  return { usuario, professor, senha, cookie, aluno, materia, matricula, horario, dia }
 }
 
 // Pequeno atalho local: os testes precisam de uma matricula com `estagio`
@@ -60,20 +58,20 @@ describe('registros de aula', () => {
   describe('GET /api/registros?data=', () => {
     it('sem nenhuma linha criada -> id null e status nao_iniciado', async () => {
       const data = '2026-03-02'
-      const { token } = await montarCenario(data)
+      const { cookie } = await montarCenario(data)
 
-      const response = await app.request(`/api/registros?data=${data}`, { headers: authHeader(token) }, testEnv)
+      const response = await app.request(`/api/registros?data=${data}`, { headers: authHeader(cookie) }, testEnv)
       expect(response.status).toBe(200)
       const body = (await response.json()) as RegistroResumoOutputType[]
       expect(body.length).toBe(1)
       expect(body[0].id).toBeNull()
-      expect(body[0].status).toBe('nao_iniciado')
+      expect(body[0].status).toBe('NAO_INICIADO')
     })
 
     it('nunca cria linha so por consultar a lista', async () => {
       const data = '2026-03-02'
-      const { token } = await montarCenario(data)
-      await app.request(`/api/registros?data=${data}`, { headers: authHeader(token) }, testEnv)
+      const { cookie } = await montarCenario(data)
+      await app.request(`/api/registros?data=${data}`, { headers: authHeader(cookie) }, testEnv)
 
       const contagem = await prisma.registroAula.count()
       expect(contagem).toBe(0)
@@ -81,37 +79,37 @@ describe('registros de aula', () => {
 
     it('com registro aberto -> em_andamento; apos finalizar -> concluido', async () => {
       const data = '2026-03-02'
-      const { token, horario } = await montarCenario(data)
+      const { cookie, horario } = await montarCenario(data)
 
       const criado = await app.request(
         '/api/registros',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ horarioId: horario.id, data, chegada: 'presente' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ horarioId: horario.id, data, chegada: 'PRESENTE' }),
         },
         testEnv,
       )
       const registro = (await criado.json()) as RegistroDetalheOutputType
 
-      const listaAberta = await app.request(`/api/registros?data=${data}`, { headers: authHeader(token) }, testEnv)
+      const listaAberta = await app.request(`/api/registros?data=${data}`, { headers: authHeader(cookie) }, testEnv)
       const bodyAberta = (await listaAberta.json()) as RegistroResumoOutputType[]
       expect(bodyAberta[0].id).toBe(registro.id)
-      expect(bodyAberta[0].status).toBe('em_andamento')
+      expect(bodyAberta[0].status).toBe('EM_ANDAMENTO')
 
-      await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(token) }, testEnv)
+      await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
 
-      const listaFechada = await app.request(`/api/registros?data=${data}`, { headers: authHeader(token) }, testEnv)
+      const listaFechada = await app.request(`/api/registros?data=${data}`, { headers: authHeader(cookie) }, testEnv)
       const bodyFechada = (await listaFechada.json()) as RegistroResumoOutputType[]
-      expect(bodyFechada[0].status).toBe('concluido')
+      expect(bodyFechada[0].status).toBe('CONCLUIDO')
     })
 
     it('horario inativo nao aparece na lista', async () => {
       const data = '2026-03-02'
-      const { token, horario } = await montarCenario(data)
+      const { cookie, horario } = await montarCenario(data)
       await prisma.matriculaHorario.update({ where: { id: horario.id }, data: { ativo: false } })
 
-      const response = await app.request(`/api/registros?data=${data}`, { headers: authHeader(token) }, testEnv)
+      const response = await app.request(`/api/registros?data=${data}`, { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as RegistroResumoOutputType[]
       expect(body).toEqual([])
     })
@@ -123,7 +121,7 @@ describe('registros de aula', () => {
 
       const response = await app.request(
         `/api/registros?data=${data}`,
-        { headers: authHeader(cenarioMeu.token) },
+        { headers: authHeader(cenarioMeu.cookie) },
         testEnv,
       )
       const body = (await response.json()) as RegistroResumoOutputType[]
@@ -135,14 +133,14 @@ describe('registros de aula', () => {
   describe('POST /api/registros', () => {
     it('cria o registro e copia estagio da matricula automaticamente', async () => {
       const data = '2026-03-02'
-      const { token, horario } = await montarCenario(data, 'Unidade 7')
+      const { cookie, horario } = await montarCenario(data, 'Unidade 7')
 
       const response = await app.request(
         '/api/registros',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ horarioId: horario.id, data, chegada: 'presente' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ horarioId: horario.id, data, chegada: 'PRESENTE' }),
         },
         testEnv,
       )
@@ -150,41 +148,41 @@ describe('registros de aula', () => {
       const body = (await response.json()) as RegistroDetalheOutputType
       expect(body.estagio).toBe('Unidade 7')
       expect(body.fechado).toBe(false)
-      expect(body.status).toBe('em_andamento')
+      expect(body.status).toBe('EM_ANDAMENTO')
     })
 
     it('persiste boletim/foco mesmo com chegada != presente, sem checar coerencia', async () => {
       const data = '2026-03-02'
-      const { token, horario } = await montarCenario(data)
+      const { cookie, horario } = await montarCenario(data)
 
       const response = await app.request(
         '/api/registros',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ horarioId: horario.id, data, chegada: 'faltou', boletim: 'pegou', foco: 'bom' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ horarioId: horario.id, data, chegada: 'FALTOU', boletim: 'PEGOU', foco: 'BOM' }),
         },
         testEnv,
       )
       expect(response.status).toBe(201)
       const body = (await response.json()) as RegistroDetalheOutputType
-      expect(body.chegada).toBe('faltou')
-      expect(body.boletim).toBe('pegou')
-      expect(body.foco).toBe('bom')
+      expect(body.chegada).toBe('FALTOU')
+      expect(body.boletim).toBe('PEGOU')
+      expect(body.foco).toBe('BOM')
     })
 
     it('duplicado pro mesmo (horarioId, data) -> 409', async () => {
       const data = '2026-03-02'
-      const { token, horario } = await montarCenario(data)
+      const { cookie, horario } = await montarCenario(data)
       await app.request(
         '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ horarioId: horario.id, data }) },
+        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ horarioId: horario.id, data }) },
         testEnv,
       )
 
       const resposta2 = await app.request(
         '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ horarioId: horario.id, data }) },
+        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ horarioId: horario.id, data }) },
         testEnv,
       )
       expect(resposta2.status).toBe(409)
@@ -193,13 +191,13 @@ describe('registros de aula', () => {
     it('professor usando horarioId de outro professor -> 400 (referencia invalida, nao 403)', async () => {
       const data = '2026-03-02'
       const outroCenario = await montarCenario(data)
-      const { token } = await montarCenario(data)
+      const { cookie } = await montarCenario(data)
 
       const response = await app.request(
         '/api/registros',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
           body: JSON.stringify({ horarioId: outroCenario.horario.id, data }),
         },
         testEnv,
@@ -209,13 +207,13 @@ describe('registros de aula', () => {
 
     it('conteudoIds inexistente -> 400', async () => {
       const data = '2026-03-02'
-      const { token, horario } = await montarCenario(data)
+      const { cookie, horario } = await montarCenario(data)
 
       const response = await app.request(
         '/api/registros',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
           body: JSON.stringify({
             horarioId: horario.id,
             data,
@@ -230,11 +228,11 @@ describe('registros de aula', () => {
     it('admin cria registro em qualquer horario', async () => {
       const data = '2026-03-02'
       const { horario } = await montarCenario(data)
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
 
       const response = await app.request(
         '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ horarioId: horario.id, data }) },
+        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ horarioId: horario.id, data }) },
         testEnv,
       )
       expect(response.status).toBe(201)
@@ -244,39 +242,39 @@ describe('registros de aula', () => {
   describe('PUT /api/registros/:id', () => {
     it('auto-save progressivo: cada PUT so aplica os campos enviados', async () => {
       const data = '2026-03-02'
-      const { token, horario } = await montarCenario(data)
+      const { cookie, horario } = await montarCenario(data)
       const criado = await app.request(
         '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ horarioId: horario.id, data, chegada: 'presente' }) },
+        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ horarioId: horario.id, data, chegada: 'PRESENTE' }) },
         testEnv,
       )
       const registro = (await criado.json()) as RegistroDetalheOutputType
 
       const resposta = await app.request(
         `/api/registros/${registro.id}`,
-        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ foco: 'excelente' }) },
+        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ foco: 'EXCELENTE' }) },
         testEnv,
       )
       expect(resposta.status).toBe(200)
       const body = (await resposta.json()) as RegistroDetalheOutputType
-      expect(body.foco).toBe('excelente')
-      expect(body.chegada).toBe('presente') // preservado
+      expect(body.foco).toBe('EXCELENTE')
+      expect(body.chegada).toBe('PRESENTE') // preservado
     })
 
     it('nao bloqueia editar um registro ja fechado', async () => {
       const data = '2026-03-02'
-      const { token, horario } = await montarCenario(data)
+      const { cookie, horario } = await montarCenario(data)
       const criado = await app.request(
         '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ horarioId: horario.id, data }) },
+        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ horarioId: horario.id, data }) },
         testEnv,
       )
       const registro = (await criado.json()) as RegistroDetalheOutputType
-      await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(token) }, testEnv)
+      await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
 
       const resposta = await app.request(
         `/api/registros/${registro.id}`,
-        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ anotacao: 'editado depois de fechado' }) },
+        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ anotacao: 'editado depois de fechado' }) },
         testEnv,
       )
       expect(resposta.status).toBe(200)
@@ -290,14 +288,14 @@ describe('registros de aula', () => {
       const outro = await montarCenario(data)
       const criado = await app.request(
         '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(dono.token) }, body: JSON.stringify({ horarioId: dono.horario.id, data }) },
+        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(dono.cookie) }, body: JSON.stringify({ horarioId: dono.horario.id, data }) },
         testEnv,
       )
       const registro = (await criado.json()) as RegistroDetalheOutputType
 
       const resposta = await app.request(
         `/api/registros/${registro.id}`,
-        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(outro.token) }, body: JSON.stringify({ anotacao: 'x' }) },
+        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(outro.cookie) }, body: JSON.stringify({ anotacao: 'x' }) },
         testEnv,
       )
       expect(resposta.status).toBe(404)
@@ -312,23 +310,23 @@ describe('registros de aula', () => {
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(new Date('2026-03-02T14:00:00.000Z'))
 
-      const { token, horario } = await montarCenario(data)
+      const { cookie, horario } = await montarCenario(data)
       const criado = await app.request(
         '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ horarioId: horario.id, data }) },
+        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ horarioId: horario.id, data }) },
         testEnv,
       )
       const registro = (await criado.json()) as RegistroDetalheOutputType
 
       vi.setSystemTime(new Date('2026-03-02T14:05:00.000Z'))
-      const primeira = await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(token) }, testEnv)
+      const primeira = await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
       const primeiroBody = (await primeira.json()) as RegistroDetalheOutputType
       expect(primeiroBody.fechado).toBe(true)
       expect(primeiroBody.duracaoMin).toBe(5)
-      expect(primeiroBody.status).toBe('concluido')
+      expect(primeiroBody.status).toBe('CONCLUIDO')
 
       vi.setSystemTime(new Date('2026-03-02T14:20:00.000Z'))
-      const segunda = await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(token) }, testEnv)
+      const segunda = await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
       const segundoBody = (await segunda.json()) as RegistroDetalheOutputType
       expect(segundoBody.duracaoMin).toBe(5) // nao virou 20
     })
