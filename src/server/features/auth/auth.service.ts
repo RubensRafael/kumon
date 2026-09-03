@@ -94,6 +94,23 @@ export async function autenticar(
   return { token, usuario: paraUsuarioOutput(usuario, professorId) }
 }
 
+/**
+ * Resolve `professorId` de uma leva de usuarios numa unica query, em vez de
+ * um `buscarProfessorIdPorUsuario` por usuario (evita N+1 numa listagem).
+ */
+export async function listarUsuarios(prisma: PrismaClient): Promise<UsuarioOutputType[]> {
+  const [usuarios, professores] = await Promise.all([
+    prisma.usuario.findMany({ orderBy: { nome: 'asc' } }),
+    prisma.professor.findMany({ where: { usuarioId: { not: null } }, select: { id: true, usuarioId: true } }),
+  ])
+
+  const professorIdPorUsuarioId = new Map(professores.map((p) => [p.usuarioId as string, p.id]))
+
+  return usuarios.map((usuario) =>
+    paraUsuarioOutput(usuario, professorIdPorUsuarioId.get(usuario.id) ?? null),
+  )
+}
+
 export async function usuarioAtual(prisma: PrismaClient, id: string): Promise<UsuarioOutputType> {
   const usuario = await prisma.usuario.findUnique({ where: { id } })
   if (!usuario) {

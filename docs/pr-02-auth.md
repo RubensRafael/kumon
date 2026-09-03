@@ -117,3 +117,10 @@ abaixo corresponde a um commit isolado.
   vínculo depois da criação, então não há o que ficar velho. Testes novos em
   `tests/e2e/auth.e2e.test.ts`, describe `authMiddleware revalida o usuario
   no banco`.
+- **`GET /usuarios` (listagem, admin-only).** Fecha o gap descrito na versão
+  original deste doc — a spec não define esse endpoint, mas sem ele
+  administrar usuários via API exigia guardar o `id` retornado na criação.
+  `listarUsuarios` resolve `professorId` de todos os usuários numa única
+  query extra (`Professor.findMany` + `Map`), evitando N+1 numa listagem.
+  Sem paginação, mesma convenção do resto da API (`plan.md`: "Sem paginação
+  por agora").

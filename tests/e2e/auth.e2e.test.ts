@@ -141,6 +141,39 @@ describe('auth', () => {
     })
   })
 
+  describe('GET /api/usuarios', () => {
+    it('admin lista todos os usuarios, com professorId resolvido', async () => {
+      const { usuario: admin, senha } = await criarUsuarioAdmin()
+      const { professor } = await criarUsuarioProfessor()
+      const { body } = await login(admin.email, senha)
+
+      const response = await app.request(
+        '/api/usuarios',
+        { headers: { authorization: `Bearer ${body.token}` } },
+        testEnv,
+      )
+
+      expect(response.status).toBe(200)
+      const lista = (await response.json()) as UsuarioOutputType[]
+      expect(lista).toHaveLength(2)
+      expect(lista.map((u) => u.email)).toContain(admin.email)
+      expect(lista.find((u) => u.professorId === professor.id)).toBeDefined()
+    })
+
+    it('professor autenticado recebe 403', async () => {
+      const { usuario, senha } = await criarUsuarioProfessor()
+      const { body } = await login(usuario.email, senha)
+
+      const response = await app.request(
+        '/api/usuarios',
+        { headers: { authorization: `Bearer ${body.token}` } },
+        testEnv,
+      )
+
+      expect(response.status).toBe(403)
+    })
+  })
+
   describe('POST /api/usuarios', () => {
     async function tokenAdmin() {
       const { usuario, senha } = await criarUsuarioAdmin()

@@ -46,6 +46,11 @@ export const meRoute = new Hono<AppEnv>().get('/', authMiddleware, async (c) => 
 
 /** `/usuarios/*` — sempre admin. */
 export const usuariosRoutes = new Hono<AppEnv>()
+  .get('/', authMiddleware, requireAdmin, async (c) => {
+    const usuarios = await authService.listarUsuarios(c.get('prisma'))
+    return c.json(usuarios.map((usuario) => UsuarioOutput.parse(usuario)))
+  })
+
   .post(
     '/',
     authMiddleware,
