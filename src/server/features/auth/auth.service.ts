@@ -1,7 +1,6 @@
 import { HTTPException } from 'hono/http-exception'
 import { sign } from 'hono/jwt'
 
-import { paraApi, paraBanco } from '../../lib/db-enum'
 import { SENHA_PLACEHOLDER, hashSenha, verificarSenha } from '../../lib/senha'
 import { gerarToken, hashToken } from '../../lib/token'
 import type { Papel, PrismaClient } from '../../db/generated/client'
@@ -22,7 +21,7 @@ interface UsuarioRow {
   id: string
   nome: string
   email: string
-  papel: string
+  papel: Papel
   ativo: boolean
 }
 
@@ -31,7 +30,7 @@ function paraUsuarioOutput(usuario: UsuarioRow, professorId: string | null): Usu
     id: usuario.id,
     nome: usuario.nome,
     email: usuario.email,
-    papel: paraApi(usuario.papel),
+    papel: usuario.papel,
     ativo: usuario.ativo,
     professorId,
   }
@@ -57,7 +56,7 @@ async function gerarJwt(
   const token = await sign(
     {
       sub: usuario.id,
-      papel: paraApi(usuario.papel),
+      papel: usuario.papel,
       professorId,
       exp: Math.floor(Date.now() / 1000) + SETE_DIAS_EM_SEGUNDOS,
     },
@@ -138,7 +137,7 @@ export async function criarUsuario(
       data: {
         nome: input.nome,
         email: input.email,
-        papel: paraBanco<Papel>(input.papel),
+        papel: input.papel,
         senhaHash: SENHA_PLACEHOLDER,
       },
     })
@@ -166,7 +165,7 @@ export async function atualizarUsuario(
   const atualizado = await prisma.usuario.update({
     where: { id },
     data: {
-      ...(input.papel !== undefined ? { papel: paraBanco<Papel>(input.papel) } : {}),
+      ...(input.papel !== undefined ? { papel: input.papel } : {}),
       ...(input.ativo !== undefined ? { ativo: input.ativo } : {}),
     },
   })

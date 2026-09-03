@@ -28,7 +28,7 @@ export interface Bindings extends Record<string, unknown> {
  */
 export interface AuthContext {
   id: string
-  papel: 'admin' | 'professor'
+  papel: 'ADMIN' | 'PROFESSOR'
   professorId: string | null
 }
 

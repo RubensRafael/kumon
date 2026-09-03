@@ -34,8 +34,8 @@ export const UsuarioCreateInput = z
     papel: PapelEnum,
     professorId: z.uuid().optional(),
   })
-  .refine((data) => (data.papel === 'professor') === (data.professorId !== undefined), {
-    message: 'professorId e obrigatorio quando papel = "professor" (e nao deve vir quando papel = "admin").',
+  .refine((data) => (data.papel === 'PROFESSOR') === (data.professorId !== undefined), {
+    message: 'professorId e obrigatorio quando papel = "PROFESSOR" (e nao deve vir quando papel = "ADMIN").',
     path: ['professorId'],
   })
 

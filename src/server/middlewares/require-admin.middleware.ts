@@ -13,7 +13,7 @@ import type { AppEnv } from '../types'
  * "Erros preveniveis pela UI").
  */
 export const requireAdmin = createMiddleware<AppEnv>(async (c, next) => {
-  if (c.get('usuario').papel !== 'admin') {
+  if (c.get('usuario').papel !== 'ADMIN') {
     throw new HTTPException(403, { message: 'Apenas administradores podem acessar este recurso.' })
   }
 

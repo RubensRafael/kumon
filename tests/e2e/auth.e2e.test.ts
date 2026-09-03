@@ -29,7 +29,7 @@ describe('auth', () => {
       expect(status).toBe(200)
       expect(body.token).toBeTypeOf('string')
       expect(body.usuario.email).toBe(usuario.email)
-      expect(body.usuario.papel).toBe('admin')
+      expect(body.usuario.papel).toBe('ADMIN')
     })
 
     it('rejeita usuario recem-criado: o placeholder de senha nunca valida', async () => {
@@ -82,7 +82,7 @@ describe('auth', () => {
       expect(response.status).toBe(200)
       const body = (await response.json()) as UsuarioOutputType
       expect(body.id).toBe(usuario.id)
-      expect(body.papel).toBe('professor')
+      expect(body.papel).toBe('PROFESSOR')
       expect(body.professorId).toBeTypeOf('string')
     })
 
@@ -120,7 +120,7 @@ describe('auth', () => {
           body: JSON.stringify({
             nome: 'Fulano',
             email: 'fulano@kflow.test',
-            papel: 'professor',
+            papel: 'PROFESSOR',
             professorId: professor.id,
           }),
         },
@@ -146,7 +146,7 @@ describe('auth', () => {
         {
           method: 'POST',
           headers: { ...jsonHeaders, authorization: `Bearer ${body.token}` },
-          body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'admin' }),
+          body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'ADMIN' }),
         },
         testEnv,
       )
@@ -161,7 +161,7 @@ describe('auth', () => {
         {
           method: 'POST',
           headers: { ...jsonHeaders, authorization: `Bearer ${token}` },
-          body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'professor' }),
+          body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'PROFESSOR' }),
         },
         testEnv,
       )
@@ -179,7 +179,7 @@ describe('auth', () => {
           body: JSON.stringify({
             nome: 'X',
             email: 'x@kflow.test',
-            papel: 'admin',
+            papel: 'ADMIN',
             professorId: professor.id,
           }),
         },
@@ -198,7 +198,7 @@ describe('auth', () => {
           body: JSON.stringify({
             nome: 'X',
             email: 'x@kflow.test',
-            papel: 'professor',
+            papel: 'PROFESSOR',
             professorId: '00000000-0000-0000-0000-000000000000',
           }),
         },
@@ -215,7 +215,7 @@ describe('auth', () => {
         {
           method: 'POST',
           headers: { ...jsonHeaders, authorization: `Bearer ${token}` },
-          body: JSON.stringify({ nome: 'X', email: existente.usuario.email, papel: 'admin' }),
+          body: JSON.stringify({ nome: 'X', email: existente.usuario.email, papel: 'ADMIN' }),
         },
         testEnv,
       )
@@ -233,7 +233,7 @@ describe('auth', () => {
           body: JSON.stringify({
             nome: 'X',
             email: 'x2@kflow.test',
-            papel: 'professor',
+            papel: 'PROFESSOR',
             professorId: professor.id,
           }),
         },

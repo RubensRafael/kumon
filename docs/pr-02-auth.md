@@ -96,3 +96,16 @@ Seção 1 da spec (`plan.md`), completa:
   `console.log` do token em dev). Isso é o que a spec pede explicitamente,
   mas vale registrar que o fluxo de reset em produção, hoje, não tem nenhum
   jeito de chegar ao usuário final até um provedor real ser conectado.
+
+## Atualizações pós-revisão
+
+Discussão completa em `discussao-pr-02.md` (untracked, na raiz). Cada item
+abaixo corresponde a um commit isolado.
+
+- **Enums uppercase em tudo, sem `paraApi`/`paraBanco`.** Revisa a decisão
+  original: o `plan.md` sugeria minúsculo na API com uma camada de conversão
+  genérica; na prática as duas pontas (banco e API) são fixadas de forma
+  independente pelo mesmo schema, então um único casing (MAIÚSCULO, igual ao
+  enum nativo do Postgres) elimina a conversão e os call sites com generic
+  explícito (`paraBanco<Papel>(...)`) que ela exigia. `src/server/lib/db-enum.ts`
+  foi removido; `PapelEnum` agora é `z.enum(['ADMIN', 'PROFESSOR'])`.
