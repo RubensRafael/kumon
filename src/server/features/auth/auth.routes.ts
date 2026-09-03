@@ -28,7 +28,13 @@ export const authRoutes = new Hono<AppEnv>()
 
   .post('/solicitar-reset', validate('json', SolicitarResetInput), async (c) => {
     const input = c.req.valid('json')
-    await authService.solicitarReset(c.get('prisma'), input, c.get('env').BACKEND_ENVIRONMENT)
+    await authService.solicitarReset(
+      c.get('prisma'),
+      input,
+      c.get('env').BACKEND_ENVIRONMENT,
+      c.get('env').BACKEND_RESEND_API_KEY,
+      new URL(c.req.url).origin,
+    )
     return c.body(null, 204)
   })
 

@@ -70,11 +70,10 @@ Seção 1 da spec (`plan.md`), completa:
 
 ## Pontos para revisão
 
-- Nenhum provedor de e-mail real está integrado — o "envio" de
-  `solicitar-reset` é, hoje, sempre um no-op (silencioso em produção, com
-  `console.log` do token em dev). Isso é o que a spec pede explicitamente,
-  mas vale registrar que o fluxo de reset em produção, hoje, não tem nenhum
-  jeito de chegar ao usuário final até um provedor real ser conectado.
+- **Nenhum provedor de e-mail real estava integrado.** Passou a existir um
+  esqueleto (`src/server/lib/email.ts`), ver "Atualizações pós-revisão" —
+  mas continua sem nenhuma conta Resend real conectada, então o e-mail em si
+  segue sem sair de fato até isso acontecer.
 
 ## Atualizações pós-revisão
 
@@ -134,3 +133,16 @@ abaixo corresponde a um commit isolado.
   proibir do lado do `ADMIN`. Ainda não dá pra vincular `professorId` a um
   admin já existente — só `POST /usuarios` faz esse link, na criação;
   `PUT /usuarios/:id` continua sem tocar nesse campo.
+- **Esqueleto de envio de e-mail via Resend** (`src/server/lib/email.ts`,
+  `enviarEmailResetSenha`). Nenhuma conta Resend real está conectada, então
+  o template (`RESEND_TEMPLATE_ID_RESET_SENHA`) é uma constante hardcoded
+  sem correspondência ainda numa conta de verdade. `BACKEND_RESEND_API_KEY`
+  é obrigatória no schema de env, mas com valor dummy hardcoded
+  (`RESEND_DUMMY_API_KEY`, replicado em `.env.example`) — enquanto a env
+  bater com esse sentinel, `enviarEmailResetSenha` é um no-op e não chama a
+  API do Resend; troca pra key de verdade quando existir conta, sem mudar
+  mais nada. `solicitarReset` ganhou dois parâmetros (`resendApiKey`,
+  `baseUrl` — este último vindo de `new URL(c.req.url).origin` na rota, pra
+  montar o link sem precisar de uma env nova só pra isso) e continua
+  fazendo o `console.log` do token em dev, como já fazia. Teste novo no
+  fluxo de reset confirma que `fetch` não é chamado com a key dummy.

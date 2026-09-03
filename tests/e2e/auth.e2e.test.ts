@@ -351,6 +351,7 @@ describe('auth', () => {
     it('fluxo completo: solicitar -> token no console -> resetar -> login com a nova senha', async () => {
       const { usuario } = await criarUsuarioAdmin()
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
       const solicitacao = await app.request(
         '/api/auth/solicitar-reset',
@@ -358,6 +359,11 @@ describe('auth', () => {
         testEnv,
       )
       expect(solicitacao.status).toBe(204)
+
+      // BACKEND_RESEND_API_KEY nos testes e o sentinel dummy: enviarEmailResetSenha
+      // nao deve chamar a API do Resend de verdade.
+      expect(fetchSpy).not.toHaveBeenCalled()
+      fetchSpy.mockRestore()
 
       const linha = logSpy.mock.calls.map((call) => String(call[0])).find((l) => l.includes(usuario.email))
       const token = linha?.split(': ').at(-1)

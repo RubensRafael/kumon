@@ -1,6 +1,7 @@
 import { HTTPException } from 'hono/http-exception'
 import { sign } from 'hono/jwt'
 
+import { enviarEmailResetSenha } from '../../lib/email'
 import { SENHA_PLACEHOLDER, hashSenha, verificarSenha } from '../../lib/senha'
 import { gerarToken, hashToken } from '../../lib/token'
 import type { Papel, PrismaClient } from '../../db/generated/client'
@@ -197,6 +198,8 @@ export async function solicitarReset(
   prisma: PrismaClient,
   input: SolicitarResetInputType,
   ambiente: string,
+  resendApiKey: string,
+  baseUrl: string,
 ): Promise<void> {
   const usuario = await prisma.usuario.findUnique({ where: { email: input.email } })
   // Sempre 204 no chamador, exista ou nao o e-mail — nao revela quem tem conta.
@@ -211,13 +214,15 @@ export async function solicitarReset(
     data: { resetTokenHash, resetTokenExpiraEm },
   })
 
-  // Nenhum provedor de e-mail esta configurado neste projeto (nao ha
-  // variavel de ambiente para isso) — o envio e, hoje, sempre um no-op
-  // silencioso. Em dev o token vai pro console do servidor, unico jeito de
-  // completar o fluxo sem um provedor de verdade.
+  // Em dev o token vai pro console do servidor — util pra completar o fluxo
+  // manualmente sem depender do e-mail chegar de verdade.
   if (ambiente === 'development') {
     console.log(`[auth] token de reset de senha para ${input.email}: ${token}`)
   }
+
+  // No-op enquanto BACKEND_RESEND_API_KEY for o valor dummy (nenhuma conta
+  // Resend conectada ainda) — ver `lib/email.ts`.
+  await enviarEmailResetSenha(resendApiKey, input.email, `${baseUrl}/resetar-senha?token=${token}`)
 }
 
 export async function resetarSenha(
