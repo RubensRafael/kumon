@@ -131,6 +131,7 @@ model Usuario {
   atualizadoEm       DateTime  @updatedAt
   professor          Professor?
 
+  @@index([resetTokenHash])
   @@map("usuarios")
 }
 
