@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { PainelOutputType } from '../../src/server/features/painel/painel.dto'
-import { authHeader, obterToken } from '../helpers/auth'
+import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
   criarHorario,
@@ -13,9 +13,9 @@ import {
 } from '../helpers/factories'
 import { app, prisma, resetDb, testEnv } from '../helpers/setup'
 
-async function tokenAdmin() {
+async function cookieAdmin() {
   const { usuario, senha } = await criarUsuarioAdmin()
-  return obterToken(usuario.email, senha)
+  return obterCookie(usuario.email, senha)
 }
 
 describe('painel', () => {
@@ -35,8 +35,8 @@ describe('painel', () => {
       await criarHorario({ matriculaId: matricula1.id, diaSemana: 'SEG' })
       await criarHorario({ matriculaId: matricula2.id, diaSemana: 'TER' })
 
-      const token = await tokenAdmin()
-      const response = await app.request('/api/painel', { headers: authHeader(token) }, testEnv)
+      const cookie = await cookieAdmin()
+      const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
       expect(response.status).toBe(200)
       const body = (await response.json()) as PainelOutputType
 
@@ -47,7 +47,7 @@ describe('painel', () => {
         { materiaId: materia.id, materiaNome: materia.nome, total: 2 },
       ])
       expect(body.aulasPorDiaSemana.length).toBe(7) // todos os 7 dias, mesmo com total 0
-      const segunda = body.aulasPorDiaSemana.find((d) => d.diaSemana === 'seg')
+      const segunda = body.aulasPorDiaSemana.find((d) => d.diaSemana === 'SEG')
       expect(segunda?.total).toBe(1)
     })
 
@@ -64,8 +64,8 @@ describe('painel', () => {
       const matriculaDeOutro = await criarMatricula({ alunoId: alunoDeOutro.id, professorId: outroProfessor.id, materiaId: materia.id })
       await criarHorario({ matriculaId: matriculaDeOutro.id })
 
-      const token = await obterToken(usuario.email, senha)
-      const response = await app.request('/api/painel', { headers: authHeader(token) }, testEnv)
+      const cookie = await obterCookie(usuario.email, senha)
+      const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as PainelOutputType
 
       expect(body.totalAlunosAtivos).toBe(1)
@@ -89,8 +89,8 @@ describe('painel', () => {
       const matriculaDeOutro = await criarMatricula({ alunoId: alunoVermelhoDeOutro.id, professorId: outroProfessor.id, materiaId: materia.id })
       await criarHorario({ matriculaId: matriculaDeOutro.id })
 
-      const token = await obterToken(usuario.email, senha)
-      const response = await app.request('/api/painel', { headers: authHeader(token) }, testEnv)
+      const cookie = await obterCookie(usuario.email, senha)
+      const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as PainelOutputType
 
       expect(body.alertas.length).toBe(1)
@@ -99,8 +99,8 @@ describe('painel', () => {
     })
 
     it('ocupacaoPercentual e 0 quando nao ha capacidade nem horarios', async () => {
-      const token = await tokenAdmin()
-      const response = await app.request('/api/painel', { headers: authHeader(token) }, testEnv)
+      const cookie = await cookieAdmin()
+      const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as PainelOutputType
       expect(body.ocupacaoPercentual).toBe(0)
     })

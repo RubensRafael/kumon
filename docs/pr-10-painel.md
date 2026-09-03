@@ -64,14 +64,26 @@ documentadas aqui para revisão deliberada.
   for `0` (nenhum professor com horário configurado), o valor cai pra `0`
   em vez de `NaN`/erro — coberto por teste.
 
+## Atualizações pós-revisão
+
+Merge em cascata de `feat/09-agenda` (que já trouxe o merge do PR 02/03, ver
+`docs/pr-03-professores.md`): `painel.service.ts` perdeu o import de
+`paraApi` (`DiaSemanaEnum` já era uppercase desde o PR 03) — `diaSemana` em
+`aulasPorDiaSemana` passa direto de `DIAS_BANCO`, sem cast.
+`tests/e2e/painel.e2e.test.ts` migrado para `obterCookie`/`authHeader` (auth
+por cookie) e o literal `d.diaSemana === 'seg'` para `'SEG'`. `alertas[].tipo`
+(`'zona_vermelha'`) não faz parte dessa convenção — é `z.string()` livre em
+`painel.dto.ts`, não um enum compartilhado espelhando um enum nativo do
+Postgres, então ficou como estava.
+
 ---
 
 ## Cadeia completa
 
 Com esta PR, as 10 branches (`feat/01-prisma-setup` até `feat/10-painel`)
 implementam o `plan.md` inteiro, seção por seção, cada uma com seus próprios
-testes e2e (96 no total) rodando contra um Postgres real via
-`docker-compose.yml`. Decisões de arquitetura (stack Cloudflare Workers +
-Neon mantida, ver `docs/pr-01-prisma-setup.md`) e toda ambiguidade resolvida
-ao longo do caminho estão documentadas PR a PR, para revisão antes de cada
-merge.
+testes e2e (101 no total, após os ajustes pós-revisão do PR 02) rodando
+contra um Postgres real via `docker-compose.yml`. Decisões de arquitetura
+(stack Cloudflare Workers + Neon mantida, ver `docs/pr-01-prisma-setup.md`) e
+toda ambiguidade resolvida ao longo do caminho estão documentadas PR a PR,
+para revisão antes de cada merge.
