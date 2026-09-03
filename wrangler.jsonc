@@ -25,8 +25,9 @@
     "not_found_handling": "none"
   },
 
-  // Mantem as variaveis/secrets definidas no dashboard da Cloudflare:
-  // um `wrangler deploy` nao apaga o que foi configurado por la.
+  // Sem esta flag o Wrangler trata este arquivo como fonte da verdade e apaga,
+  // a cada deploy, as variaveis de texto criadas no dashboard. Secrets nunca
+  // sao apagados por um deploy.
   "keep_vars": true,
 
   "observability": {
@@ -35,6 +36,7 @@
 
   // As variaveis BACKEND_* nao ficam aqui. Em desenvolvimento o Wrangler as le
   // do `.env` (o que ele faz automaticamente quando nao existe um `.dev.vars`);
-  // em producao venham de `wrangler secret put BACKEND_DATABASE_URL` ou do
-  // dashboard.
+  // em producao elas vem do dashboard, em Settings > Variables and Secrets.
+  // Use o tipo "Secret" para a BACKEND_DATABASE_URL: como "Text" a senha do
+  // banco fica legivel para quem tiver acesso a conta.
 }

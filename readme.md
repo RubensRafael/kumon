@@ -79,14 +79,9 @@ const list = await callApi('listUsers', { query: { limit: 10 } })
 await callApi('createUser', { body: { email, name } }) // erra o body -> nao compila
 ```
 
-**Por que nao o RPC do Hono (`hc<typeof app>`).** O RPC obriga o cliente a
-importar os tipos do servidor, e o TypeScript entao carrega todo o grafo do
-back-end — incluindo o Prisma Client gerado — no projeto do front-end. Nada
-disso chega ao bundle, mas o acoplamento e real e os modelos do banco passam a
-moldar o contrato publico. O contrato compartilhado da a mesma seguranca de
-tipos ponta a ponta sem essa dependencia. Para quem preferir o RPC,
-`src/server/routes/index.ts` exporta `ApiRoutes = typeof apiRoutes`, pronto para
-`hc<ApiRoutes>('/api')`.
+O servidor nao exporta nenhum tipo para o cliente: a dependencia vai nos dois
+sentidos apenas para `src/shared/`, e o front-end jamais carrega o grafo do
+back-end (nem o Prisma Client gerado) no seu projeto de compilacao.
 
 Os DTOs sao escritos a mao, nunca derivados dos modelos do Prisma: uma coluna
 nova no banco nao vaza para a API sem alguem decidir por isso.
@@ -115,6 +110,7 @@ O prefixo define quem enxerga a variavel:
 | Prefixo | Onde vive | Chega ao bundle do browser? |
 | --- | --- | --- |
 | `BACKEND_*` | `c.env` no Worker, `process.env` no Prisma CLI | **Nao** |
+
 | `FRONTEND_*` | `import.meta.env` no browser | Sim — nunca coloque segredo |
 
 `envPrefix: ['FRONTEND_']` no `vite.config.ts` substitui o `VITE_` padrao, entao
@@ -183,14 +179,27 @@ Prisma CLI.
 
 ## Deploy
 
+As variaveis de producao ficam no dashboard da Cloudflare, em
+*Worker > Settings > Variables and Secrets > Add*. Ao adicionar, escolha o
+**tipo**:
+
+| Variavel | Tipo | Por que |
+| --- | --- | --- |
+| `BACKEND_DATABASE_URL` | **Secret** | a connection string do Neon carrega a senha do banco. Como `Text` ela fica legivel em texto claro no dashboard e via API/Wrangler para qualquer pessoa com acesso a conta |
+| `BACKEND_ENVIRONMENT` | Text | e so `"production"`, nao ha o que proteger |
+
+`Secret` e `Text` sao a mesma feature, na mesma tela — muda so o tipo
+escolhido, e nao e preciso usar `wrangler secret put`. Nos dois casos o valor
+chega igual em `c.env`; o codigo nao muda.
+
 ```bash
-npx wrangler secret put BACKEND_DATABASE_URL   # ou defina no dashboard
-npx wrangler secret put BACKEND_ENVIRONMENT    # "production"
 npm run deploy
 ```
 
-`keep_vars: true` no `wrangler.jsonc` garante que um deploy nao apague as
-variaveis configuradas pelo dashboard.
+`keep_vars: true` no `wrangler.jsonc` garante que o deploy nao apague as
+variaveis de texto configuradas pelo dashboard (sem ele, o Wrangler trata o
+arquivo de config como fonte da verdade e limpa o resto). Secrets nunca sao
+apagados por um deploy, com ou sem a flag.
 
 ## Notas de implementacao
 
