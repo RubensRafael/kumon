@@ -54,3 +54,14 @@ Seção 6 da spec, completa:
   em `matricula_horarios (matricula_id, dia_semana, horario) WHERE ativo` —
   vale essa conversa antes do merge, já que muda o schema que foi declarado
   fechado.
+
+## Atualizações pós-revisão
+
+Merge em cascata de `feat/06-matriculas` (que já trouxe o merge do PR 02/03,
+ver `docs/pr-03-professores.md`): `horarios.service.ts` perdeu o import de
+`paraApi`/`paraBanco` — `DiaSemanaEnum` já era uppercase desde o PR 03, então
+aqui é só a limpeza da camada de conversão; `HorarioRow.diaSemana` passou a
+usar o tipo `DiaSemana` gerado pelo Prisma direto. `tests/e2e/horarios.e2e.test.ts`
+migrado para `obterCookie`/`authHeader` (auth por cookie) e os literais de
+`diaSemana` nos corpos de request (`'sex'`, `'ter'`, `'qui'`, `'seg'`) para
+maiúsculo.
