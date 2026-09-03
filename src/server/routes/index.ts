@@ -6,6 +6,7 @@ import { alunosRoutes } from '../features/alunos/alunos.routes'
 import { authRoutes, meRoute, usuariosRoutes } from '../features/auth/auth.routes'
 import { conteudosRoutes, materiasRoutes } from '../features/materias/materias.routes'
 import { horariosRoutes, matriculaHorariosRoutes } from '../features/horarios/horarios.routes'
+import { agendaRoutes, alunoAgendaRoutes } from '../features/agenda/agenda.routes'
 import { alunoMatriculasRoutes, matriculasRoutes } from '../features/matriculas/matriculas.routes'
 import { professoresRoutes } from '../features/professores/professores.routes'
 import { registrosRoutes } from '../features/registros/registros.routes'
@@ -38,6 +39,8 @@ apiRoutes.route('/matriculas', matriculasRoutes)
 apiRoutes.route('/matriculas', matriculaHorariosRoutes)
 apiRoutes.route('/horarios', horariosRoutes)
 apiRoutes.route('/registros', registrosRoutes)
+apiRoutes.route('/agenda', agendaRoutes)
+apiRoutes.route('/alunos', alunoAgendaRoutes)
 
 /**
  * Catch-all da API.
