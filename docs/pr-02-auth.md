@@ -116,3 +116,10 @@ abaixo corresponde a um commit isolado.
   campo simplesmente não é tocado — então `papel: input.papel, ativo:
   input.ativo` direto tem o mesmo efeito, sem os dois `...(x !== undefined ?
   {...} : {})`.
+- **`verificarSenha` sem o guard `startsWith('$2')`.** Redundante: o
+  `bcryptjs` (`compare`/`compareSync`) já checa `hash.length !== 60` antes de
+  tentar decodificar qualquer coisa e devolve `false` sem lançar — é
+  exatamente o caso do `SENHA_PLACEHOLDER` (44 chars). O `try/catch` sozinho
+  já cobre o caso geral (hash de 60 chars com prefixo de salt inválido), que
+  é quando `bcryptjs` de fato lança. Confirmado lendo
+  `node_modules/bcryptjs/index.js:226-232` antes de remover.
