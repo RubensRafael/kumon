@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import type { ApiError } from '../../shared/dto'
 import { prismaMiddleware } from '../db/prisma.middleware'
 import { authRoutes, meRoute, usuariosRoutes } from '../features/auth/auth.routes'
+import { professoresRoutes } from '../features/professores/professores.routes'
 import { envMiddleware } from '../middlewares/env.middleware'
 import type { AppEnv } from '../types'
 import { healthRoute } from './health.route'
@@ -23,6 +24,7 @@ apiRoutes.route('/health', healthRoute)
 apiRoutes.route('/auth', authRoutes)
 apiRoutes.route('/me', meRoute)
 apiRoutes.route('/usuarios', usuariosRoutes)
+apiRoutes.route('/professores', professoresRoutes)
 
 /**
  * Catch-all da API.
