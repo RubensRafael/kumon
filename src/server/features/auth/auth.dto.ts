@@ -16,8 +16,11 @@ export const UsuarioOutput = z.object({
   professorId: z.uuid().nullable(),
 })
 
+/**
+ * O token nunca aparece aqui — vai num cookie `HttpOnly` setado por
+ * `POST /auth/login` (ver `authMiddleware`), nao no corpo da resposta.
+ */
 export const LoginOutput = z.object({
-  token: z.string(),
   usuario: UsuarioOutput,
 })
 

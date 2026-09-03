@@ -7,7 +7,6 @@ import { gerarToken, hashToken } from '../../lib/token'
 import type { Papel, PrismaClient } from '../../db/generated/client'
 import type {
   LoginInputType,
-  LoginOutputType,
   ResetarSenhaInputType,
   SolicitarResetInputType,
   UsuarioCreateInputType,
@@ -15,8 +14,20 @@ import type {
   UsuarioUpdateInputType,
 } from './auth.dto'
 
-const SETE_DIAS_EM_SEGUNDOS = 7 * 24 * 60 * 60
+/** Validade do JWT de sessao — tambem o `maxAge` do cookie que o carrega. */
+export const SETE_DIAS_EM_SEGUNDOS = 7 * 24 * 60 * 60
 const RESET_EXPIRACAO_MS = 60 * 60 * 1000
+
+/**
+ * Retorno interno de `autenticar` — inclui o token cru porque a rota precisa
+ * dele pra setar o cookie. Nao e o formato exposto ao cliente: `LoginOutput`
+ * (o DTO em `auth.dto.ts`) so leva `usuario`, o token nunca aparece no corpo
+ * da resposta.
+ */
+export interface ResultadoLogin {
+  token: string
+  usuario: UsuarioOutputType
+}
 
 interface UsuarioRow {
   id: string
@@ -79,7 +90,7 @@ export async function autenticar(
   prisma: PrismaClient,
   jwtSecret: string,
   input: LoginInputType,
-): Promise<LoginOutputType> {
+): Promise<ResultadoLogin> {
   const usuario = await prisma.usuario.findUnique({ where: { email: input.email } })
 
   if (!usuario || !usuario.ativo) {

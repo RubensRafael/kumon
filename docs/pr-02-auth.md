@@ -119,6 +119,26 @@ abaixo corresponde a um commit isolado.
   query extra (`Professor.findMany` + `Map`), evitando N+1 numa listagem.
   Sem paginação, mesma convenção do resto da API (`plan.md`: "Sem paginação
   por agora").
+- **Autenticação via cookie `HttpOnly`, em vez de `Authorization: Bearer` no
+  corpo.** O `plan.md` pseudocodifica `authMiddleware` lendo
+  `c.req.header("authorization")` — essa era a implementação original.
+  Revista porque front e back são a mesma origem (`wrangler.jsonc`: um
+  Worker só serve os assets da SPA e a API), então um cookie funciona sem
+  CORS no caminho, e `HttpOnly` tira o token do alcance de qualquer JS do
+  front (fecha a classe de risco "XSS rouba o token do `localStorage`").
+  `POST /auth/login` seta o cookie `kflow_token` (`HttpOnly`, `SameSite=Strict`,
+  `maxAge` igual à validade do JWT) em vez de devolver `token` no corpo —
+  `LoginOutput` agora só tem `usuario`. `secure` é condicional
+  (`BACKEND_ENVIRONMENT === 'production'`): sempre `true` quebraria login em
+  dev local (`http://localhost`, sem HTTPS — o browser descartaria o cookie
+  em silêncio). `authMiddleware` lê o cookie via `getCookie` (`hono/cookie`)
+  em vez do header. Novo `POST /auth/logout` (público, sem `authMiddleware`)
+  limpa o cookie — não existia nenhum antes, porque um bearer token não tem
+  contraparte no servidor pra "encerrar"; vale registrar que isso continua
+  sendo só client-side: o JWT em si não é revogado (é stateless), só o
+  cookie do browser é limpo — um token capturado antes do logout continua
+  validando até expirar. Testes e2e reescritos pra capturar o cookie do
+  `Set-Cookie` da resposta de login em vez de ler `body.token`.
 - **Admin pode ter `professorId` vinculado.** A validação original proibia
   a combinação (`papel === 'ADMIN'` com `professorId` preenchido → `400`).
   Revista: a pessoa administrar E dar aula é um caso real (comum numa

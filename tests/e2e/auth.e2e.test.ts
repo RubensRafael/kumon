@@ -6,13 +6,24 @@ import { app, prisma, resetDb, testEnv } from '../helpers/setup'
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
+/** Extrai `nome=valor` do `Set-Cookie` da resposta, pronto pra virar header `Cookie` numa proxima request. */
+function extrairCookie(response: Response): string {
+  const setCookie = response.headers.get('set-cookie')
+  if (!setCookie) throw new Error('resposta de login nao setou cookie de sessao')
+  return setCookie.split(';')[0]
+}
+
 async function login(email: string, senha: string) {
   const response = await app.request(
     '/api/auth/login',
     { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ email, senha }) },
     testEnv,
   )
-  return { status: response.status, body: (await response.json()) as LoginOutputType }
+  return {
+    status: response.status,
+    body: (await response.json()) as LoginOutputType,
+    cookie: response.status === 200 ? extrairCookie(response) : null,
+  }
 }
 
 describe('auth', () => {
@@ -21,13 +32,13 @@ describe('auth', () => {
   })
 
   describe('POST /api/auth/login', () => {
-    it('autentica com credenciais corretas e devolve token + usuario', async () => {
+    it('autentica com credenciais corretas, seta cookie de sessao e devolve o usuario', async () => {
       const { usuario, senha } = await criarUsuarioAdmin()
 
-      const { status, body } = await login(usuario.email, senha)
+      const { status, body, cookie } = await login(usuario.email, senha)
 
       expect(status).toBe(200)
-      expect(body.token).toBeTypeOf('string')
+      expect(cookie).toMatch(/^kflow_token=.+/)
       expect(body.usuario.email).toBe(usuario.email)
       expect(body.usuario.papel).toBe('ADMIN')
     })
@@ -68,16 +79,35 @@ describe('auth', () => {
     })
   })
 
+  describe('POST /api/auth/logout', () => {
+    it('limpa o cookie de sessao', async () => {
+      const { usuario, senha } = await criarUsuarioAdmin()
+      const { cookie } = await login(usuario.email, senha)
+
+      const response = await app.request(
+        '/api/auth/logout',
+        { method: 'POST', headers: { cookie: cookie! } },
+        testEnv,
+      )
+
+      expect(response.status).toBe(204)
+      const setCookie = response.headers.get('set-cookie')
+      expect(setCookie).toMatch(/^kflow_token=;/)
+
+      const me = await app.request('/api/me', { headers: { cookie: cookie! } }, testEnv)
+      expect(me.status).toBe(200) // logout nao revoga o JWT em si, so limpa o cookie do browser
+
+      const semCookie = await app.request('/api/me', {}, testEnv)
+      expect(semCookie.status).toBe(401)
+    })
+  })
+
   describe('GET /api/me', () => {
     it('devolve o usuario autenticado, com professorId resolvido', async () => {
       const { usuario, senha } = await criarUsuarioProfessor()
-      const { body: loginBody } = await login(usuario.email, senha)
+      const { cookie } = await login(usuario.email, senha)
 
-      const response = await app.request(
-        '/api/me',
-        { headers: { authorization: `Bearer ${loginBody.token}` } },
-        testEnv,
-      )
+      const response = await app.request('/api/me', { headers: { cookie: cookie! } }, testEnv)
 
       expect(response.status).toBe(200)
       const body = (await response.json()) as UsuarioOutputType
@@ -94,7 +124,7 @@ describe('auth', () => {
     it('token invalido -> 401', async () => {
       const response = await app.request(
         '/api/me',
-        { headers: { authorization: 'Bearer token-forjado' } },
+        { headers: { cookie: 'kflow_token=token-forjado' } },
         testEnv,
       )
       expect(response.status).toBe(401)
@@ -104,7 +134,7 @@ describe('auth', () => {
   describe('authMiddleware revalida o usuario no banco', () => {
     it('usuario desativado depois do login -> 401 mesmo com token ainda valido', async () => {
       const { usuario, senha } = await criarUsuarioAdmin()
-      const { body } = await login(usuario.email, senha)
+      const { cookie } = await login(usuario.email, senha)
 
       await prisma.usuario.update({ where: { id: usuario.id }, data: { ativo: false } })
 
@@ -112,7 +142,7 @@ describe('auth', () => {
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${body.token}` },
+          headers: { ...jsonHeaders, cookie: cookie! },
           body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'ADMIN' }),
         },
         testEnv,
@@ -123,7 +153,7 @@ describe('auth', () => {
 
     it('papel alterado depois do login -> 403 numa rota admin-only, ignora o papel do token', async () => {
       const { usuario, senha } = await criarUsuarioAdmin()
-      const { body } = await login(usuario.email, senha)
+      const { cookie } = await login(usuario.email, senha)
 
       await prisma.usuario.update({ where: { id: usuario.id }, data: { papel: 'PROFESSOR' } })
 
@@ -131,7 +161,7 @@ describe('auth', () => {
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${body.token}` },
+          headers: { ...jsonHeaders, cookie: cookie! },
           body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'ADMIN' }),
         },
         testEnv,
@@ -145,13 +175,9 @@ describe('auth', () => {
     it('admin lista todos os usuarios, com professorId resolvido', async () => {
       const { usuario: admin, senha } = await criarUsuarioAdmin()
       const { professor } = await criarUsuarioProfessor()
-      const { body } = await login(admin.email, senha)
+      const { cookie } = await login(admin.email, senha)
 
-      const response = await app.request(
-        '/api/usuarios',
-        { headers: { authorization: `Bearer ${body.token}` } },
-        testEnv,
-      )
+      const response = await app.request('/api/usuarios', { headers: { cookie: cookie! } }, testEnv)
 
       expect(response.status).toBe(200)
       const lista = (await response.json()) as UsuarioOutputType[]
@@ -162,34 +188,30 @@ describe('auth', () => {
 
     it('professor autenticado recebe 403', async () => {
       const { usuario, senha } = await criarUsuarioProfessor()
-      const { body } = await login(usuario.email, senha)
+      const { cookie } = await login(usuario.email, senha)
 
-      const response = await app.request(
-        '/api/usuarios',
-        { headers: { authorization: `Bearer ${body.token}` } },
-        testEnv,
-      )
+      const response = await app.request('/api/usuarios', { headers: { cookie: cookie! } }, testEnv)
 
       expect(response.status).toBe(403)
     })
   })
 
   describe('POST /api/usuarios', () => {
-    async function tokenAdmin() {
+    async function cookieAdmin() {
       const { usuario, senha } = await criarUsuarioAdmin()
-      const { body } = await login(usuario.email, senha)
-      return body.token
+      const { cookie } = await login(usuario.email, senha)
+      return cookie!
     }
 
     it('admin cria usuario professor vinculado a um professor existente', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const professor = await criarProfessor()
 
       const response = await app.request(
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${token}` },
+          headers: { ...jsonHeaders, cookie },
           body: JSON.stringify({
             nome: 'Fulano',
             email: 'fulano@kflow.test',
@@ -212,13 +234,13 @@ describe('auth', () => {
 
     it('professor autenticado recebe 403 (gestao de usuario nao e filtragem por escopo)', async () => {
       const { usuario, senha } = await criarUsuarioProfessor()
-      const { body } = await login(usuario.email, senha)
+      const { cookie } = await login(usuario.email, senha)
 
       const response = await app.request(
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${body.token}` },
+          headers: { ...jsonHeaders, cookie: cookie! },
           body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'ADMIN' }),
         },
         testEnv,
@@ -228,12 +250,12 @@ describe('auth', () => {
     })
 
     it('papel=professor sem professorId -> 400', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const response = await app.request(
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${token}` },
+          headers: { ...jsonHeaders, cookie },
           body: JSON.stringify({ nome: 'X', email: 'x@kflow.test', papel: 'PROFESSOR' }),
         },
         testEnv,
@@ -242,13 +264,13 @@ describe('auth', () => {
     })
 
     it('papel=admin com professorId cria o vinculo normalmente (admin tambem pode dar aula)', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const professor = await criarProfessor()
       const response = await app.request(
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${token}` },
+          headers: { ...jsonHeaders, cookie },
           body: JSON.stringify({
             nome: 'X',
             email: 'x@kflow.test',
@@ -265,12 +287,12 @@ describe('auth', () => {
     })
 
     it('professorId inexistente -> 400', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const response = await app.request(
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${token}` },
+          headers: { ...jsonHeaders, cookie },
           body: JSON.stringify({
             nome: 'X',
             email: 'x@kflow.test',
@@ -284,13 +306,13 @@ describe('auth', () => {
     })
 
     it('e-mail duplicado -> 409', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const existente = await criarUsuarioAdmin()
       const response = await app.request(
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${token}` },
+          headers: { ...jsonHeaders, cookie },
           body: JSON.stringify({ nome: 'X', email: existente.usuario.email, papel: 'ADMIN' }),
         },
         testEnv,
@@ -299,13 +321,13 @@ describe('auth', () => {
     })
 
     it('professor ja vinculado a outro usuario -> 409', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const { professor } = await criarUsuarioProfessor()
       const response = await app.request(
         '/api/usuarios',
         {
           method: 'POST',
-          headers: { ...jsonHeaders, authorization: `Bearer ${token}` },
+          headers: { ...jsonHeaders, cookie },
           body: JSON.stringify({
             nome: 'X',
             email: 'x2@kflow.test',
@@ -322,7 +344,7 @@ describe('auth', () => {
   describe('PUT /api/usuarios/:id', () => {
     it('atualiza ativo/papel e ignora silenciosamente qualquer senha enviada', async () => {
       const admin = await criarUsuarioAdmin()
-      const { body: loginAdmin } = await login(admin.usuario.email, admin.senha)
+      const { cookie: cookieAdmin } = await login(admin.usuario.email, admin.senha)
 
       const alvo = await criarUsuarioAdmin()
 
@@ -330,7 +352,7 @@ describe('auth', () => {
         `/api/usuarios/${alvo.usuario.id}`,
         {
           method: 'PUT',
-          headers: { ...jsonHeaders, authorization: `Bearer ${loginAdmin.token}` },
+          headers: { ...jsonHeaders, cookie: cookieAdmin! },
           body: JSON.stringify({ ativo: false, senha: 'senha-hackeada' }),
         },
         testEnv,

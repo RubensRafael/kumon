@@ -1,3 +1,4 @@
+import { getCookie } from 'hono/cookie'
 import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 import { verify } from 'hono/jwt'
@@ -6,6 +7,15 @@ import { z } from 'zod'
 import { PapelEnum } from '../../shared/dto/enums'
 import type { AppEnv } from '../types'
 
+/**
+ * Nome do cookie de sessao. Front e back sao a mesma origem (Worker unico
+ * servindo os assets da SPA e a API, ver `wrangler.jsonc`), entao um cookie
+ * `HttpOnly` funciona sem CORS no caminho e sem o token nunca ficar
+ * acessivel ao JS do front — `POST /auth/login` seta, `POST /auth/logout`
+ * limpa.
+ */
+export const TOKEN_COOKIE_NAME = 'kflow_token'
+
 const jwtPayloadSchema = z.object({
   sub: z.string(),
   papel: PapelEnum,
@@ -13,8 +23,7 @@ const jwtPayloadSchema = z.object({
 })
 
 /**
- * Decodifica o JWT do header `Authorization: Bearer <token>` e injeta o
- * usuario em `c.var.usuario`.
+ * Le o JWT do cookie `kflow_token` e injeta o usuario em `c.var.usuario`.
  *
  * Revalida `ativo`/`papel` no banco a cada request: o token sozinho garante
  * só que foi emitido por nós e ainda não expirou, não que continua
@@ -25,8 +34,7 @@ const jwtPayloadSchema = z.object({
  * a criação, então não há valor em rebuscá-lo aqui.
  */
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
-  const header = c.req.header('authorization')
-  const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : null
+  const token = getCookie(c, TOKEN_COOKIE_NAME)
 
   if (!token) {
     throw new HTTPException(401, { message: 'Token de autenticacao ausente.' })

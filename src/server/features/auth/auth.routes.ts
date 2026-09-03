@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
+import { deleteCookie, setCookie } from 'hono/cookie'
 
 import { validate } from '../../lib/validator'
-import { authMiddleware } from '../../middlewares/auth.middleware'
+import { TOKEN_COOKIE_NAME, authMiddleware } from '../../middlewares/auth.middleware'
 import { requireAdmin } from '../../middlewares/require-admin.middleware'
 import type { AppEnv } from '../../types'
 import {
@@ -18,12 +19,28 @@ import * as authService from './auth.service'
 export const authRoutes = new Hono<AppEnv>()
   .post('/login', validate('json', LoginInput), async (c) => {
     const input = c.req.valid('json')
-    const resultado = await authService.autenticar(
+    const { token, usuario } = await authService.autenticar(
       c.get('prisma'),
       c.get('env').BACKEND_JWT_SECRET,
       input,
     )
-    return c.json(resultado)
+
+    setCookie(c, TOKEN_COOKIE_NAME, token, {
+      httpOnly: true,
+      // `Secure` exige HTTPS — em dev local (`npm run dev`, http://localhost)
+      // o browser descartaria o cookie silenciosamente se isso fosse sempre true.
+      secure: c.get('env').BACKEND_ENVIRONMENT === 'production',
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: authService.SETE_DIAS_EM_SEGUNDOS,
+    })
+
+    return c.json({ usuario })
+  })
+
+  .post('/logout', async (c) => {
+    deleteCookie(c, TOKEN_COOKIE_NAME, { path: '/' })
+    return c.body(null, 204)
   })
 
   .post('/solicitar-reset', validate('json', SolicitarResetInput), async (c) => {
