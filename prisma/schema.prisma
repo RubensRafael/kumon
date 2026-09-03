@@ -1,10 +1,19 @@
-// Prisma 7 + Neon (PostgreSQL) rodando na Edge da Cloudflare.
+// Prisma 7 rodando em dois transportes, escolhidos em runtime por
+// `src/server/db/client.ts`:
 //
-// Duas mudancas em relacao ao Prisma 6 valem nota:
+//   - Cloudflare Workers (producao e `wrangler dev`): Driver Adapter do Neon
+//     (`@prisma/adapter-neon`), unico jeito de falar com Postgres sem socket
+//     TCP cru, que o workerd nao expoe.
+//   - Node.js puro (`npm run dev` via Vite e os testes e2e do Vitest): Driver
+//     Adapter do `pg` (`@prisma/adapter-pg`), TCP normal contra o Postgres do
+//     `docker-compose.yml`.
+//
+// As duas mudancas do Prisma 6 pro 7 valem nota:
 //   - o datasource nao declara mais `url`; a connection string do CLI vive em
-//     `prisma.config.ts` e a de runtime vem do Driver Adapter;
+//     `prisma.config.ts` e a de runtime vem do Driver Adapter escolhido acima;
 //   - `driverAdapters` deixou de ser preview feature — e o unico modo de
-//     operacao, entao nao ha flag para ativar.
+//     operacao, entao nao ha flag para ativar, e um adapter e sempre
+//     obrigatorio na instanciacao do client.
 
 generator client {
   provider = "prisma-client"
@@ -14,7 +23,8 @@ generator client {
   output = "../src/server/db/generated"
 
   // `cloudflare` gera o client para o runtime dos Workers, que bloqueia a
-  // instanciacao de `WebAssembly.Module()` em tempo de execucao.
+  // instanciacao de `WebAssembly.Module()` em tempo de execucao. O mesmo
+  // client, pareado com o adapter do `pg`, funciona igual em Node puro.
   runtime      = "cloudflare"
   moduleFormat = "esm"
 }
@@ -24,31 +34,253 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Modelos de exemplo — troque pelos seus.
+// Enums nativos do Postgres. Resolvem de graca a antiga duvida "int no banco,
+// string na API": o Postgres guarda o enum de forma compacta e o Prisma
+// devolve o tipo string tipado sozinho, sem mapa manual int<->string.
 // ---------------------------------------------------------------------------
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  posts Post[]
-
-  @@map("users")
+enum Papel {
+  ADMIN
+  PROFESSOR
 }
 
-model Post {
-  id        String   @id @default(uuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
+enum DiaSemana {
+  DOM
+  SEG
+  TER
+  QUA
+  QUI
+  SEX
+  SAB
+}
 
-  authorId String @map("author_id")
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+enum SituacaoAluno {
+  ATIVO
+  TRANCADO
+  DESISTENTE
+}
 
-  @@index([authorId])
-  @@map("posts")
+enum TipoAtendimento {
+  REGULAR
+  PRE_ESCOLAR
+}
+
+enum SituacaoMatricula {
+  ATIVA
+  PAUSADA
+  ENCERRADA
+}
+
+enum Chegada {
+  PRESENTE
+  ATRASADO
+  FALTOU
+}
+
+enum Boletim {
+  PEGOU
+  NAO_PEGOU
+  PROBLEMA
+}
+
+enum AtividadeCasa {
+  FEZ
+  FEZ_PARCIALMENTE
+  NAO_FEZ
+  NAO_HAVIA
+}
+
+enum Foco {
+  BAIXO
+  REGULAR
+  BOM
+  EXCELENTE
+}
+
+enum Autonomia {
+  BAIXA
+  REGULAR
+  BOA
+  EXCELENTE
+}
+
+enum Comportamento {
+  NECESSITOU_INTERVENCAO
+  OSCILOU
+  ADEQUADO
+  EXCELENTE
+}
+
+enum Desempenho {
+  PRECISOU_INTERVENCAO
+  APRESENTOU_DIFICULDADE
+  BOM
+  EXCELENTE
+}
+
+model Usuario {
+  id                 String    @id @default(uuid())
+  nome               String
+  email              String    @unique
+  senhaHash          String
+  papel              Papel
+  ativo              Boolean   @default(true)
+  resetTokenHash     String?
+  resetTokenExpiraEm DateTime?
+  criadoEm           DateTime  @default(now())
+  atualizadoEm       DateTime  @updatedAt
+  professor          Professor?
+
+  @@map("usuarios")
+}
+
+model Professor {
+  id                   String             @id @default(uuid())
+  usuarioId            String?            @unique
+  usuario              Usuario?           @relation(fields: [usuarioId], references: [id])
+  nome                 String
+  telefone             String?
+  email                String?
+  photoUrl             String?
+  diasDisponiveis      DiaSemana[]
+  horarioInicial       String
+  horarioFinal         String
+  capacidadePorHorario Int
+  duracaoAulaMin       Int
+  corAgenda            String
+  observacoes          String?
+  criadoEm             DateTime           @default(now())
+  atualizadoEm         DateTime           @updatedAt
+  materias             ProfessorMateria[]
+  matriculas           Matricula[]
+
+  @@map("professores")
+}
+
+model Materia {
+  id          String             @id @default(uuid())
+  nome        String
+  ativo       Boolean            @default(true)
+  conteudos   Conteudo[]
+  matriculas  Matricula[]
+  professores ProfessorMateria[]
+
+  @@map("materias")
+}
+
+model Conteudo {
+  id        String                 @id @default(uuid())
+  materiaId String
+  materia   Materia                @relation(fields: [materiaId], references: [id])
+  nome      String
+  ativo     Boolean                @default(true)
+  registros RegistroAulaConteudo[]
+
+  @@index([materiaId])
+  @@map("conteudos")
+}
+
+model ProfessorMateria {
+  professorId String
+  materiaId   String
+  professor   Professor @relation(fields: [professorId], references: [id])
+  materia     Materia   @relation(fields: [materiaId], references: [id])
+
+  @@id([professorId, materiaId])
+  @@map("professor_materia")
+}
+
+model Aluno {
+  id             String        @id @default(uuid())
+  nome           String
+  responsavel    String?
+  telefone       String?
+  whatsapp       String?
+  email          String?
+  dataNascimento DateTime?
+  observacoes    String?
+  dataMatricula  DateTime
+  situacao       SituacaoAluno @default(ATIVO)
+  zonaVermelha   Boolean       @default(false)
+  connect        Boolean       @default(false)
+  criadoEm       DateTime      @default(now())
+  atualizadoEm   DateTime      @updatedAt
+  matriculas     Matricula[]
+
+  @@map("alunos")
+}
+
+model Matricula {
+  id              String             @id @default(uuid())
+  alunoId         String
+  aluno           Aluno              @relation(fields: [alunoId], references: [id])
+  professorId     String
+  professor       Professor          @relation(fields: [professorId], references: [id])
+  materiaId       String
+  materia         Materia            @relation(fields: [materiaId], references: [id])
+  estagio         String?
+  tipoAtendimento TipoAtendimento
+  situacao        SituacaoMatricula  @default(ATIVA)
+  observacoes     String?
+  criadoEm        DateTime           @default(now())
+  atualizadoEm    DateTime           @updatedAt
+  horarios        MatriculaHorario[]
+  registros       RegistroAula[]
+
+  @@index([professorId])
+  @@index([alunoId])
+  @@map("matriculas")
+}
+
+model MatriculaHorario {
+  id          String         @id @default(uuid())
+  matriculaId String
+  matricula   Matricula      @relation(fields: [matriculaId], references: [id])
+  diaSemana   DiaSemana
+  horario     String
+  ativo       Boolean        @default(true)
+  criadoEm    DateTime       @default(now())
+  registros   RegistroAula[]
+
+  @@index([matriculaId])
+  @@map("matricula_horarios")
+}
+
+model RegistroAula {
+  id            String                 @id @default(uuid())
+  horarioId     String
+  horario       MatriculaHorario       @relation(fields: [horarioId], references: [id])
+  matriculaId   String
+  matricula     Matricula              @relation(fields: [matriculaId], references: [id])
+  data          DateTime
+  estagio       String?
+  chegada       Chegada?
+  boletim       Boletim?
+  atividadeCasa AtividadeCasa?
+  foco          Foco?
+  autonomia     Autonomia?
+  comportamento Comportamento?
+  desempenho    Desempenho?
+  anotacao      String?
+  fechado       Boolean                @default(false)
+  horaInicio    DateTime?
+  horaFim       DateTime?
+  duracaoMin    Int?
+  criadoEm      DateTime               @default(now())
+  atualizadoEm  DateTime               @updatedAt
+  conteudos     RegistroAulaConteudo[]
+
+  @@unique([horarioId, data])
+  @@index([data])
+  @@map("registros_aula")
+}
+
+model RegistroAulaConteudo {
+  registroId String
+  conteudoId String
+  registro   RegistroAula @relation(fields: [registroId], references: [id])
+  conteudo   Conteudo     @relation(fields: [conteudoId], references: [id])
+
+  @@id([registroId, conteudoId])
+  @@map("registro_aula_conteudo")
 }

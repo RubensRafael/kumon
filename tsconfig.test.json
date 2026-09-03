@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "lib": ["ES2023"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "types": ["node"]
+  },
+  "include": [
+    "vitest.config.ts",
+    "vite-plugins/**/*.ts",
+    "tests/**/*.ts",
+    "src/server/**/*.ts",
+    "src/server/**/*.tsx",
+    "src/shared/**/*.ts"
+  ]
+}

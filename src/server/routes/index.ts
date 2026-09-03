@@ -5,7 +5,6 @@ import { prismaMiddleware } from '../db/prisma.middleware'
 import { envMiddleware } from '../middlewares/env.middleware'
 import type { AppEnv } from '../types'
 import { healthRoute } from './health.route'
-import { usersRoute } from './users.route'
 
 /**
  * Router da API, montado sob `/api` em `app.ts` — o mesmo prefixo que o
@@ -20,7 +19,6 @@ apiRoutes.use('*', envMiddleware)
 apiRoutes.use('*', prismaMiddleware)
 
 apiRoutes.route('/health', healthRoute)
-apiRoutes.route('/users', usersRoute)
 
 /**
  * Catch-all da API.

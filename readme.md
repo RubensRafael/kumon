@@ -149,13 +149,30 @@ Worker, onde o Hono responde `/api/*` ou devolve o `index.html` pelo binding
 ```bash
 npm install                 # instala + gera Prisma Client e tipos do Worker
 cp .env.example .env
-# preencha BACKEND_DATABASE_URL com a connection string do POOLER do Neon
-npm run db:push             # cria as tabelas do schema no Neon
+npm run db:local:up         # sobe o Postgres local (docker-compose, porta 54329)
+npm run db:migrate          # aplica as migrations
 npm run dev                 # http://localhost:5173
 ```
 
-A `BACKEND_DATABASE_URL` deve ser a string de **connection pooling** do Neon
-(host com sufixo `-pooler`), disponivel em *Neon Console > Project > Connect*.
+Por padrão o `.env.example` já aponta `BACKEND_DATABASE_URL` para o Postgres
+local do `docker-compose.yml`. Para produzir contra o Neon (obrigatorio em
+`wrangler dev`/`wrangler deploy`, que rodam o workerd de verdade e não abrem
+socket TCP), troque `BACKEND_DATABASE_URL` pela string de **connection
+pooling** do Neon (host com sufixo `-pooler`), disponivel em
+*Neon Console > Project > Connect*. `src/server/db/client.ts` escolhe o
+Driver Adapter certo sozinho, em runtime — Neon sob Workers, `pg` (TCP) em
+qualquer outro caso.
+
+### Testes
+
+Os testes e2e (Vitest) rodam contra o Postgres do `docker-compose.yml`, de
+ponta a ponta pelo `app.request()` do próprio Hono (sem subir servidor HTTP):
+
+```bash
+npm run db:local:up
+npm test          # roda uma vez
+npm run test:watch
+```
 
 Nao existe `.dev.vars` neste projeto: quando ele esta ausente, o Wrangler carrega
 o `.env` automaticamente, entao um unico arquivo serve ao Vite, ao Worker e ao
@@ -176,6 +193,10 @@ Prisma CLI.
 | `npm run db:push` | aplica o schema no banco sem criar migration |
 | `npm run db:migrate` | cria e aplica uma migration |
 | `npm run db:studio` | abre o Prisma Studio |
+| `npm test` | roda os testes e2e (Vitest) uma vez |
+| `npm run test:watch` | testes e2e em modo watch |
+| `npm run db:local:up` | sobe o Postgres local (`docker-compose.yml`) |
+| `npm run db:local:down` | derruba o Postgres local |
 
 ## Deploy
 
