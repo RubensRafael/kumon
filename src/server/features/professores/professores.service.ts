@@ -1,7 +1,5 @@
 import { HTTPException } from 'hono/http-exception'
 
-import type { DiaSemana as DiaSemanaApi } from '../../../shared/dto/enums'
-import { paraApi, paraBanco } from '../../lib/db-enum'
 import type { DiaSemana, PrismaClient } from '../../db/generated/client'
 import type { ProfessorCreateInputType, ProfessorOutputType } from './professores.dto'
 
@@ -12,7 +10,7 @@ type ProfessorComMaterias = {
   telefone: string | null
   email: string | null
   photoUrl: string | null
-  diasDisponiveis: string[]
+  diasDisponiveis: DiaSemana[]
   horarioInicial: string
   horarioFinal: string
   capacidadePorHorario: number
@@ -32,7 +30,7 @@ function paraProfessorOutput(professor: ProfessorComMaterias): ProfessorOutputTy
     telefone: professor.telefone,
     email: professor.email,
     photoUrl: professor.photoUrl,
-    diasDisponiveis: professor.diasDisponiveis.map((dia) => paraApi<DiaSemanaApi>(dia)),
+    diasDisponiveis: professor.diasDisponiveis,
     horarioInicial: professor.horarioInicial,
     horarioFinal: professor.horarioFinal,
     capacidadePorHorario: professor.capacidadePorHorario,
@@ -101,7 +99,7 @@ export async function criarProfessor(
       telefone: input.telefone ?? null,
       email: input.email ?? null,
       photoUrl: input.photoUrl ?? null,
-      diasDisponiveis: input.diasDisponiveis.map((dia) => paraBanco<DiaSemana>(dia)),
+      diasDisponiveis: input.diasDisponiveis,
       horarioInicial: input.horarioInicial,
       horarioFinal: input.horarioFinal,
       capacidadePorHorario: input.capacidadePorHorario,
@@ -149,7 +147,7 @@ export async function atualizarProfessor(
         ...(input.email !== undefined ? { email: input.email } : {}),
         ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl } : {}),
         ...(input.diasDisponiveis !== undefined
-          ? { diasDisponiveis: input.diasDisponiveis.map((dia) => paraBanco<DiaSemana>(dia)) }
+          ? { diasDisponiveis: input.diasDisponiveis }
           : {}),
         ...(input.horarioInicial !== undefined ? { horarioInicial: input.horarioInicial } : {}),
         ...(input.horarioFinal !== undefined ? { horarioFinal: input.horarioFinal } : {}),

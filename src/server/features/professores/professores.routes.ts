@@ -39,7 +39,7 @@ export const professoresRoutes = new Hono<AppEnv>()
    */
   .put('/:id', authMiddleware, restrictProfessorSelf, async (c) => {
     const usuario = c.get('usuario')
-    const schema = usuario.papel === 'admin' ? ProfessorUpdateInputAdmin : ProfessorUpdateInputSelf
+    const schema = usuario.papel === 'ADMIN' ? ProfessorUpdateInputAdmin : ProfessorUpdateInputSelf
 
     const json = await c.req.json().catch(() => ({}))
     const parsed = schema.safeParse(json)

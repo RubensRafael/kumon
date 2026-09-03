@@ -47,7 +47,7 @@ export const RegistroDetalheOutput = RegistroResumoOutput.extend({
  * Um unico formato de entrada, usado tanto na criacao (`POST`) quanto em
  * cada auto-save (`PUT`). Tudo opcional exceto o minimo pra criar a linha na
  * primeira chamada. Sem checagem de coerencia entre campos (ex.:
- * boletim/foco so fazem sentido se `chegada: 'presente'`) — a UI decide o
+ * boletim/foco so fazem sentido se `chegada: 'PRESENTE'`) — a UI decide o
  * que mostrar; o backend so persiste o que chega.
  */
 export const RegistroInput = z.object({

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { AgendaSlotOutputType } from '../../src/server/features/agenda/agenda.dto'
-import { authHeader, obterToken } from '../helpers/auth'
+import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
   criarHorario,
@@ -13,9 +13,9 @@ import {
 } from '../helpers/factories'
 import { app, prisma, resetDb, testEnv } from '../helpers/setup'
 
-async function tokenAdmin() {
+async function cookieAdmin() {
   const { usuario, senha } = await criarUsuarioAdmin()
-  return obterToken(usuario.email, senha)
+  return obterCookie(usuario.email, senha)
 }
 
 async function montarSlot(professorId: string) {
@@ -38,8 +38,8 @@ describe('agenda', () => {
       await montarSlot(professor1.id)
       await montarSlot(professor2.id)
 
-      const token = await tokenAdmin()
-      const response = await app.request('/api/agenda', { headers: authHeader(token) }, testEnv)
+      const cookie = await cookieAdmin()
+      const response = await app.request('/api/agenda', { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as AgendaSlotOutputType[]
       expect(body.length).toBe(2)
     })
@@ -50,10 +50,10 @@ describe('agenda', () => {
       await montarSlot(professor1.id)
       await montarSlot(professor2.id)
 
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const response = await app.request(
         `/api/agenda?professorId=${professor1.id}`,
-        { headers: authHeader(token) },
+        { headers: authHeader(cookie) },
         testEnv,
       )
       const body = (await response.json()) as AgendaSlotOutputType[]
@@ -67,10 +67,10 @@ describe('agenda', () => {
       await montarSlot(professor.id)
       await montarSlot(outroProfessor.id)
 
-      const token = await obterToken(usuario.email, senha)
+      const cookie = await obterCookie(usuario.email, senha)
       const response = await app.request(
         `/api/agenda?professorId=${outroProfessor.id}`,
-        { headers: authHeader(token) },
+        { headers: authHeader(cookie) },
         testEnv,
       )
       const body = (await response.json()) as AgendaSlotOutputType[]
@@ -83,10 +83,10 @@ describe('agenda', () => {
       const { horario } = await montarSlot(professor.id)
       await prisma.matriculaHorario.update({ where: { id: horario.id }, data: { ativo: false } })
 
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const response = await app.request(
         `/api/agenda?professorId=${professor.id}`,
-        { headers: authHeader(token) },
+        { headers: authHeader(cookie) },
         testEnv,
       )
       const body = (await response.json()) as AgendaSlotOutputType[]
@@ -106,8 +106,8 @@ describe('agenda', () => {
       await criarHorario({ matriculaId: matricula1.id })
       await criarHorario({ matriculaId: matricula2.id, diaSemana: 'QUA' })
 
-      const token = await tokenAdmin()
-      const response = await app.request(`/api/alunos/${aluno.id}/agenda`, { headers: authHeader(token) }, testEnv)
+      const cookie = await cookieAdmin()
+      const response = await app.request(`/api/alunos/${aluno.id}/agenda`, { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as AgendaSlotOutputType[]
       expect(body.length).toBe(2)
     })
@@ -123,8 +123,8 @@ describe('agenda', () => {
       await criarHorario({ matriculaId: minha.id })
       await criarHorario({ matriculaId: deOutro.id, diaSemana: 'QUA' })
 
-      const token = await obterToken(usuario.email, senha)
-      const response = await app.request(`/api/alunos/${aluno.id}/agenda`, { headers: authHeader(token) }, testEnv)
+      const cookie = await obterCookie(usuario.email, senha)
+      const response = await app.request(`/api/alunos/${aluno.id}/agenda`, { headers: authHeader(cookie) }, testEnv)
       const body = (await response.json()) as AgendaSlotOutputType[]
       expect(body.length).toBe(1)
       expect(body[0].professorId).toBe(professor.id)
@@ -135,8 +135,8 @@ describe('agenda', () => {
       const outroProfessor = await criarProfessor()
       const { aluno } = await montarSlot(outroProfessor.id)
 
-      const token = await obterToken(usuario.email, senha)
-      const response = await app.request(`/api/alunos/${aluno.id}/agenda`, { headers: authHeader(token) }, testEnv)
+      const cookie = await obterCookie(usuario.email, senha)
+      const response = await app.request(`/api/alunos/${aluno.id}/agenda`, { headers: authHeader(cookie) }, testEnv)
       expect(response.status).toBe(200)
       const body = (await response.json()) as AgendaSlotOutputType[]
       expect(body).toEqual([])

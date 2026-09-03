@@ -1,5 +1,3 @@
-import type { DiaSemana as DiaSemanaApi } from '../../../shared/dto/enums'
-import { paraApi } from '../../lib/db-enum'
 import type { Prisma, PrismaClient } from '../../db/generated/client'
 import type { AgendaSlotOutputType } from './agenda.dto'
 
@@ -17,7 +15,7 @@ type HorarioComMatricula = Prisma.MatriculaHorarioGetPayload<{ include: typeof I
 function paraAgendaSlotOutput(horario: HorarioComMatricula): AgendaSlotOutputType {
   return {
     horarioId: horario.id,
-    diaSemana: paraApi<DiaSemanaApi>(horario.diaSemana),
+    diaSemana: horario.diaSemana,
     horario: horario.horario,
     matriculaId: horario.matriculaId,
     alunoId: horario.matricula.alunoId,
@@ -29,9 +27,9 @@ function paraAgendaSlotOutput(horario: HorarioComMatricula): AgendaSlotOutputTyp
 }
 
 /**
- * `escopoProfessorId` sempre vence a querystring quando `papel === 'professor'`
+ * `escopoProfessorId` sempre vence a querystring quando `papel === 'PROFESSOR'`
  * — o `professorId` da query e literalmente ignorado nesse caso (ver spec,
- * secao 8). Pra `admin` sem `professorId` na query, sem filtro: agenda da
+ * secao 8). Pra `ADMIN` sem `professorId` na query, sem filtro: agenda da
  * unidade inteira.
  */
 export async function listarAgenda(

@@ -1,13 +1,12 @@
 import { HTTPException } from 'hono/http-exception'
 import { sign } from 'hono/jwt'
 
-import { paraApi, paraBanco } from '../../lib/db-enum'
+import { enviarEmailResetSenha } from '../../lib/email'
 import { SENHA_PLACEHOLDER, hashSenha, verificarSenha } from '../../lib/senha'
 import { gerarToken, hashToken } from '../../lib/token'
 import type { Papel, PrismaClient } from '../../db/generated/client'
 import type {
   LoginInputType,
-  LoginOutputType,
   ResetarSenhaInputType,
   SolicitarResetInputType,
   UsuarioCreateInputType,
@@ -15,14 +14,26 @@ import type {
   UsuarioUpdateInputType,
 } from './auth.dto'
 
-const SETE_DIAS_EM_SEGUNDOS = 7 * 24 * 60 * 60
+/** Validade do JWT de sessao — tambem o `maxAge` do cookie que o carrega. */
+export const SETE_DIAS_EM_SEGUNDOS = 7 * 24 * 60 * 60
 const RESET_EXPIRACAO_MS = 60 * 60 * 1000
+
+/**
+ * Retorno interno de `autenticar` — inclui o token cru porque a rota precisa
+ * dele pra setar o cookie. Nao e o formato exposto ao cliente: `LoginOutput`
+ * (o DTO em `auth.dto.ts`) so leva `usuario`, o token nunca aparece no corpo
+ * da resposta.
+ */
+export interface ResultadoLogin {
+  token: string
+  usuario: UsuarioOutputType
+}
 
 interface UsuarioRow {
   id: string
   nome: string
   email: string
-  papel: string
+  papel: Papel
   ativo: boolean
 }
 
@@ -31,7 +42,7 @@ function paraUsuarioOutput(usuario: UsuarioRow, professorId: string | null): Usu
     id: usuario.id,
     nome: usuario.nome,
     email: usuario.email,
-    papel: paraApi(usuario.papel),
+    papel: usuario.papel,
     ativo: usuario.ativo,
     professorId,
   }
@@ -57,7 +68,7 @@ async function gerarJwt(
   const token = await sign(
     {
       sub: usuario.id,
-      papel: paraApi(usuario.papel),
+      papel: usuario.papel,
       professorId,
       exp: Math.floor(Date.now() / 1000) + SETE_DIAS_EM_SEGUNDOS,
     },
@@ -79,7 +90,7 @@ export async function autenticar(
   prisma: PrismaClient,
   jwtSecret: string,
   input: LoginInputType,
-): Promise<LoginOutputType> {
+): Promise<ResultadoLogin> {
   const usuario = await prisma.usuario.findUnique({ where: { email: input.email } })
 
   if (!usuario || !usuario.ativo) {
@@ -93,6 +104,23 @@ export async function autenticar(
 
   const { token, professorId } = await gerarJwt(prisma, jwtSecret, usuario)
   return { token, usuario: paraUsuarioOutput(usuario, professorId) }
+}
+
+/**
+ * Resolve `professorId` de uma leva de usuarios numa unica query, em vez de
+ * um `buscarProfessorIdPorUsuario` por usuario (evita N+1 numa listagem).
+ */
+export async function listarUsuarios(prisma: PrismaClient): Promise<UsuarioOutputType[]> {
+  const [usuarios, professores] = await Promise.all([
+    prisma.usuario.findMany({ orderBy: { nome: 'asc' } }),
+    prisma.professor.findMany({ where: { usuarioId: { not: null } }, select: { id: true, usuarioId: true } }),
+  ])
+
+  const professorIdPorUsuarioId = new Map(professores.map((p) => [p.usuarioId as string, p.id]))
+
+  return usuarios.map((usuario) =>
+    paraUsuarioOutput(usuario, professorIdPorUsuarioId.get(usuario.id) ?? null),
+  )
 }
 
 export async function usuarioAtual(prisma: PrismaClient, id: string): Promise<UsuarioOutputType> {
@@ -138,7 +166,7 @@ export async function criarUsuario(
       data: {
         nome: input.nome,
         email: input.email,
-        papel: paraBanco<Papel>(input.papel),
+        papel: input.papel,
         senhaHash: SENHA_PLACEHOLDER,
       },
     })
@@ -163,11 +191,13 @@ export async function atualizarUsuario(
     throw new HTTPException(404, { message: 'Usuario nao encontrado.' })
   }
 
+  // Prisma ignora chave com valor `undefined` em `data` — nao precisa de
+  // spread condicional pra so tocar o que veio no corpo da request.
   const atualizado = await prisma.usuario.update({
     where: { id },
     data: {
-      ...(input.papel !== undefined ? { papel: paraBanco<Papel>(input.papel) } : {}),
-      ...(input.ativo !== undefined ? { ativo: input.ativo } : {}),
+      papel: input.papel,
+      ativo: input.ativo,
     },
   })
 
@@ -179,6 +209,8 @@ export async function solicitarReset(
   prisma: PrismaClient,
   input: SolicitarResetInputType,
   ambiente: string,
+  resendApiKey: string,
+  baseUrl: string,
 ): Promise<void> {
   const usuario = await prisma.usuario.findUnique({ where: { email: input.email } })
   // Sempre 204 no chamador, exista ou nao o e-mail — nao revela quem tem conta.
@@ -193,13 +225,15 @@ export async function solicitarReset(
     data: { resetTokenHash, resetTokenExpiraEm },
   })
 
-  // Nenhum provedor de e-mail esta configurado neste projeto (nao ha
-  // variavel de ambiente para isso) — o envio e, hoje, sempre um no-op
-  // silencioso. Em dev o token vai pro console do servidor, unico jeito de
-  // completar o fluxo sem um provedor de verdade.
+  // Em dev o token vai pro console do servidor — util pra completar o fluxo
+  // manualmente sem depender do e-mail chegar de verdade.
   if (ambiente === 'development') {
     console.log(`[auth] token de reset de senha para ${input.email}: ${token}`)
   }
+
+  // No-op enquanto BACKEND_RESEND_API_KEY for o valor dummy (nenhuma conta
+  // Resend conectada ainda) — ver `lib/email.ts`.
+  await enviarEmailResetSenha(resendApiKey, input.email, `${baseUrl}/resetar-senha?token=${token}`)
 }
 
 export async function resetarSenha(

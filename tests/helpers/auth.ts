@@ -1,17 +1,23 @@
-import type { LoginOutputType } from '../../src/server/features/auth/auth.dto'
 import { app, testEnv } from './setup'
 
-/** Faz login e devolve so o token — usado por todos os testes a partir daqui. */
-export async function obterToken(email: string, senha: string): Promise<string> {
+function extrairCookie(response: Response): string {
+  const setCookie = response.headers.get('set-cookie')
+  if (!setCookie) {
+    throw new Error('Resposta de login sem Set-Cookie.')
+  }
+  return setCookie.split(';')[0]
+}
+
+/** Faz login e devolve o cookie de sessao — usado por todos os testes a partir daqui. */
+export async function obterCookie(email: string, senha: string): Promise<string> {
   const response = await app.request(
     '/api/auth/login',
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, senha }) },
     testEnv,
   )
-  const body = (await response.json()) as LoginOutputType
-  return body.token
+  return extrairCookie(response)
 }
 
-export function authHeader(token: string): { authorization: string } {
-  return { authorization: `Bearer ${token}` }
+export function authHeader(cookie: string): { cookie: string } {
+  return { cookie }
 }

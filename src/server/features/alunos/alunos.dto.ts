@@ -26,7 +26,7 @@ export const AlunoCreateInput = z.object({
   dataNascimento: z.string().optional(),
   observacoes: z.string().optional(),
   dataMatricula: z.string(),
-  situacao: SituacaoAlunoEnum.default('ativo'),
+  situacao: SituacaoAlunoEnum.default('ATIVO'),
   zonaVermelha: z.boolean().default(false),
   connect: z.boolean().default(false),
 })
