@@ -40,3 +40,18 @@ verificação automática em push/PR.
 - Este workflow não faz deploy nenhum — só valida. Se/quando o projeto
   quiser CD (deploy automático pro Cloudflare Workers no merge em `main`),
   isso é um workflow separado, com secrets configurados no repositório.
+
+## Atualizações pós-revisão
+
+Merge em cascata de `feat/10-painel` (última da chain, já trouxe o merge do
+PR 02/03, ver `docs/pr-03-professores.md`) — sem nenhum ajuste de código
+necessário aqui: `ci.yml` não referencia `paraApi`/`paraBanco`, nenhum enum
+nem o helper de auth de teste, então nada nesta branch quebrou com as
+mudanças do PR 02. `BACKEND_RESEND_API_KEY` (nova env obrigatória) não
+precisou ser adicionada ao bloco `env:` do workflow — só é lida por
+`envMiddleware` em tempo de request, e nenhum dos passos do CI
+(`typecheck`, `test`, `build`) executa esse caminho: `npm test` usa o
+`testEnv` hardcoded em `tests/helpers/setup.ts` (já inclui a env, adicionada
+no PR 02), e `npm run build` é só `tsc` + `vite build`, nenhum dos dois lê
+`process.env`. Confirmado rodando os 3 passos do workflow localmente
+(`typecheck`, `test` — 101 passando, `build`) antes de dar push.
