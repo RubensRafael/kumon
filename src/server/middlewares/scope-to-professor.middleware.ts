@@ -8,8 +8,8 @@ import type { AppEnv } from '../types'
  * em `c.var.escopoProfessorId` — nunca a partir da querystring, sempre do
  * token:
  *
- * - `admin` -> `null` (sem filtro).
- * - `professor` -> `usuario.professorId`, sempre o proprio.
+ * - `ADMIN` -> `null` (sem filtro).
+ * - `PROFESSOR` -> `usuario.professorId`, sempre o proprio.
  *
  * De proposito nao decide *como* filtrar: cada feature tem uma forma
  * diferente de chegar no professor certo (coluna direta em `MATRICULA`,
@@ -18,6 +18,6 @@ import type { AppEnv } from '../types'
  */
 export const scopeToProfessor = createMiddleware<AppEnv>(async (c, next) => {
   const usuario = c.get('usuario')
-  c.set('escopoProfessorId', usuario.papel === 'professor' ? usuario.professorId : null)
+  c.set('escopoProfessorId', usuario.papel === 'PROFESSOR' ? usuario.professorId : null)
   await next()
 })

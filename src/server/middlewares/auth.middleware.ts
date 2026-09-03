@@ -1,3 +1,4 @@
+import { getCookie } from 'hono/cookie'
 import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 import { verify } from 'hono/jwt'
@@ -6,6 +7,15 @@ import { z } from 'zod'
 import { PapelEnum } from '../../shared/dto/enums'
 import type { AppEnv } from '../types'
 
+/**
+ * Nome do cookie de sessao. Front e back sao a mesma origem (Worker unico
+ * servindo os assets da SPA e a API, ver `wrangler.jsonc`), entao um cookie
+ * `HttpOnly` funciona sem CORS no caminho e sem o token nunca ficar
+ * acessivel ao JS do front — `POST /auth/login` seta, `POST /auth/logout`
+ * limpa.
+ */
+export const TOKEN_COOKIE_NAME = 'kflow_token'
+
 const jwtPayloadSchema = z.object({
   sub: z.string(),
   papel: PapelEnum,
@@ -13,19 +23,18 @@ const jwtPayloadSchema = z.object({
 })
 
 /**
- * Decodifica o JWT do header `Authorization: Bearer <token>` e injeta o
- * usuario em `c.var.usuario`.
+ * Le o JWT do cookie `kflow_token` e injeta o usuario em `c.var.usuario`.
  *
- * De proposito nao consulta o banco: confia no que o token carrega (ver
- * `auth.service.ts#autenticar`). Isso mantem o middleware barato — ele roda
- * em toda rota protegida —, ao custo de uma janela de ate 7 dias (a validade
- * do token) em que um usuario desativado (`ativo: false`) continua
- * autenticando com um token emitido antes da desativacao. `GET /me` busca o
- * estado atual no banco e nao sofre desse efeito.
+ * Revalida `ativo`/`papel` no banco a cada request: o token sozinho garante
+ * só que foi emitido por nós e ainda não expirou, não que continua
+ * refletindo o estado atual do usuário — `PUT /usuarios/:id` pode desativar
+ * ou trocar o papel a qualquer momento, e sem essa consulta o token velho
+ * continuaria validando por até 7 dias (a validade dele). `professorId`
+ * continua vindo do token: não existe endpoint que altere esse vínculo após
+ * a criação, então não há valor em rebuscá-lo aqui.
  */
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
-  const header = c.req.header('authorization')
-  const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : null
+  const token = getCookie(c, TOKEN_COOKIE_NAME)
 
   if (!token) {
     throw new HTTPException(401, { message: 'Token de autenticacao ausente.' })
@@ -43,9 +52,18 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     throw new HTTPException(401, { message: 'Token invalido ou expirado.' })
   }
 
+  const usuario = await c.get('prisma').usuario.findUnique({
+    where: { id: parsed.data.sub },
+    select: { ativo: true, papel: true },
+  })
+
+  if (!usuario || !usuario.ativo) {
+    throw new HTTPException(401, { message: 'Token invalido ou expirado.' })
+  }
+
   c.set('usuario', {
     id: parsed.data.sub,
-    papel: parsed.data.papel,
+    papel: usuario.papel,
     professorId: parsed.data.professorId,
   })
 

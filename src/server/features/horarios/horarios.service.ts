@@ -1,14 +1,12 @@
 import { HTTPException } from 'hono/http-exception'
 
-import type { DiaSemana as DiaSemanaApi } from '../../../shared/dto/enums'
-import { paraApi, paraBanco } from '../../lib/db-enum'
 import type { DiaSemana, PrismaClient } from '../../db/generated/client'
 import type { HorarioCreateInputType, HorarioOutputType, HorarioUpdateInputType } from './horarios.dto'
 
 interface HorarioRow {
   id: string
   matriculaId: string
-  diaSemana: string
+  diaSemana: DiaSemana
   horario: string
   ativo: boolean
 }
@@ -17,7 +15,7 @@ function paraHorarioOutput(horario: HorarioRow): HorarioOutputType {
   return {
     id: horario.id,
     matriculaId: horario.matriculaId,
-    diaSemana: paraApi<DiaSemanaApi>(horario.diaSemana),
+    diaSemana: horario.diaSemana,
     horario: horario.horario,
     ativo: horario.ativo,
   }
@@ -79,9 +77,8 @@ export async function criarHorario(
     throw new HTTPException(404, { message: 'Matricula nao encontrada.' })
   }
 
-  const diaSemanaBanco = paraBanco<DiaSemana>(input.diaSemana)
   const existente = await prisma.matriculaHorario.findFirst({
-    where: { matriculaId, diaSemana: diaSemanaBanco, horario: input.horario, ativo: true },
+    where: { matriculaId, diaSemana: input.diaSemana, horario: input.horario, ativo: true },
     select: { id: true },
   })
   if (existente) {
@@ -91,7 +88,7 @@ export async function criarHorario(
   }
 
   const horario = await prisma.matriculaHorario.create({
-    data: { matriculaId, diaSemana: diaSemanaBanco, horario: input.horario },
+    data: { matriculaId, diaSemana: input.diaSemana, horario: input.horario },
   })
   return paraHorarioOutput(horario)
 }

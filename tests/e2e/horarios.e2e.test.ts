@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { HorarioOutputType } from '../../src/server/features/horarios/horarios.dto'
-import { authHeader, obterToken } from '../helpers/auth'
+import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
   criarHorario,
@@ -15,9 +15,9 @@ import { app, resetDb, testEnv } from '../helpers/setup'
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
-async function tokenAdmin() {
+async function cookieAdmin() {
   const { usuario, senha } = await criarUsuarioAdmin()
-  return obterToken(usuario.email, senha)
+  return obterCookie(usuario.email, senha)
 }
 
 async function novaMatricula(professorId: string) {
@@ -38,10 +38,10 @@ describe('horarios', () => {
       await criarHorario({ matriculaId: matricula.id, diaSemana: 'SEG', horario: '14:00' })
       await criarHorario({ matriculaId: matricula.id, diaSemana: 'QUA', horario: '15:00' })
 
-      const token = await obterToken(usuario.email, senha)
+      const cookie = await obterCookie(usuario.email, senha)
       const response = await app.request(
         `/api/matriculas/${matricula.id}/horarios`,
-        { headers: authHeader(token) },
+        { headers: authHeader(cookie) },
         testEnv,
       )
       expect(response.status).toBe(200)
@@ -55,10 +55,10 @@ describe('horarios', () => {
       await criarHorario({ matriculaId: matricula.id })
 
       const { usuario, senha } = await criarUsuarioProfessor()
-      const token = await obterToken(usuario.email, senha)
+      const cookie = await obterCookie(usuario.email, senha)
       const response = await app.request(
         `/api/matriculas/${matricula.id}/horarios`,
-        { headers: authHeader(token) },
+        { headers: authHeader(cookie) },
         testEnv,
       )
       expect(response.status).toBe(404)
@@ -67,7 +67,7 @@ describe('horarios', () => {
 
   describe('POST /api/matriculas/:matriculaId/horarios', () => {
     it('admin cria horario', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const professor = await criarProfessor()
       const matricula = await novaMatricula(professor.id)
 
@@ -75,19 +75,19 @@ describe('horarios', () => {
         `/api/matriculas/${matricula.id}/horarios`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ diaSemana: 'sex', horario: '16:00' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ diaSemana: 'SEX', horario: '16:00' }),
         },
         testEnv,
       )
       expect(response.status).toBe(201)
       const body = (await response.json()) as HorarioOutputType
-      expect(body.diaSemana).toBe('sex')
+      expect(body.diaSemana).toBe('SEX')
       expect(body.ativo).toBe(true)
     })
 
     it('rejeita horario duplicado (mesma matricula+dia+hora, ambos ativos) -> 409', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const professor = await criarProfessor()
       const matricula = await novaMatricula(professor.id)
       await criarHorario({ matriculaId: matricula.id, diaSemana: 'TER', horario: '10:00' })
@@ -96,8 +96,8 @@ describe('horarios', () => {
         `/api/matriculas/${matricula.id}/horarios`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ diaSemana: 'ter', horario: '10:00' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ diaSemana: 'TER', horario: '10:00' }),
         },
         testEnv,
       )
@@ -105,14 +105,14 @@ describe('horarios', () => {
     })
 
     it('permite recriar o mesmo dia/hora depois que o antigo foi desativado', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const professor = await criarProfessor()
       const matricula = await novaMatricula(professor.id)
       const antigo = await criarHorario({ matriculaId: matricula.id, diaSemana: 'QUI', horario: '09:00' })
 
       await app.request(
         `/api/horarios/${antigo.id}`,
-        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ ativo: false }) },
+        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ ativo: false }) },
         testEnv,
       )
 
@@ -120,8 +120,8 @@ describe('horarios', () => {
         `/api/matriculas/${matricula.id}/horarios`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ diaSemana: 'qui', horario: '09:00' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ diaSemana: 'QUI', horario: '09:00' }),
         },
         testEnv,
       )
@@ -131,14 +131,14 @@ describe('horarios', () => {
     it('professor autenticado nao pode criar horario -> 403', async () => {
       const { usuario, professor, senha } = await criarUsuarioProfessor()
       const matricula = await novaMatricula(professor.id)
-      const token = await obterToken(usuario.email, senha)
+      const cookie = await obterCookie(usuario.email, senha)
 
       const response = await app.request(
         `/api/matriculas/${matricula.id}/horarios`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ diaSemana: 'seg', horario: '10:00' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ diaSemana: 'SEG', horario: '10:00' }),
         },
         testEnv,
       )
@@ -148,14 +148,14 @@ describe('horarios', () => {
 
   describe('PUT /api/horarios/:id', () => {
     it('desativa via ativo:false', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const professor = await criarProfessor()
       const matricula = await novaMatricula(professor.id)
       const horario = await criarHorario({ matriculaId: matricula.id })
 
       const response = await app.request(
         `/api/horarios/${horario.id}`,
-        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ ativo: false }) },
+        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ ativo: false }) },
         testEnv,
       )
       expect(response.status).toBe(200)
@@ -164,7 +164,7 @@ describe('horarios', () => {
     })
 
     it('diaSemana no corpo e descartado em silencio, sem erro', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const professor = await criarProfessor()
       const matricula = await novaMatricula(professor.id)
       const horario = await criarHorario({ matriculaId: matricula.id, diaSemana: 'SEG' })
@@ -173,14 +173,14 @@ describe('horarios', () => {
         `/api/horarios/${horario.id}`,
         {
           method: 'PUT',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ diaSemana: 'sex', ativo: true }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ diaSemana: 'SEX', ativo: true }),
         },
         testEnv,
       )
       expect(response.status).toBe(200)
       const body = (await response.json()) as HorarioOutputType
-      expect(body.diaSemana).toBe('seg')
+      expect(body.diaSemana).toBe('SEG')
     })
   })
 })

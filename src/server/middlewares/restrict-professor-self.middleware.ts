@@ -17,7 +17,7 @@ import type { AppEnv } from '../types'
 export const restrictProfessorSelf = createMiddleware<AppEnv>(async (c, next) => {
   const usuario = c.get('usuario')
 
-  if (usuario.papel === 'professor' && c.req.param('id') !== usuario.professorId) {
+  if (usuario.papel === 'PROFESSOR' && c.req.param('id') !== usuario.professorId) {
     throw new HTTPException(403, { message: 'Voce so pode editar o proprio cadastro de professor.' })
   }
 

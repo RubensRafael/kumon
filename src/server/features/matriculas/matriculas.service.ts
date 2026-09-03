@@ -1,7 +1,5 @@
 import { HTTPException } from 'hono/http-exception'
 
-import type { SituacaoMatricula as SituacaoMatriculaApi, TipoAtendimento as TipoAtendimentoApi } from '../../../shared/dto/enums'
-import { paraApi, paraBanco } from '../../lib/db-enum'
 import type { PrismaClient, SituacaoMatricula, TipoAtendimento } from '../../db/generated/client'
 import type { MatriculaCreateInputType, MatriculaOutputType, MatriculaUpdateInputType } from './matriculas.dto'
 
@@ -11,8 +9,8 @@ interface MatriculaRow {
   professorId: string
   materiaId: string
   estagio: string | null
-  tipoAtendimento: string
-  situacao: string
+  tipoAtendimento: TipoAtendimento
+  situacao: SituacaoMatricula
   observacoes: string | null
 }
 
@@ -23,8 +21,8 @@ function paraMatriculaOutput(matricula: MatriculaRow): MatriculaOutputType {
     professorId: matricula.professorId,
     materiaId: matricula.materiaId,
     estagio: matricula.estagio,
-    tipoAtendimento: paraApi<TipoAtendimentoApi>(matricula.tipoAtendimento),
-    situacao: paraApi<SituacaoMatriculaApi>(matricula.situacao),
+    tipoAtendimento: matricula.tipoAtendimento,
+    situacao: matricula.situacao,
     observacoes: matricula.observacoes,
   }
 }
@@ -83,7 +81,7 @@ export async function criarMatricula(
       professorId: input.professorId,
       materiaId: input.materiaId,
       estagio: input.estagio ?? null,
-      tipoAtendimento: paraBanco<TipoAtendimento>(input.tipoAtendimento),
+      tipoAtendimento: input.tipoAtendimento,
       observacoes: input.observacoes ?? null,
       // MATRICULA_HORARIO nao e copiado de nenhuma matricula anterior:
       // toda matricula nova nasce sem horario, mesmo numa troca de professor.
@@ -107,10 +105,8 @@ export async function atualizarMatricula(
     where: { id },
     data: {
       ...(input.estagio !== undefined ? { estagio: input.estagio } : {}),
-      ...(input.tipoAtendimento !== undefined
-        ? { tipoAtendimento: paraBanco<TipoAtendimento>(input.tipoAtendimento) }
-        : {}),
-      ...(input.situacao !== undefined ? { situacao: paraBanco<SituacaoMatricula>(input.situacao) } : {}),
+      ...(input.tipoAtendimento !== undefined ? { tipoAtendimento: input.tipoAtendimento } : {}),
+      ...(input.situacao !== undefined ? { situacao: input.situacao } : {}),
       ...(input.observacoes !== undefined ? { observacoes: input.observacoes } : {}),
     },
   })

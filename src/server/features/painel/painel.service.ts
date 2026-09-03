@@ -1,5 +1,3 @@
-import type { DiaSemana as DiaSemanaApi } from '../../../shared/dto/enums'
-import { paraApi } from '../../lib/db-enum'
 import type { PrismaClient } from '../../db/generated/client'
 import type { PainelOutputType } from './painel.dto'
 
@@ -125,7 +123,7 @@ export async function obterPainel(
   // grafico de barras do que omitir dias sem aula.
   const totalPorDia = new Map(horariosAgrupados.map((grupo) => [grupo.diaSemana, grupo._count._all]))
   const aulasPorDiaSemana = DIAS_BANCO.map((dia) => ({
-    diaSemana: paraApi<DiaSemanaApi>(dia),
+    diaSemana: dia,
     total: totalPorDia.get(dia) ?? 0,
   }))
 
