@@ -109,22 +109,26 @@ export async function atualizarAluno(
 
   const aluno = await prisma.aluno.update({
     where: { id },
+    // Prisma ignora chave com valor `undefined` -- spread condicional so
+    // sobra pra `dataNascimento`/`dataMatricula`, onde a guarda nao e sobre
+    // o que o Prisma faz e sim pra nao chamar `parseData` (que exige
+    // `string`) com `undefined` quando o campo nao veio no corpo.
     data: {
-      ...(input.nome !== undefined ? { nome: input.nome } : {}),
-      ...(input.responsavel !== undefined ? { responsavel: input.responsavel } : {}),
-      ...(input.telefone !== undefined ? { telefone: input.telefone } : {}),
-      ...(input.whatsapp !== undefined ? { whatsapp: input.whatsapp } : {}),
-      ...(input.email !== undefined ? { email: input.email } : {}),
+      nome: input.nome,
+      responsavel: input.responsavel,
+      telefone: input.telefone,
+      whatsapp: input.whatsapp,
+      email: input.email,
       ...(input.dataNascimento !== undefined
         ? { dataNascimento: parseData(input.dataNascimento, 'dataNascimento') }
         : {}),
-      ...(input.observacoes !== undefined ? { observacoes: input.observacoes } : {}),
+      observacoes: input.observacoes,
       ...(input.dataMatricula !== undefined
         ? { dataMatricula: parseData(input.dataMatricula, 'dataMatricula') }
         : {}),
-      ...(input.situacao !== undefined ? { situacao: input.situacao } : {}),
-      ...(input.zonaVermelha !== undefined ? { zonaVermelha: input.zonaVermelha } : {}),
-      ...(input.connect !== undefined ? { connect: input.connect } : {}),
+      situacao: input.situacao,
+      zonaVermelha: input.zonaVermelha,
+      connect: input.connect,
     },
   })
   return paraAlunoOutput(aluno)
