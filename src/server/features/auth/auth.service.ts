@@ -162,11 +162,13 @@ export async function atualizarUsuario(
     throw new HTTPException(404, { message: 'Usuario nao encontrado.' })
   }
 
+  // Prisma ignora chave com valor `undefined` em `data` — nao precisa de
+  // spread condicional pra so tocar o que veio no corpo da request.
   const atualizado = await prisma.usuario.update({
     where: { id },
     data: {
-      ...(input.papel !== undefined ? { papel: input.papel } : {}),
-      ...(input.ativo !== undefined ? { ativo: input.ativo } : {}),
+      papel: input.papel,
+      ativo: input.ativo,
     },
   })
 

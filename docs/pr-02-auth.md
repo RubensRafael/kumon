@@ -109,3 +109,10 @@ abaixo corresponde a um commit isolado.
   enum nativo do Postgres) elimina a conversão e os call sites com generic
   explícito (`paraBanco<Papel>(...)`) que ela exigia. `src/server/lib/db-enum.ts`
   foi removido; `PapelEnum` agora é `z.enum(['ADMIN', 'PROFESSOR'])`.
+- **`atualizarUsuario` sem spread condicional.** Consequência direta do item
+  acima: o `data` do `prisma.usuario.update` só precisava do spread
+  condicional pra não chamar `paraBanco(undefined)`. Sem essa conversão no
+  meio, Prisma já ignora sozinho chave com valor `undefined` em `data` — o
+  campo simplesmente não é tocado — então `papel: input.papel, ativo:
+  input.ativo` direto tem o mesmo efeito, sem os dois `...(x !== undefined ?
+  {...} : {})`.
