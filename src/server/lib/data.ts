@@ -18,3 +18,15 @@ export function parseData(valor: string, campo: string): Date {
 export function formatarData(data: Date): string {
   return data.toISOString().slice(0, 10)
 }
+
+const DIAS_SEMANA_BANCO = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
+
+/**
+ * Dia da semana (enum do banco, MAIUSCULO) de uma data — usado por
+ * `GET /registros?data=X` pra achar os `MatriculaHorario` daquele dia.
+ * `getUTCDay()` (0=domingo..6=sabado) bate na mesma ordem do enum
+ * `DiaSemana` do schema, porque `parseData` sempre ancora em UTC.
+ */
+export function diaDaSemana(data: Date): (typeof DIAS_SEMANA_BANCO)[number] {
+  return DIAS_SEMANA_BANCO[data.getUTCDay()]
+}

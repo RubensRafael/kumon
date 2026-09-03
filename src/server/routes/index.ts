@@ -8,6 +8,7 @@ import { conteudosRoutes, materiasRoutes } from '../features/materias/materias.r
 import { horariosRoutes, matriculaHorariosRoutes } from '../features/horarios/horarios.routes'
 import { alunoMatriculasRoutes, matriculasRoutes } from '../features/matriculas/matriculas.routes'
 import { professoresRoutes } from '../features/professores/professores.routes'
+import { registrosRoutes } from '../features/registros/registros.routes'
 import { envMiddleware } from '../middlewares/env.middleware'
 import type { AppEnv } from '../types'
 import { healthRoute } from './health.route'
@@ -36,6 +37,7 @@ apiRoutes.route('/alunos', alunoMatriculasRoutes)
 apiRoutes.route('/matriculas', matriculasRoutes)
 apiRoutes.route('/matriculas', matriculaHorariosRoutes)
 apiRoutes.route('/horarios', horariosRoutes)
+apiRoutes.route('/registros', registrosRoutes)
 
 /**
  * Catch-all da API.
