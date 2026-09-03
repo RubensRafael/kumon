@@ -207,17 +207,19 @@ export async function atualizarRegistro(
       await tx.registroAulaConteudo.deleteMany({ where: { registroId: id } })
     }
 
+    // Prisma ignora chave com valor `undefined` em `data` -- spread
+    // condicional so sobra pra `conteudos`, que e escrita de relacao.
     return tx.registroAula.update({
       where: { id },
       data: {
-        ...(input.chegada !== undefined ? { chegada: input.chegada } : {}),
-        ...(input.boletim !== undefined ? { boletim: input.boletim } : {}),
-        ...(input.atividadeCasa !== undefined ? { atividadeCasa: input.atividadeCasa } : {}),
-        ...(input.foco !== undefined ? { foco: input.foco } : {}),
-        ...(input.autonomia !== undefined ? { autonomia: input.autonomia } : {}),
-        ...(input.comportamento !== undefined ? { comportamento: input.comportamento } : {}),
-        ...(input.desempenho !== undefined ? { desempenho: input.desempenho } : {}),
-        ...(input.anotacao !== undefined ? { anotacao: input.anotacao } : {}),
+        chegada: input.chegada,
+        boletim: input.boletim,
+        atividadeCasa: input.atividadeCasa,
+        foco: input.foco,
+        autonomia: input.autonomia,
+        comportamento: input.comportamento,
+        desempenho: input.desempenho,
+        anotacao: input.anotacao,
         ...(conteudoIds ? { conteudos: { create: conteudoIds.map((conteudoId) => ({ conteudoId })) } } : {}),
       },
       include: INCLUDE_DETALHE,
