@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { MatriculaOutputType } from '../../src/server/features/matriculas/matriculas.dto'
 import type { ApiError } from '../../src/shared/dto'
-import { authHeader, obterToken } from '../helpers/auth'
+import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
   criarMateria,
@@ -15,9 +15,9 @@ import { app, prisma, resetDb, testEnv } from '../helpers/setup'
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
-async function tokenAdmin() {
+async function cookieAdmin() {
   const { usuario, senha } = await criarUsuarioAdmin()
-  return obterToken(usuario.email, senha)
+  return obterCookie(usuario.email, senha)
 }
 
 describe('matriculas', () => {
@@ -36,10 +36,10 @@ describe('matriculas', () => {
       const materia2 = await criarMateria()
       await criarMatricula({ alunoId: aluno.id, professorId: outroProfessor.id, materiaId: materia2.id })
 
-      const token = await obterToken(usuario.email, senha)
+      const cookie = await obterCookie(usuario.email, senha)
       const response = await app.request(
         `/api/alunos/${aluno.id}/matriculas`,
-        { headers: authHeader(token) },
+        { headers: authHeader(cookie) },
         testEnv,
       )
       const body = (await response.json()) as MatriculaOutputType[]
@@ -55,10 +55,10 @@ describe('matriculas', () => {
       await criarMatricula({ alunoId: aluno.id, professorId: professor1.id, materiaId: materia1.id })
       await criarMatricula({ alunoId: aluno.id, professorId: professor2.id, materiaId: materia2.id })
 
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const response = await app.request(
         `/api/alunos/${aluno.id}/matriculas`,
-        { headers: authHeader(token) },
+        { headers: authHeader(cookie) },
         testEnv,
       )
       const body = (await response.json()) as MatriculaOutputType[]
@@ -68,7 +68,7 @@ describe('matriculas', () => {
 
   describe('POST /api/alunos/:alunoId/matriculas', () => {
     it('cria matricula sem herdar horarios de nenhuma outra', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const aluno = await criarAluno()
       const professor = await criarProfessor()
       const materia = await criarMateria()
@@ -77,22 +77,22 @@ describe('matriculas', () => {
         `/api/alunos/${aluno.id}/matriculas`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ professorId: professor.id, materiaId: materia.id, tipoAtendimento: 'regular' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ professorId: professor.id, materiaId: materia.id, tipoAtendimento: 'REGULAR' }),
         },
         testEnv,
       )
 
       expect(response.status).toBe(201)
       const body = (await response.json()) as MatriculaOutputType
-      expect(body.situacao).toBe('ativa')
+      expect(body.situacao).toBe('ATIVA')
 
       const horarios = await prisma.matriculaHorario.count({ where: { matriculaId: body.id } })
       expect(horarios).toBe(0)
     })
 
     it('rejeita segunda matricula ativa do mesmo aluno na mesma materia -> 400', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const aluno = await criarAluno()
       const professor = await criarProfessor()
       const materia = await criarMateria()
@@ -102,8 +102,8 @@ describe('matriculas', () => {
         `/api/alunos/${aluno.id}/matriculas`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ professorId: professor.id, materiaId: materia.id, tipoAtendimento: 'regular' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ professorId: professor.id, materiaId: materia.id, tipoAtendimento: 'REGULAR' }),
         },
         testEnv,
       )
@@ -111,7 +111,7 @@ describe('matriculas', () => {
     })
 
     it('permite nova matricula ativa depois que a antiga foi encerrada (fluxo de troca)', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const aluno = await criarAluno()
       const professorAntigo = await criarProfessor()
       const professorNovo = await criarProfessor()
@@ -120,7 +120,7 @@ describe('matriculas', () => {
 
       const encerrar = await app.request(
         `/api/matriculas/${antiga.id}`,
-        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(token) }, body: JSON.stringify({ situacao: 'encerrada' }) },
+        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ situacao: 'ENCERRADA' }) },
         testEnv,
       )
       expect(encerrar.status).toBe(200)
@@ -129,8 +129,8 @@ describe('matriculas', () => {
         `/api/alunos/${aluno.id}/matriculas`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ professorId: professorNovo.id, materiaId: materia.id, tipoAtendimento: 'regular' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ professorId: professorNovo.id, materiaId: materia.id, tipoAtendimento: 'REGULAR' }),
         },
         testEnv,
       )
@@ -138,7 +138,7 @@ describe('matriculas', () => {
     })
 
     it('rejeita materia inativa -> 400', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const aluno = await criarAluno()
       const professor = await criarProfessor()
       const materia = await criarMateria({ ativo: false })
@@ -147,8 +147,8 @@ describe('matriculas', () => {
         `/api/alunos/${aluno.id}/matriculas`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ professorId: professor.id, materiaId: materia.id, tipoAtendimento: 'regular' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ professorId: professor.id, materiaId: materia.id, tipoAtendimento: 'REGULAR' }),
         },
         testEnv,
       )
@@ -157,7 +157,7 @@ describe('matriculas', () => {
 
     it('professor autenticado nao pode criar matricula -> 403', async () => {
       const { usuario, senha } = await criarUsuarioProfessor()
-      const token = await obterToken(usuario.email, senha)
+      const cookie = await obterCookie(usuario.email, senha)
       const aluno = await criarAluno()
       const professor = await criarProfessor()
       const materia = await criarMateria()
@@ -166,8 +166,8 @@ describe('matriculas', () => {
         `/api/alunos/${aluno.id}/matriculas`,
         {
           method: 'POST',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ professorId: professor.id, materiaId: materia.id, tipoAtendimento: 'regular' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ professorId: professor.id, materiaId: materia.id, tipoAtendimento: 'REGULAR' }),
         },
         testEnv,
       )
@@ -177,7 +177,7 @@ describe('matriculas', () => {
 
   describe('PUT /api/matriculas/:id', () => {
     it('atualiza estagio/situacao/observacoes normalmente', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const aluno = await criarAluno()
       const professor = await criarProfessor()
       const materia = await criarMateria()
@@ -187,19 +187,19 @@ describe('matriculas', () => {
         `/api/matriculas/${matricula.id}`,
         {
           method: 'PUT',
-          headers: { ...jsonHeaders, ...authHeader(token) },
-          body: JSON.stringify({ estagio: 'Unidade 3', situacao: 'pausada' }),
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ estagio: 'Unidade 3', situacao: 'PAUSADA' }),
         },
         testEnv,
       )
       expect(response.status).toBe(200)
       const body = (await response.json()) as MatriculaOutputType
       expect(body.estagio).toBe('Unidade 3')
-      expect(body.situacao).toBe('pausada')
+      expect(body.situacao).toBe('PAUSADA')
     })
 
     it('professorId no corpo -> 422 com mensagem explicando o caminho certo', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const aluno = await criarAluno()
       const professor = await criarProfessor()
       const outroProfessor = await criarProfessor()
@@ -210,7 +210,7 @@ describe('matriculas', () => {
         `/api/matriculas/${matricula.id}`,
         {
           method: 'PUT',
-          headers: { ...jsonHeaders, ...authHeader(token) },
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
           body: JSON.stringify({ professorId: outroProfessor.id }),
         },
         testEnv,
@@ -221,7 +221,7 @@ describe('matriculas', () => {
     })
 
     it('materiaId no corpo -> 422', async () => {
-      const token = await tokenAdmin()
+      const cookie = await cookieAdmin()
       const aluno = await criarAluno()
       const professor = await criarProfessor()
       const materia = await criarMateria()
@@ -232,7 +232,7 @@ describe('matriculas', () => {
         `/api/matriculas/${matricula.id}`,
         {
           method: 'PUT',
-          headers: { ...jsonHeaders, ...authHeader(token) },
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
           body: JSON.stringify({ materiaId: outraMateria.id }),
         },
         testEnv,

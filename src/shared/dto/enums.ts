@@ -20,8 +20,8 @@ export type DiaSemana = z.infer<typeof DiaSemanaEnum>
 export const SituacaoAlunoEnum = z.enum(['ATIVO', 'TRANCADO', 'DESISTENTE'])
 export type SituacaoAluno = z.infer<typeof SituacaoAlunoEnum>
 
-export const TipoAtendimentoEnum = z.enum(['regular', 'pre_escolar'])
+export const TipoAtendimentoEnum = z.enum(['REGULAR', 'PRE_ESCOLAR'])
 export type TipoAtendimento = z.infer<typeof TipoAtendimentoEnum>
 
-export const SituacaoMatriculaEnum = z.enum(['ativa', 'pausada', 'encerrada'])
+export const SituacaoMatriculaEnum = z.enum(['ATIVA', 'PAUSADA', 'ENCERRADA'])
 export type SituacaoMatricula = z.infer<typeof SituacaoMatriculaEnum>

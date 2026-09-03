@@ -49,5 +49,20 @@ Seção 5 da spec, completa:
   não como algo a corrigir — só deixando registrado que a decisão de
   manter os dois passos separados foi da spec, não minha.
 - Nenhuma validação de coerência entre `tipoAtendimento` e a idade do aluno
-  (`ativo`, "regular" vs. "pre_escolar") — a spec não define essa regra,
+  (`ativo`, "REGULAR" vs. "PRE_ESCOLAR") — a spec não define essa regra,
   então os dois valores são aceitos livremente para qualquer aluno.
+
+## Atualizações pós-revisão
+
+Merge em cascata de `feat/05-alunos` (que já trouxe o merge do PR 02/03, ver
+`docs/pr-03-professores.md`):
+
+- **`TipoAtendimentoEnum`/`SituacaoMatriculaEnum` uppercase**, mesma decisão
+  já aplicada aos enums anteriores: `['REGULAR', 'PRE_ESCOLAR']` e `['ATIVA',
+  'PAUSADA', 'ENCERRADA']`, sem `paraApi`/`paraBanco`. `matriculas.service.ts`
+  perdeu esse import; `MatriculaRow.tipoAtendimento`/`.situacao` passaram a
+  usar os tipos gerados pelo Prisma direto, em vez de `string` com cast
+  manual.
+- **`tests/e2e/matriculas.e2e.test.ts`** migrado para `obterCookie`/`authHeader`
+  (auth por cookie) e os literais (`'regular'`, `'ativa'`, `'pausada'`,
+  `'encerrada'`) para maiúsculo.
