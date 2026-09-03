@@ -44,3 +44,13 @@ Seção 8 da spec, completa:
 - Nenhum ponto de atenção adicional além dos já registrados nos PRs
   anteriores (a lógica de escopo e o formato de output reaproveitam
   integralmente o que já foi decidido em `alunos`/`horarios`).
+
+## Atualizações pós-revisão
+
+Merge em cascata de `feat/08-registros` (que já trouxe o merge do PR 02/03,
+ver `docs/pr-03-professores.md`): `agenda.service.ts` perdeu o import de
+`paraApi` (`DiaSemanaEnum` já era uppercase desde o PR 03) — `diaSemana`
+passa direto do Prisma pro output, sem cast. `tests/e2e/agenda.e2e.test.ts`
+migrado para `obterCookie`/`authHeader` (auth por cookie); sem literais de
+enum pra corrigir nesta feature (agenda é só leitura, nenhum `diaSemana`
+aparece em corpo de request).
