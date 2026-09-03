@@ -101,13 +101,15 @@ export async function atualizarMatricula(
     throw new HTTPException(404, { message: 'Matricula nao encontrada.' })
   }
 
+  // Prisma ignora chave com valor `undefined` em `data` -- spread condicional
+  // era redundante, nenhum campo aqui e nullable.
   const matricula = await prisma.matricula.update({
     where: { id },
     data: {
-      ...(input.estagio !== undefined ? { estagio: input.estagio } : {}),
-      ...(input.tipoAtendimento !== undefined ? { tipoAtendimento: input.tipoAtendimento } : {}),
-      ...(input.situacao !== undefined ? { situacao: input.situacao } : {}),
-      ...(input.observacoes !== undefined ? { observacoes: input.observacoes } : {}),
+      estagio: input.estagio,
+      tipoAtendimento: input.tipoAtendimento,
+      situacao: input.situacao,
+      observacoes: input.observacoes,
     },
   })
   return paraMatriculaOutput(matricula)
