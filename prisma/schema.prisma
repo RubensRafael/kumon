@@ -1,0 +1,58 @@
+// Prisma + Neon (PostgreSQL) rodando na Edge da Cloudflare via Driver Adapters.
+// Docs: https://www.prisma.io/docs/orm/prisma-client/deployment/edge/deploy-to-cloudflare
+
+generator client {
+  provider = "prisma-client"
+
+  // Client gerado em TypeScript dentro do projeto (fora de node_modules),
+  // o que evita problemas de resolucao no bundle do Worker.
+  output = "../src/server/db/generated"
+
+  // `workerd` faz o client importar o runtime compativel com Cloudflare Workers.
+  runtime      = "workerd"
+  moduleFormat = "esm"
+
+  // `client` usa o Query Compiler em WASM: nao ha Query Engine nativo,
+  // toda a comunicacao passa pelo Driver Adapter do Neon.
+  engineType = "client"
+
+  // Driver Adapters: exigido pelo setup serverless/edge.
+  // Obs.: a partir do Prisma 6.6 a funcionalidade e GA e o CLI emite um aviso
+  // de "deprecated preview feature" — a linha pode ser removida sem impacto.
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Modelos de exemplo — troque pelos seus.
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  posts Post[]
+
+  @@map("users")
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  authorId String @map("author_id")
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@map("posts")
+}

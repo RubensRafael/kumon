@@ -1,0 +1,38 @@
+/**
+ * Configuracao do Cloudflare Worker.
+ * Referencia completa: https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kumon",
+
+  // Entrypoint do servidor Hono. O bundler do Wrangler resolve o TSX e o WASM
+  // do Prisma Query Compiler automaticamente.
+  "main": "./src/server.tsx",
+
+  "compatibility_date": "2025-11-01",
+
+  // Necessario para @neondatabase/serverless (WebSocket/Buffer) e para o
+  // runtime do Prisma Client.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Build do React (vite build) servido como assets estaticos pela Cloudflare.
+  // `not_found_handling: "none"` faz qualquer rota sem arquivo correspondente
+  // cair no Worker, onde o Hono devolve o index.html da SPA.
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  },
+
+  // Mantem as variaveis/secrets definidas no dashboard da Cloudflare:
+  // um `wrangler deploy` nao apaga o que foi configurado por la.
+  "keep_vars": true,
+
+  "observability": {
+    "enabled": true
+  }
+
+  // DATABASE_URL nao fica aqui: em desenvolvimento vem de `.dev.vars` e em
+  // producao de `wrangler secret put DATABASE_URL` ou do dashboard.
+}
