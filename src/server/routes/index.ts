@@ -8,6 +8,7 @@ import { conteudosRoutes, materiasRoutes } from '../features/materias/materias.r
 import { horariosRoutes, matriculaHorariosRoutes } from '../features/horarios/horarios.routes'
 import { agendaRoutes, alunoAgendaRoutes } from '../features/agenda/agenda.routes'
 import { alunoMatriculasRoutes, matriculasRoutes } from '../features/matriculas/matriculas.routes'
+import { painelRoutes } from '../features/painel/painel.routes'
 import { professoresRoutes } from '../features/professores/professores.routes'
 import { registrosRoutes } from '../features/registros/registros.routes'
 import { envMiddleware } from '../middlewares/env.middleware'
@@ -41,6 +42,7 @@ apiRoutes.route('/horarios', horariosRoutes)
 apiRoutes.route('/registros', registrosRoutes)
 apiRoutes.route('/agenda', agendaRoutes)
 apiRoutes.route('/alunos', alunoAgendaRoutes)
+apiRoutes.route('/painel', painelRoutes)
 
 /**
  * Catch-all da API.
