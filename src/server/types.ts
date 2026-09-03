@@ -16,6 +16,7 @@ export interface Bindings extends Record<string, unknown> {
   BACKEND_DATABASE_URL: string
   BACKEND_ENVIRONMENT: string
   BACKEND_JWT_SECRET: string
+  BACKEND_RESEND_API_KEY: string
   /** Binding dos assets estaticos declarado no wrangler.jsonc. */
   ASSETS: { fetch(input: Request | URL | string): Promise<Response> }
 }
@@ -28,7 +29,7 @@ export interface Bindings extends Record<string, unknown> {
  */
 export interface AuthContext {
   id: string
-  papel: 'admin' | 'professor'
+  papel: 'ADMIN' | 'PROFESSOR'
   professorId: string | null
 }
 
