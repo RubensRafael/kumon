@@ -39,6 +39,11 @@ export interface Variables {
   prisma: PrismaClient
   /** Presente apos `authMiddleware`; ausente em rotas publicas. */
   usuario: AuthContext
+  /**
+   * Presente apos `scopeToProfessor`. `null` = sem filtro (admin);
+   * caso contrario, o `professorId` a que a query deve se restringir.
+   */
+  escopoProfessorId: string | null
 }
 
 export interface AppEnv {

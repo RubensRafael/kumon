@@ -88,3 +88,41 @@ export async function criarMateria(opcoes: CriarMateriaOpcoes = {}) {
     },
   })
 }
+
+interface CriarAlunoOpcoes {
+  nome?: string
+  dataMatricula?: Date
+}
+
+export async function criarAluno(opcoes: CriarAlunoOpcoes = {}) {
+  return prisma.aluno.create({
+    data: {
+      nome: opcoes.nome ?? unico('Aluno'),
+      dataMatricula: opcoes.dataMatricula ?? new Date(),
+    },
+  })
+}
+
+interface CriarMatriculaOpcoes {
+  alunoId: string
+  professorId: string
+  materiaId: string
+  situacao?: 'ATIVA' | 'PAUSADA' | 'ENCERRADA'
+}
+
+/**
+ * A feature de matriculas so chega no PR 06 — ate la, os testes de escopo
+ * (PR 05 em diante) semeiam a linha direto pelo Prisma, mesma estrategia
+ * usada pra `Professor`/`Materia` nos PRs anteriores.
+ */
+export async function criarMatricula(opcoes: CriarMatriculaOpcoes) {
+  return prisma.matricula.create({
+    data: {
+      alunoId: opcoes.alunoId,
+      professorId: opcoes.professorId,
+      materiaId: opcoes.materiaId,
+      tipoAtendimento: 'REGULAR',
+      situacao: opcoes.situacao ?? 'ATIVA',
+    },
+  })
+}

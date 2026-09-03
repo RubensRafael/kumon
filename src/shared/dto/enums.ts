@@ -13,3 +13,6 @@ export type Papel = z.infer<typeof PapelEnum>
 
 export const DiaSemanaEnum = z.enum(['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'])
 export type DiaSemana = z.infer<typeof DiaSemanaEnum>
+
+export const SituacaoAlunoEnum = z.enum(['ativo', 'trancado', 'desistente'])
+export type SituacaoAluno = z.infer<typeof SituacaoAlunoEnum>
