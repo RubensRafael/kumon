@@ -14,5 +14,5 @@ import { z } from 'zod'
 export const PapelEnum = z.enum(['ADMIN', 'PROFESSOR'])
 export type Papel = z.infer<typeof PapelEnum>
 
-export const DiaSemanaEnum = z.enum(['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'])
+export const DiaSemanaEnum = z.enum(['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'])
 export type DiaSemana = z.infer<typeof DiaSemanaEnum>

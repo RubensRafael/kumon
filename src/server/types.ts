@@ -24,7 +24,7 @@ export interface Bindings extends Record<string, unknown> {
 /**
  * Usuario autenticado, decodificado do JWT por `authMiddleware`.
  *
- * `professorId` vem preenchido quando `papel === 'professor'` — e o vinculo
+ * `professorId` vem preenchido quando `papel === 'PROFESSOR'` — e o vinculo
  * que `scopeToProfessor` usa para filtrar dados de outros professores.
  */
 export interface AuthContext {
