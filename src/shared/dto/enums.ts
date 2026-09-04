@@ -27,6 +27,21 @@ export const SituacaoMatriculaEnum = z.enum(['ATIVA', 'PAUSADA', 'ENCERRADA'])
 export type SituacaoMatricula = z.infer<typeof SituacaoMatriculaEnum>
 
 /**
+ * "HH:mm" em intervalos de 30 min -- ex.: "07:00", "14:30", "23:30".
+ *
+ * O regex tem duas partes, uma pra hora e uma pra minuto, separadas pelo `:`:
+ * - Hora: `[01]\d` cobre "00" a "19" (0 ou 1, seguido de qualquer dígito),
+ *   `2[0-3]` cobre "20" a "23" -- juntos, toda hora válida de um dia.
+ * - Minuto: `(00|30)` só aceita esses dois literais, nada mais.
+ * `^`/`$` garantem que a string inteira precisa bater, não só um pedaço dela.
+ */
+export const HORARIO_REGEX = /^([01]\d|2[0-3]):(00|30)$/
+export const HorarioDoDia = z
+  .string()
+  .regex(HORARIO_REGEX, 'Horario deve estar no formato HH:mm, em intervalos de 30 minutos (ex.: "14:00", "14:30").')
+export type HorarioDoDiaType = z.infer<typeof HorarioDoDia>
+
+/**
  * `status` e sempre derivado no backend — nunca aparece em nenhum input.
  * Sem coluna nativa no Postgres (nunca persistido, so calculado on-the-fly),
  * mas mantido no mesmo casing (MAIUSCULO) dos demais enums deste arquivo por

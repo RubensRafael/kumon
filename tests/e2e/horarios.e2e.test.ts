@@ -128,6 +128,23 @@ describe('horarios', () => {
       expect(response.status).toBe(201)
     })
 
+    it('rejeita horario fora do formato HH:mm em intervalos de 30 min -> 400', async () => {
+      const cookie = await cookieAdmin()
+      const professor = await criarProfessor()
+      const matricula = await novaMatricula(professor.id)
+
+      const response = await app.request(
+        `/api/matriculas/${matricula.id}/horarios`,
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ diaSemana: 'SEX', horario: '16:15' }),
+        },
+        testEnv,
+      )
+      expect(response.status).toBe(400)
+    })
+
     it('professor autenticado nao pode criar horario -> 403', async () => {
       const { usuario, professor, senha } = await criarUsuarioProfessor()
       const matricula = await novaMatricula(professor.id)

@@ -8,6 +8,7 @@ import {
   ComportamentoEnum,
   DesempenhoEnum,
   FocoEnum,
+  HorarioDoDia,
   StatusRegistroEnum,
 } from '../../../shared/dto/enums'
 
@@ -27,7 +28,7 @@ export const RegistroResumoOutput = z.object({
   professorId: z.uuid(),
   materiaId: z.uuid(),
   data: z.date(),
-  horarioPrevisto: z.string(),
+  horarioPrevisto: HorarioDoDia,
   status: StatusRegistroEnum,
 })
 

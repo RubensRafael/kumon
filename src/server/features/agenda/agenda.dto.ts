@@ -1,11 +1,11 @@
 import { z } from 'zod'
 
-import { DiaSemanaEnum } from '../../../shared/dto/enums'
+import { DiaSemanaEnum, HorarioDoDia } from '../../../shared/dto/enums'
 
 export const AgendaSlotOutput = z.object({
   horarioId: z.uuid(),
   diaSemana: DiaSemanaEnum,
-  horario: z.string(),
+  horario: HorarioDoDia,
   matriculaId: z.uuid(),
   alunoId: z.uuid(),
   alunoNome: z.string(),

@@ -21,10 +21,11 @@ export const MatriculaCreateInput = z.object({
   observacoes: z.string().optional(),
 })
 
-// professorId e materiaId nao existem neste schema de proposito — trocar
-// qualquer um dos dois numa matricula existente e bloqueado por
-// `rejeitarTrocaProfessorMateria`, com uma mensagem explicando o caminho
-// certo (ver matriculas.middleware.ts).
+// professorId e materiaId nao existem neste schema de proposito: trocar
+// professor/materia de uma matricula existente nao e suportado por aqui
+// (encerre e crie uma nova). O Zod descarta esses campos em silencio se
+// vierem no corpo -- nao ha checagem explicita, a UI e quem deve impedir o
+// envio.
 export const MatriculaUpdateInput = z
   .object({
     estagio: z.string().optional(),

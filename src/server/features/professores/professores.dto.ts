@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { DiaSemanaEnum } from '../../../shared/dto/enums'
+import { DiaSemanaEnum, HorarioDoDia } from '../../../shared/dto/enums'
 
 export const ProfessorOutput = z.object({
   id: z.uuid(),
@@ -10,8 +10,8 @@ export const ProfessorOutput = z.object({
   email: z.email().nullable(),
   photoUrl: z.url().nullable(),
   diasDisponiveis: z.array(DiaSemanaEnum),
-  horarioInicial: z.string(),
-  horarioFinal: z.string(),
+  horarioInicial: HorarioDoDia,
+  horarioFinal: HorarioDoDia,
   capacidadePorHorario: z.number().int(),
   duracaoAulaMin: z.number().int(),
   corAgenda: z.string(),
@@ -25,8 +25,8 @@ export const ProfessorCreateInput = z.object({
   email: z.email().optional(),
   photoUrl: z.url().optional(),
   diasDisponiveis: z.array(DiaSemanaEnum).min(1),
-  horarioInicial: z.string(),
-  horarioFinal: z.string(),
+  horarioInicial: HorarioDoDia,
+  horarioFinal: HorarioDoDia,
   capacidadePorHorario: z.number().int().positive(),
   duracaoAulaMin: z.number().int().positive(),
   corAgenda: z.string(),
