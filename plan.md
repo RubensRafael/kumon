@@ -160,7 +160,6 @@ export const ProfessorOutput = z.object({
   horarioInicial: z.string(), // "HH:mm", só em intervalos de 30 min (mesmo regex compartilhado da seção 6)
   horarioFinal: z.string(),
   capacidadePorHorario: z.number().int(),
-  duracaoAulaMin: z.number().int(),
   corAgenda: z.string(),
   observacoes: z.string().nullable(),
   materiaIds: z.array(z.string().uuid()),
@@ -175,7 +174,6 @@ export const ProfessorCreateInput = z.object({
   horarioInicial: z.string(),
   horarioFinal: z.string(),
   capacidadePorHorario: z.number().int().positive(),
-  duracaoAulaMin: z.number().int().positive(),
   corAgenda: z.string(),
   observacoes: z.string().optional(),
   materiaIds: z.array(z.string().uuid()).min(1),
@@ -788,7 +786,6 @@ model Professor {
   horarioInicial       String
   horarioFinal         String
   capacidadePorHorario Int
-  duracaoAulaMin       Int
   corAgenda            String
   observacoes          String?
   criadoEm             DateTime           @default(now())
@@ -1052,3 +1049,16 @@ model RegistroAulaConteudo {
 > - [ ] Testes e2e cobrindo caminho feliz + escopo + a(s) regra(s) de negócio da seção.
 > - [ ] `docs/pr-XX-<nome>.md` criado, com três seções: **"O que foi implementado"**, **"Decisões tomadas"** (toda vez que você resolveu uma ambiguidade sozinho, listar aqui o que decidiu e por quê), e **"Pontos para revisão"** (o que eu deveria olhar com atenção antes de mergear — inclui qualquer trade-off, qualquer coisa que a spec deixou em aberto e você teve que resolver, e qualquer risco que você percebeu ao implementar).
 > - [ ] PR aberto contra a branch anterior, título e descrição batendo com o `docs/*.md` daquele PR.
+
+---
+
+## Coisas pra fazer
+
+Ações futuras já discutidas mas não implementadas — anotadas aqui pra não perder o fio quando chegar a hora.
+
+- **`tipoAtendimento` (Matrícula) deveria ser imutável, igual `professorId`/`materiaId`.** Mapa de todos os campos de `Matricula` e sua mutabilidade hoje, pra deixar claro o que muda e o que não muda com essa decisão:
+  - **Já imutáveis** (não existem em `MatriculaUpdateInput`, Zod descarta em silêncio): `alunoId`, `professorId`, `materiaId`. Trocar qualquer um desses é sempre "encerrar a matrícula atual + criar uma nova".
+  - **Mutáveis hoje, devem continuar assim**: `situacao` (é literalmente o mecanismo de encerrar/pausar — não pode virar imutável sem quebrar o próprio fluxo de troca) e `observacoes` (texto livre, sem motivo pra travar).
+  - **Mutáveis hoje, deveriam ser imutáveis**: `tipoAtendimento` e `estagio`. Intenção geral: manter histórico interno de mudanças por matrícula, mesmo tratamento de `professorId`/`materiaId` (Zod deixa de declarar o campo em `MatriculaUpdateInput`). Consequência de travar `estagio` sobre o snapshot `RegistroAula.estagio` — nota em `discussao.md` (é mudança do lado de `registros`, não de `matriculas`).
+  - **Issue de UI associada**: [#14 — UI: esconder que "editar" professor/matéria/tipo de atendimento cria uma matrícula nova](https://github.com/RubensRafael/kumon/issues/14).
+- **Issue: tipografia/mensagens de erro da API estão muito técnicas**: [#15 — API: revisar tipografia/clareza das mensagens de erro](https://github.com/RubensRafael/kumon/issues/15).
