@@ -113,3 +113,16 @@ foi a maior propagação da decisão de uppercase até aqui:
   `criarHorario` — checagem explícita antes de escrever, em vez de
   depender de código de erro do banco. Comportamento (`409` na duplicata)
   não muda, só a forma de detectar.
+- **`RegistroAula.data` trocou de `TIMESTAMP(3)` pra `DATE`** (`@db.Date`
+  no Prisma, migration `20260904203834_registro_data_date`). Motivo:
+  `RegistroInput.data`/`ListarRegistrosQuery.data` são `z.coerce.date()`,
+  que aceita qualquer string parseável por `Date`, não só
+  `"YYYY-MM-DD"` — e todo o casamento de "mesmo dia" no sistema
+  (`where: { data }` em `listarRegistrosDoDia`, `@@unique([horarioId,
+  data])`) dependia de igualdade exata de timestamp. Um datetime completo
+  (ex.: `"2026-03-09T09:00:00-03:00"`) tinha hora não-meia-noite em UTC e
+  quebraria esse casamento — a linha sumiria de `GET /registros?data=X` e
+  um segundo `POST` pro "mesmo dia" passaria direto pelo `409` de
+  duplicata. Com a coluna `DATE`, o Postgres descarta fisicamente a hora
+  na gravação, então o problema não existe mais na origem — não foi
+  necessário mudar `z.coerce.date()` pra nada mais restrito.

@@ -252,7 +252,7 @@ model RegistroAula {
   horario       MatriculaHorario       @relation(fields: [horarioId], references: [id])
   matriculaId   String
   matricula     Matricula              @relation(fields: [matriculaId], references: [id])
-  data          DateTime
+  data          DateTime               @db.Date
   estagio       String?
   chegada       Chegada?
   boletim       Boletim?

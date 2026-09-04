@@ -547,6 +547,7 @@ app.put(
 ### Regras de negócio / testes
 
 - `GET /registros?data=X` nunca cria linha nenhuma — `LEFT JOIN` entre `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana de `X`) e `REGISTRO_AULA` existente pra aquela `data`. Sem linha → `id: VIRTUAL_REGISTRO_ID`, `status: 'nao_iniciado'`.
+- `RegistroAula.data` é `DATE` no banco (não `TIMESTAMP`) — o Postgres descarta a hora na gravação, então `POST /registros`/`GET /registros?data=X` casam por dia mesmo que o cliente mande um datetime completo em vez de `"YYYY-MM-DD"` puro (`z.coerce.date()` no input aceita ambos).
 - `status` nunca vem em nenhum input — é sempre derivado no backend na hora de montar o output: sem linha → `nao_iniciado`; linha existe e `fechado=false` → `em_andamento`; `fechado=true` → `concluido`.
 - `POST /registros` com `chegada: 'atrasado'` ou `'faltou'` — o endpoint só salva o que veio; se por algum motivo vierem também campos de detalhe (`boletim`, `foco` etc.) junto nesse mesmo payload, eles são simplesmente persistidos também, sem checagem de coerência. Não é uma configuração esperada (a UI não deveria enviar isso), mas o backend não trata como erro.
 - `POST /registros` duplicado pro mesmo `(horarioId, data)` → `409` (constraint única no banco — essa sim é uma checagem de integridade real, mantida independente da UI).
@@ -886,7 +887,7 @@ model RegistroAula {
   horario       MatriculaHorario       @relation(fields: [horarioId], references: [id])
   matriculaId   String
   matricula     Matricula              @relation(fields: [matriculaId], references: [id])
-  data          DateTime
+  data          DateTime               @db.Date // so a data, sem hora -- ver "Regras de negocio" da secao 7
   estagio       String?
   chegada       Chegada?
   boletim       Boletim?
