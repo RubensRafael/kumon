@@ -79,3 +79,10 @@ mudanças que afetam esta branch diretamente, propagadas aqui:
   `obterCookie` captura o `Set-Cookie` da resposta de login, `authHeader`
   agora monta `{ cookie }`. `tests/e2e/professores.e2e.test.ts` atualizado
   para o novo helper e para os literais de dia em maiúsculo.
+- **`horarioInicial`/`horarioFinal` passaram a usar `HorarioDoDia`** (mesmo
+  regex `HH:mm` em intervalos de 30 min introduzido no PR 07, ver
+  `docs/pr-07-horarios.md`), em vez de `z.string()` puro. Toda a agenda é
+  quantizada em blocos de 30 min a partir de `MatriculaHorario.horario` — um
+  limite de expediente fora desse grid (ex.: `"08:15"`) não alinha com
+  nenhum horário reservável de verdade, então faz sentido travar o mesmo
+  formato aqui.
