@@ -1,25 +1,13 @@
 import { HTTPException } from 'hono/http-exception'
 
 import { formatarData, parseData } from '../../lib/data'
-import type { PrismaClient, SituacaoAluno } from '../../db/generated/client'
+import type { Aluno, PrismaClient } from '../../db/generated/client'
 import type { AlunoCreateInputType, AlunoOutputType, AlunoUpdateInputType } from './alunos.dto'
 
-interface AlunoRow {
-  id: string
-  nome: string
-  responsavel: string | null
-  telefone: string | null
-  whatsapp: string | null
-  email: string | null
-  dataNascimento: Date | null
-  observacoes: string | null
-  dataMatricula: Date
-  situacao: SituacaoAluno
-  zonaVermelha: boolean
-  connect: boolean
-}
-
-function paraAlunoOutput(aluno: AlunoRow): AlunoOutputType {
+// Nenhuma query de aluno usa `include`/`select` -- a linha sempre vem
+// completa, entao o model `Aluno` exportado pelo client ja e o shape certo,
+// sem precisar de uma interface copiada campo a campo.
+function paraAlunoOutput(aluno: Aluno): AlunoOutputType {
   return {
     id: aluno.id,
     nome: aluno.nome,
