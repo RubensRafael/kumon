@@ -21,8 +21,8 @@ async function cookieAdmin() {
 }
 
 async function novaMatricula(professorId: string) {
-  const aluno = await criarAluno()
-  const materia = await criarMateria()
+  const aluno = await criarAluno({ nome: 'Aluno' })
+  const materia = await criarMateria({ nome: 'Materia' })
   return criarMatricula({ alunoId: aluno.id, professorId, materiaId: materia.id })
 }
 

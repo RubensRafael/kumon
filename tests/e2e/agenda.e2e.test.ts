@@ -19,8 +19,8 @@ async function cookieAdmin() {
 }
 
 async function montarSlot(professorId: string) {
-  const materia = await criarMateria()
-  const aluno = await criarAluno()
+  const materia = await criarMateria({ nome: 'Materia' })
+  const aluno = await criarAluno({ nome: 'Aluno' })
   const matricula = await criarMatricula({ alunoId: aluno.id, professorId, materiaId: materia.id })
   const horario = await criarHorario({ matriculaId: matricula.id, diaSemana: 'SEG', horario: '10:00' })
   return { aluno, materia, matricula, horario }
@@ -98,9 +98,9 @@ describe('agenda', () => {
     it('admin ve a agenda completa do aluno, mesmo com professores diferentes', async () => {
       const professor1 = await criarProfessor()
       const professor2 = await criarProfessor()
-      const aluno = await criarAluno()
-      const materia1 = await criarMateria()
-      const materia2 = await criarMateria()
+      const aluno = await criarAluno({ nome: 'Aluno' })
+      const materia1 = await criarMateria({ nome: 'Materia 1' })
+      const materia2 = await criarMateria({ nome: 'Materia 2' })
       const matricula1 = await criarMatricula({ alunoId: aluno.id, professorId: professor1.id, materiaId: materia1.id })
       const matricula2 = await criarMatricula({ alunoId: aluno.id, professorId: professor2.id, materiaId: materia2.id })
       await criarHorario({ matriculaId: matricula1.id })
@@ -115,9 +115,9 @@ describe('agenda', () => {
     it('professor so ve os proprios horarios daquele aluno', async () => {
       const { usuario, professor, senha } = await criarUsuarioProfessor()
       const outroProfessor = await criarProfessor()
-      const aluno = await criarAluno()
-      const materia1 = await criarMateria()
-      const materia2 = await criarMateria()
+      const aluno = await criarAluno({ nome: 'Aluno' })
+      const materia1 = await criarMateria({ nome: 'Materia 1' })
+      const materia2 = await criarMateria({ nome: 'Materia 2' })
       const minha = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia1.id })
       const deOutro = await criarMatricula({ alunoId: aluno.id, professorId: outroProfessor.id, materiaId: materia2.id })
       await criarHorario({ matriculaId: minha.id })

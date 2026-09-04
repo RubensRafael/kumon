@@ -52,12 +52,12 @@ export async function atualizarMateria(
     throw new HTTPException(404, { message: 'Materia nao encontrada.' })
   }
 
+  // Prisma ignora chave com valor `undefined` em `data` — nenhum campo aqui
+  // e nullable, entao nao ha `null` explicito pra distinguir de "nao veio no
+  // corpo da request", e o spread condicional era redundante.
   const materia = await prisma.materia.update({
     where: { id },
-    data: {
-      ...(input.nome !== undefined ? { nome: input.nome } : {}),
-      ...(input.ativo !== undefined ? { ativo: input.ativo } : {}),
-    },
+    data: { nome: input.nome, ativo: input.ativo },
   })
   return paraMateriaOutput(materia)
 }
@@ -116,11 +116,7 @@ export async function atualizarConteudo(
 
   const conteudo = await prisma.conteudo.update({
     where: { id },
-    data: {
-      ...(input.materiaId !== undefined ? { materiaId: input.materiaId } : {}),
-      ...(input.nome !== undefined ? { nome: input.nome } : {}),
-      ...(input.ativo !== undefined ? { ativo: input.ativo } : {}),
-    },
+    data: { materiaId: input.materiaId, nome: input.nome, ativo: input.ativo },
   })
   return paraConteudoOutput(conteudo)
 }

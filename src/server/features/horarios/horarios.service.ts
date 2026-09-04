@@ -1,17 +1,12 @@
 import { HTTPException } from 'hono/http-exception'
 
-import type { DiaSemana, PrismaClient } from '../../db/generated/client'
+import type { MatriculaHorario, PrismaClient } from '../../db/generated/client'
 import type { HorarioCreateInputType, HorarioOutputType, HorarioUpdateInputType } from './horarios.dto'
 
-interface HorarioRow {
-  id: string
-  matriculaId: string
-  diaSemana: DiaSemana
-  horario: string
-  ativo: boolean
-}
-
-function paraHorarioOutput(horario: HorarioRow): HorarioOutputType {
+// Nenhuma query de horario usa include/select -- a linha sempre vem
+// completa, entao o model MatriculaHorario exportado pelo client ja e o
+// shape certo.
+function paraHorarioOutput(horario: MatriculaHorario): HorarioOutputType {
   return {
     id: horario.id,
     matriculaId: horario.matriculaId,
@@ -103,9 +98,10 @@ export async function atualizarHorario(
     throw new HTTPException(404, { message: 'Horario nao encontrado.' })
   }
 
+  // Prisma ignora chave com valor `undefined` em `data`.
   const horario = await prisma.matriculaHorario.update({
     where: { id },
-    data: input.ativo !== undefined ? { ativo: input.ativo } : {},
+    data: { ativo: input.ativo },
   })
   return paraHorarioOutput(horario)
 }
