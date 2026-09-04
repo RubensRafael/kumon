@@ -25,20 +25,12 @@ Seção 7 da spec, completa — a feature mais complexa da API até aqui:
   `PrismaClientKnownRequestError` código `P2002`) em vez de um `findFirst`
   prévio — essa checagem *é* a exceção "constraint de banco real" que a
   spec descreve para este caso especificamente.
-- `POST /registros/:id/finalizar`: idempotente — testado com
-  `vi.useFakeTimers({ toFake: ['Date'] })` avançando o relógio entre duas
-  chamadas e confirmando que `duracaoMin` não muda na segunda.
+- `POST /registros/:id/finalizar`: marca `fechado: true`, idempotente — uma
+  segunda chamada não falha, só devolve o estado atual.
 - 15 testes e2e em `tests/e2e/registros.e2e.test.ts`.
 
 ## Decisões tomadas
 
-- **`horaInicio` é definido em `POST /registros` (o momento em que a linha
-  é criada), nunca depois.** A spec não diz explicitamente quando esse
-  campo é preenchido — só que existe no schema e que `duracaoMin` é
-  calculado a partir dele em `finalizar`. Interpretação natural: é o
-  instante em que o professor começa a preencher o registro (equivalente a
-  "marcar chegada"), e `duracaoMin = finalizar.horaFim - criar.horaInicio`,
-  em minutos, arredondado.
 - **`GET /registros/:id` e `PUT`/`finalizar` usam a mesma convenção geral de
   escopo por filtragem (404 pra registro de outro professor), não um `403`
   explícito.** A spec só documenta essa regra explicitamente pra `POST`
@@ -71,9 +63,6 @@ Seção 7 da spec, completa — a feature mais complexa da API até aqui:
   específica minha. Não afeta o resultado (84/84 testes passam de forma
   consistente), mas vale investigar antes de ir pra produção — pode
   indicar uma versão do `pg` que vale atualizar.
-- `duracaoMin` é arredondado pro minuto mais próximo
-  (`Math.round(...).60_000`); uma finalização a menos de 30s da criação
-  arredonda pra `0`. A spec não define a granularidade esperada.
 
 ## Atualizações pós-revisão
 
@@ -105,3 +94,80 @@ foi a maior propagação da decisão de uppercase até aqui:
 - **`horarioPrevisto` passou a usar `HorarioDoDia`** (regex `HH:mm` do
   PR 07), em vez de `z.string()` puro — é um valor copiado direto de
   `MatriculaHorario.horario`, então herda a mesma validação de formato.
+- **`horaInicio`/`horaFim`/`duracaoMin` removidos inteiramente** (DTO,
+  service, schema Prisma — nova migration
+  `20260904175328_remove_registro_duracao` fazendo o `DROP COLUMN` das três
+  colunas). Eram uma medição de tempo real decorrido entre `POST /registros`
+  (criação da linha) e `POST /registros/:id/finalizar`, sem nenhum
+  consumidor downstream (nada em `painel` ou em qualquer outro lugar lia
+  `duracaoMin`) e sem nenhuma relação com `Matricula.tipoAtendimento` ou
+  `Professor.duracaoAulaMin` — três conceitos de "duração" que nunca
+  se conectavam entre si. `finalizarRegistro` ficou só marcando
+  `fechado: true`, mantendo a idempotência. Ver `plan.md`, seção final
+  "Coisas pra lembrar", pra decisões relacionadas ainda não implementadas
+  (`tipoAtendimento` imutável, futuro de `duracaoAulaMin`).
+- **`criarRegistro` passou a checar duplicata com `findFirst` antes do
+  `create`**, em vez de tentar o `create` direto e capturar `P2002`
+  (`PrismaClientKnownRequestError`) da violação de
+  `@@unique([horarioId, data])`. Mesmo padrão já usado em `criarMatricula`/
+  `criarHorario` — checagem explícita antes de escrever, em vez de
+  depender de código de erro do banco. Comportamento (`409` na duplicata)
+  não muda, só a forma de detectar.
+- **`RegistroAula.data` trocou de `TIMESTAMP(3)` pra `DATE`** (`@db.Date`
+  no Prisma, migration `20260904203834_registro_data_date`). Motivo:
+  `RegistroInput.data`/`ListarRegistrosQuery.data` são `z.coerce.date()`,
+  que aceita qualquer string parseável por `Date`, não só
+  `"YYYY-MM-DD"` — e todo o casamento de "mesmo dia" no sistema
+  (`where: { data }` em `listarRegistrosDoDia`, `@@unique([horarioId,
+  data])`) dependia de igualdade exata de timestamp. Um datetime completo
+  (ex.: `"2026-03-09T09:00:00-03:00"`) tinha hora não-meia-noite em UTC e
+  quebraria esse casamento — a linha sumiria de `GET /registros?data=X` e
+  um segundo `POST` pro "mesmo dia" passaria direto pelo `409` de
+  duplicata. Com a coluna `DATE`, o Postgres descarta fisicamente a hora
+  na gravação, então o problema não existe mais na origem — não foi
+  necessário mudar `z.coerce.date()` pra nada mais restrito.
+- **Coluna `RegistroAula.estagio` removida** (migration
+  `20260904204204_remove_registro_estagio_snapshot`). Era um snapshot
+  copiado de `Matricula.estagio` no momento do `POST /registros`,
+  necessário porque `Matricula.estagio` podia mudar depois daquela aula.
+  Deixou de ser preciso desde que `tipoAtendimento`/`estagio` viraram
+  imutáveis em `MatriculaUpdateInput` (PR 06, branch
+  `feat/matricula-imutavel` mergeada em `main`) — a matrícula nunca mais
+  muda de `estagio` durante sua vida, então `registro.matricula.estagio`
+  (via relação, já disponível em `INCLUDE_DETALHE`) é sempre o valor
+  certo. `paraDetalheOutput` passou a ler de lá; `criarRegistro` parou de
+  copiar o campo no `create`. `RegistroDetalheOutput` não mudou de schema
+  Zod — o campo `estagio` no output continua existindo, só mudou de onde
+  o valor vem no service.
+- **`status`/`fechado` removidos da API inteira.** Decisão de revisão:
+  como todo campo de um registro é opcional e pode ser preenchido aos
+  poucos, faz mais sentido a UI decidir "completo ou não" olhando os
+  campos preenchidos, em vez do backend expor um estado binário baseado
+  só em `fechado`. Mudanças:
+  - `POST /registros/:id/finalizar` **removido inteiramente** (rota,
+    `finalizarRegistro` em `registros.service.ts`, coluna
+    `RegistroAula.fechado` no schema — migration
+    `20260904210734_remove_registro_fechado`). Não existe mais nenhuma
+    trava vinda do backend: `PUT /registros/:id` sempre aceita edição,
+    independente do quão "completo" o registro já esteja — decidir se
+    ainda mostra formulário editável é call do front.
+  - `StatusRegistroEnum`/`status` removidos de `RegistroResumoOutput`
+    (`registros.dto.ts` e `shared/dto/enums.ts`). No lugar, `chegada`/
+    `boletim`/`atividadeCasa`/`foco`/`autonomia`/`comportamento`/
+    `desempenho` subiram de `RegistroDetalheOutput` pra
+    `RegistroResumoOutput` — decisão de revisão: a lista do dia (`GET
+    /registros?data=X`, pensada pra uma view tipo agenda com vários
+    horários) também precisa mostrar completo/em andamento/falta por
+    horário, não só o detalhe de um registro (`GET /registros/:id`).
+    `listarRegistrosDoDia` passou a mapear esses campos a partir do
+    `include` que já buscava (nunca precisou de outra query).
+  - **Novos helpers em `src/shared/dto/registro.dto.ts`**: `isFalta`
+    (`chegada === 'FALTOU'`, completo por definição — não há nota pra
+    dar quando o aluno não veio) e `isCompleto` (falta é sempre
+    completo; senão, exige as 6 notas — `boletim`, `atividadeCasa`,
+    `foco`, `autonomia`, `comportamento`, `desempenho` — todas
+    preenchidas). `anotacao`/`conteudoIds` nunca entram nessa conta,
+    ficam sempre opcionais (decisão explícita de revisão). Cobertos por
+    teste unitário novo, `tests/unit/registro.dto.test.ts` — primeiro
+    arquivo de teste não-e2e do repositório, `vitest.config.ts` ganhou
+    `tests/unit/**/*.test.ts` no `include` pra rodar isso.

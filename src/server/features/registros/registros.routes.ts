@@ -16,8 +16,8 @@ import * as registrosService from './registros.service'
 /**
  * Nenhuma rota aqui usa `requireAdmin`: e "admin ou professor dono", e a
  * checagem de dono depende do recurso (o `horarioId` no `POST`, o registro
- * existente no `PUT`/`finalizar`) — fica em cada chamada de service, a
- * partir do mesmo `escopoProfessorId` que `scopeToProfessor` ja calcula.
+ * existente no `PUT`) — fica em cada chamada de service, a partir do mesmo
+ * `escopoProfessorId` que `scopeToProfessor` ja calcula.
  */
 export const registrosRoutes = new Hono<AppEnv>()
   .get('/', authMiddleware, scopeToProfessor, validate('query', ListarRegistrosQuery), async (c) => {
@@ -55,15 +55,6 @@ export const registrosRoutes = new Hono<AppEnv>()
       c.get('prisma'),
       c.req.param('id'),
       input,
-      c.get('escopoProfessorId'),
-    )
-    return c.json(RegistroDetalheOutput.parse(registro))
-  })
-
-  .post('/:id/finalizar', authMiddleware, scopeToProfessor, async (c) => {
-    const registro = await registrosService.finalizarRegistro(
-      c.get('prisma'),
-      c.req.param('id'),
       c.get('escopoProfessorId'),
     )
     return c.json(RegistroDetalheOutput.parse(registro))

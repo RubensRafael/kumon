@@ -2,7 +2,7 @@ import { HTTPException } from 'hono/http-exception'
 
 import { diaDaSemana } from '../../lib/data'
 import type { Prisma, PrismaClient } from '../../db/generated/client'
-import { Prisma as PrismaNamespace } from '../../db/generated/client'
+import { VIRTUAL_REGISTRO_ID } from '../../../shared/dto/registro.dto'
 import type {
   RegistroDetalheOutputType,
   RegistroInputType,
@@ -29,9 +29,6 @@ function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
     materiaId: registro.matricula.materiaId,
     data: registro.data,
     horarioPrevisto: registro.horario.horario,
-    // Nunca vem de nenhum input — sempre derivado aqui na hora de montar o output.
-    status: registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
-    estagio: registro.estagio,
     chegada: registro.chegada,
     boletim: registro.boletim,
     atividadeCasa: registro.atividadeCasa,
@@ -39,12 +36,11 @@ function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
     autonomia: registro.autonomia,
     comportamento: registro.comportamento,
     desempenho: registro.desempenho,
+    // Sem coluna propria: Matricula.estagio e imutavel, entao a relacao ja e
+    // sempre o valor certo pra qualquer registro daquela matricula.
+    estagio: registro.matricula.estagio,
     conteudoIds: registro.conteudos.map((c) => c.conteudoId),
     anotacao: registro.anotacao,
-    fechado: registro.fechado,
-    horaInicio: registro.horaInicio ? registro.horaInicio.toISOString() : null,
-    horaFim: registro.horaFim ? registro.horaFim.toISOString() : null,
-    duracaoMin: registro.duracaoMin,
   }
 }
 
@@ -90,7 +86,8 @@ async function validarConteudoIds(
  * Nunca cria linha nenhuma: `LEFT JOIN` (aqui, um `include` filtrado) entre
  * `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana
  * de `data`) e `REGISTRO_AULA` existente pra aquela data. Sem linha -> `id:
- * null`, `status: 'NAO_INICIADO'`.
+ * VIRTUAL_REGISTRO_ID`, campos de nota todos `null` (front usa
+ * `isFalta`/`isCompleto` pra saber o que exibir a partir daqui).
  */
 export async function listarRegistrosDoDia(
   prisma: PrismaClient,
@@ -115,7 +112,7 @@ export async function listarRegistrosDoDia(
   return horarios.map((horario) => {
     const registro = horario.registros[0] ?? null
     return {
-      id: registro?.id ?? null,
+      id: registro?.id ?? VIRTUAL_REGISTRO_ID,
       horarioId: horario.id,
       matriculaId: horario.matriculaId,
       alunoId: horario.matricula.alunoId,
@@ -124,7 +121,13 @@ export async function listarRegistrosDoDia(
       materiaId: horario.matricula.materiaId,
       data,
       horarioPrevisto: horario.horario,
-      status: !registro ? 'NAO_INICIADO' : registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
+      chegada: registro?.chegada ?? null,
+      boletim: registro?.boletim ?? null,
+      atividadeCasa: registro?.atividadeCasa ?? null,
+      foco: registro?.foco ?? null,
+      autonomia: registro?.autonomia ?? null,
+      comportamento: registro?.comportamento ?? null,
+      desempenho: registro?.desempenho ?? null,
     }
   })
 }
@@ -158,39 +161,41 @@ export async function criarRegistro(
 
   const conteudoIds = await validarConteudoIds(prisma, input.conteudoIds)
 
-  try {
-    const registro = await prisma.registroAula.create({
-      data: {
-        horarioId: input.horarioId,
-        matriculaId: horario.matriculaId,
-        data: input.data,
-        // Unica copia (snapshot) intencional do schema: nunca vem do input.
-        estagio: horario.matricula.estagio,
-        horaInicio: new Date(),
-        chegada: input.chegada,
-        boletim: input.boletim,
-        atividadeCasa: input.atividadeCasa,
-        foco: input.foco,
-        autonomia: input.autonomia,
-        comportamento: input.comportamento,
-        desempenho: input.desempenho,
-        anotacao: input.anotacao,
-        conteudos: conteudoIds ? { create: conteudoIds.map((conteudoId) => ({ conteudoId })) } : undefined,
-      },
-      include: INCLUDE_DETALHE,
+  const existente = await prisma.registroAula.findFirst({
+    where: { horarioId: input.horarioId, data: input.data },
+    select: { id: true },
+  })
+  if (existente) {
+    throw new HTTPException(409, {
+      message: 'Ja existe um registro de aula para este horario nesta data.',
     })
-    return paraDetalheOutput(registro)
-  } catch (error) {
-    if (error instanceof PrismaNamespace.PrismaClientKnownRequestError && error.code === 'P2002') {
-      throw new HTTPException(409, {
-        message: 'Ja existe um registro de aula para este horario nesta data.',
-      })
-    }
-    throw error
   }
+
+  const registro = await prisma.registroAula.create({
+    data: {
+      horarioId: input.horarioId,
+      matriculaId: horario.matriculaId,
+      data: input.data,
+      chegada: input.chegada,
+      boletim: input.boletim,
+      atividadeCasa: input.atividadeCasa,
+      foco: input.foco,
+      autonomia: input.autonomia,
+      comportamento: input.comportamento,
+      desempenho: input.desempenho,
+      anotacao: input.anotacao,
+      conteudos: conteudoIds ? { create: conteudoIds.map((conteudoId) => ({ conteudoId })) } : undefined,
+    },
+    include: INCLUDE_DETALHE,
+  })
+  return paraDetalheOutput(registro)
 }
 
-/** Nao bloqueia edicao de um registro `fechado: true` — convencao de UI (form read-only apos "Finalizar"). */
+/**
+ * Sempre aceita a edicao, mesmo que `isCompleto` (src/shared/dto/registro.dto.ts)
+ * ja seja `true` pro registro -- o backend nao trava nada; decidir se ainda
+ * mostra um formulario editavel e call do front.
+ */
 export async function atualizarRegistro(
   prisma: PrismaClient,
   id: string,
@@ -225,32 +230,4 @@ export async function atualizarRegistro(
   })
 
   return paraDetalheOutput(registro)
-}
-
-/**
- * Grava `horaFim = now()` e `duracaoMin`. Idempotente: numa segunda chamada
- * (`fechado` ja `true`), devolve o estado atual sem recalcular nada a partir
- * de um novo `now()`.
- */
-export async function finalizarRegistro(
-  prisma: PrismaClient,
-  id: string,
-  escopoProfessorId: string | null,
-): Promise<RegistroDetalheOutputType> {
-  const registro = await buscarRegistroEscopado(prisma, id, escopoProfessorId)
-
-  if (registro.fechado) {
-    return paraDetalheOutput(registro)
-  }
-
-  const horaFim = new Date()
-  const horaInicio = registro.horaInicio ?? registro.criadoEm
-  const duracaoMin = Math.max(0, Math.round((horaFim.getTime() - horaInicio.getTime()) / 60_000))
-
-  const atualizado = await prisma.registroAula.update({
-    where: { id },
-    data: { fechado: true, horaFim, duracaoMin },
-    include: INCLUDE_DETALHE,
-  })
-  return paraDetalheOutput(atualizado)
 }

@@ -66,3 +66,15 @@ Merge em cascata de `feat/05-alunos` (que já trouxe o merge do PR 02/03, ver
   removido, `matriculas.routes.ts`/`matriculas.service.ts` perderam a
   referência, e os dois testes de `422` viraram um teste único confirmando
   que `professorId`/`materiaId` são ignorados em silêncio.
+- **`tipoAtendimento`/`estagio` viraram imutáveis, mesmo tratamento de
+  `professorId`/`materiaId`.** Intenção: manter um histórico interno de
+  mudanças por matrícula (trocar = encerrar a matrícula atual + criar uma
+  nova), em vez de sobrescrever o valor antigo direto na mesma linha.
+  `MatriculaUpdateInput` deixou de declarar os dois campos — Zod descarta em
+  silêncio, sem `422` explícito, mesma lógica/justificativa do item acima.
+  `atualizarMatricula` (`matriculas.service.ts`) parou de repassá-los pro
+  `data` do `update`. Mapa completo de mutabilidade de `Matricula` documentado
+  em `plan.md` ("Regras de negócio"). Consequência do lado de `registros`:
+  o snapshot `RegistroAula.estagio` deixa de ser necessário, já que
+  `Matricula.estagio` agora nunca muda depois de criada — ver
+  `discussao.md` na branch `feat/08-registros` pro follow-up.
