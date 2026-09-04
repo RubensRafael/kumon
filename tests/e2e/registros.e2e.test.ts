@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { RegistroDetalheOutputType, RegistroResumoOutputType } from '../../src/server/features/registros/registros.dto'
+import { VIRTUAL_REGISTRO_ID } from '../../src/shared/dto/registro.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
@@ -54,7 +55,7 @@ describe('registros de aula', () => {
   })
 
   describe('GET /api/registros?data=', () => {
-    it('sem nenhuma linha criada -> id null e status nao_iniciado', async () => {
+    it('sem nenhuma linha criada -> id virtual e status nao_iniciado', async () => {
       const data = '2026-03-02'
       const { cookie } = await montarCenario(data)
 
@@ -62,7 +63,7 @@ describe('registros de aula', () => {
       expect(response.status).toBe(200)
       const body = (await response.json()) as RegistroResumoOutputType[]
       expect(body.length).toBe(1)
-      expect(body[0].id).toBeNull()
+      expect(body[0].id).toBe(VIRTUAL_REGISTRO_ID)
       expect(body[0].status).toBe('NAO_INICIADO')
     })
 

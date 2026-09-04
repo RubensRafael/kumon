@@ -3,6 +3,7 @@ import { HTTPException } from 'hono/http-exception'
 import { diaDaSemana } from '../../lib/data'
 import type { Prisma, PrismaClient } from '../../db/generated/client'
 import { Prisma as PrismaNamespace } from '../../db/generated/client'
+import { VIRTUAL_REGISTRO_ID } from '../../../shared/dto/registro.dto'
 import type {
   RegistroDetalheOutputType,
   RegistroInputType,
@@ -87,7 +88,7 @@ async function validarConteudoIds(
  * Nunca cria linha nenhuma: `LEFT JOIN` (aqui, um `include` filtrado) entre
  * `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana
  * de `data`) e `REGISTRO_AULA` existente pra aquela data. Sem linha -> `id:
- * null`, `status: 'NAO_INICIADO'`.
+ * VIRTUAL_REGISTRO_ID`, `status: 'NAO_INICIADO'`.
  */
 export async function listarRegistrosDoDia(
   prisma: PrismaClient,
@@ -112,7 +113,7 @@ export async function listarRegistrosDoDia(
   return horarios.map((horario) => {
     const registro = horario.registros[0] ?? null
     return {
-      id: registro?.id ?? null,
+      id: registro?.id ?? VIRTUAL_REGISTRO_ID,
       horarioId: horario.id,
       matriculaId: horario.matriculaId,
       alunoId: horario.matricula.alunoId,

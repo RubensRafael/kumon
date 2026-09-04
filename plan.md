@@ -467,7 +467,7 @@ export const DesempenhoEnum = z.enum([
 
 // retornado por GET /registros (lista do dia) e reaproveitado dentro de RegistroDetalheOutput
 export const RegistroResumoOutput = z.object({
-  id: z.string().uuid().nullable(), // null = ainda não existe linha, é virtual
+  id: z.union([z.string().uuid(), z.literal(VIRTUAL_REGISTRO_ID)]), // sentinela compartilhado (shared/dto/registro.dto.ts) = ainda não existe linha, é virtual
   horarioId: z.string().uuid(),
   matriculaId: z.string().uuid(),
   alunoId: z.string().uuid(),
@@ -550,7 +550,7 @@ app.put(
 
 ### Regras de negócio / testes
 
-- `GET /registros?data=X` nunca cria linha nenhuma — `LEFT JOIN` entre `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana de `X`) e `REGISTRO_AULA` existente pra aquela `data`. Sem linha → `id: null`, `status: 'nao_iniciado'`.
+- `GET /registros?data=X` nunca cria linha nenhuma — `LEFT JOIN` entre `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana de `X`) e `REGISTRO_AULA` existente pra aquela `data`. Sem linha → `id: VIRTUAL_REGISTRO_ID`, `status: 'nao_iniciado'`.
 - `status` nunca vem em nenhum input — é sempre derivado no backend na hora de montar o output: sem linha → `nao_iniciado`; linha existe e `fechado=false` → `em_andamento`; `fechado=true` → `concluido`.
 - `POST /registros` com `chegada: 'atrasado'` ou `'faltou'` — o endpoint só salva o que veio; se por algum motivo vierem também campos de detalhe (`boletim`, `foco` etc.) junto nesse mesmo payload, eles são simplesmente persistidos também, sem checagem de coerência. Não é uma configuração esperada (a UI não deveria enviar isso), mas o backend não trata como erro.
 - `POST /registros` duplicado pro mesmo `(horarioId, data)` → `409` (constraint única no banco — essa sim é uma checagem de integridade real, mantida independente da UI).

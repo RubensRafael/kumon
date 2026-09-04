@@ -11,6 +11,7 @@ import {
   HorarioDoDia,
   StatusRegistroEnum,
 } from '../../../shared/dto/enums'
+import { VIRTUAL_REGISTRO_ID } from '../../../shared/dto/registro.dto'
 
 /**
  * `data` como `Date`, nao string -- mesmo raciocinio de `alunos.dto.ts`:
@@ -20,7 +21,8 @@ import {
 
 /** Retornado por `GET /registros` (lista do dia) e reaproveitado dentro de `RegistroDetalheOutput`. */
 export const RegistroResumoOutput = z.object({
-  id: z.uuid().nullable(), // null = ainda nao existe linha, e virtual
+  // VIRTUAL_REGISTRO_ID (nao uuid real) = ainda nao existe linha, e virtual. Ver o jsdoc la.
+  id: z.union([z.uuid(), z.literal(VIRTUAL_REGISTRO_ID)]),
   horarioId: z.uuid(),
   matriculaId: z.uuid(),
   alunoId: z.uuid(),
