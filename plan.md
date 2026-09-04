@@ -552,66 +552,66 @@ app.put(
 
 ---
 
-## 8. Agenda (vistas computadas)
+## 8. Agenda e painel (visões computadas)
+
+`GET /painel` é o único endpoint dos dois — devolve o snapshot bruto da
+unidade inteira (professores, alunos, matrículas com seus horários,
+matérias e conteúdos), sem nenhuma agregação no backend. Agenda e painel
+(seções 8/9 originais) são duas leituras diferentes do mesmo payload, cada
+uma como função pura em `src/shared/dto/`, não mais como endpoint próprio:
+
+- `calcularAgregacoesPainel` (`painel.dto.ts`) — contagens, ocupação,
+  agrupamento por matéria/dia, alertas (a antiga saída de `GET /painel`).
+- `derivarAgendaSlots` (`agenda.dto.ts`) — lista de slots por dia/horário (a
+  antiga saída de `GET /agenda`/`GET /alunos/:id/agenda`).
+
+Ver `docs/pr-10-painel.md` ("Atualizações pós-revisão") e
+`docs/pr-09-agenda.md` ("Retirado") pro raciocínio completo da mudança.
 
 ### DTOs
 
 ```ts
-export const AgendaSlotOutput = z.object({
-  horarioId: z.string().uuid(),
-  diaSemana: DiaSemanaEnum,
-  horario: z.string(),
-  matriculaId: z.string().uuid(),
-  alunoId: z.string().uuid(),
-  alunoNome: z.string(),
-  professorId: z.string().uuid(),
-  professorNome: z.string(),
-  materiaId: z.string().uuid(),
-});
-```
-
-### Endpoints
-
-| Método | Rota                   | Papel                      | Input | Output               |
-| ------ | ---------------------- | -------------------------- | ----- | -------------------- |
-| GET    | `/agenda?professorId=` | qualquer (escopo aplicado) | —     | `AgendaSlotOutput[]` |
-| GET    | `/alunos/:id/agenda`   | qualquer (escopo aplicado) | —     | `AgendaSlotOutput[]` |
-
-### Regras de negócio / testes
-
-- `GET /agenda?professorId=X` com `papel=professor` ignora o `professorId` da querystring e força o próprio.
-- Ambos retornam só `MATRICULA_HORARIO.ativo = true`.
-
----
-
-## 9. Painel
-
-### DTOs
-
-```ts
-export const PainelOutput = z.object({
-  totalAlunosAtivos: z.number().int(),
-  totalMatriculasAtivas: z.number().int(),
-  totalProfessores: z.number().int(),
-  ocupacaoPercentual: z.number(),
-  matriculasPorMateria: z.array(
+export const PainelDadosOutput = z.object({
+  professores: z.array(
     z.object({
+      id: z.string().uuid(),
+      nome: z.string(),
+      diasDisponiveis: z.array(DiaSemanaEnum),
+      horarioInicial: z.string(), // "HH:mm"
+      horarioFinal: z.string(),
+      capacidadePorHorario: z.number().int(),
+    }),
+  ),
+  alunos: z.array(
+    z.object({
+      id: z.string().uuid(),
+      nome: z.string(),
+      situacao: SituacaoAlunoEnum,
+      zonaVermelha: z.boolean(),
+    }),
+  ),
+  materias: z.array(
+    z.object({
+      id: z.string().uuid(),
+      nome: z.string(),
+      conteudos: z.array(z.object({ id: z.string().uuid(), nome: z.string(), ativo: z.boolean() })),
+    }),
+  ),
+  matriculas: z.array(
+    z.object({
+      id: z.string().uuid(),
+      alunoId: z.string().uuid(),
+      professorId: z.string().uuid(),
       materiaId: z.string().uuid(),
-      materiaNome: z.string(),
-      total: z.number().int(),
-    }),
-  ),
-  aulasPorDiaSemana: z.array(
-    z.object({
-      diaSemana: DiaSemanaEnum,
-      total: z.number().int(),
-    }),
-  ),
-  alertas: z.array(
-    z.object({
-      tipo: z.string(),
-      alunoId: z.string().uuid().optional(),
-      mensagem: z.string(),
+      situacao: SituacaoMatriculaEnum,
+      tipoAtendimento: TipoAtendimentoEnum,
+      horarios: z.array(
+        z.object({
+          id: z.string().uuid(),
+          diaSemana: DiaSemanaEnum,
+          horario: z.string(), // "HH:mm" -- so ativo=true
+        }),
+      ),
     }),
   ),
 });
@@ -619,15 +619,26 @@ export const PainelOutput = z.object({
 
 ### Endpoints
 
-| Método | Rota      | Papel                      | Input | Output         |
-| ------ | --------- | -------------------------- | ----- | -------------- |
-| GET    | `/painel` | qualquer (escopo aplicado) | —     | `PainelOutput` |
+| Método | Rota      | Papel                | Input | Output               |
+| ------ | --------- | --------------------- | ----- | --------------------- |
+| GET    | `/painel` | qualquer autenticado  | —     | `PainelDadosOutput`   |
 
 ### Regras de negócio / testes
 
-- Com `papel=admin`: agregações cruzam toda a unidade.
-- Com `papel=professor`: mesmo shape, tudo filtrado por `professorId = usuario.professorId` primeiro — vale decidir se `totalProfessores` faz sentido nessa visão ou se deveria ser omitido pro professor.
-- `alertas` também é escopado: professor só vê alertas dos próprios alunos.
+- Sem escopo por professor na query — é leitura pura, qualquer usuário
+  autenticado vê a unidade inteira. O corte por professor deixou de ser
+  imposto pelo backend: é só um filtro (`professorId`) que
+  `calcularAgregacoesPainel`/`derivarAgendaSlots` aplicam sob demanda no
+  client (ex.: dashboard do professor mostrando só o próprio).
+- `matriculas[].horarios` só traz `MATRICULA_HORARIO.ativo = true`.
+- `totalProfessores` sempre da unidade inteira, com ou sem filtro — mesma
+  lógica não-escopada de `GET /professores`.
+- `ocupacaoPercentual`: capacidade teórica no grid fixo de 30min ×
+  `capacidadePorHorario`; ocupação pesa `REGULAR` como 2 slots (50min) e
+  `PRE_ESCOLAR` como 1 slot (30min) — ver "Coisas pra fazer" pro caso raro
+  de double-booking não tratado no cálculo.
+- `alertas`: único tipo implementado é `zona_vermelha` (aluno ativo com
+  `Aluno.zonaVermelha = true`).
 
 ---
 
@@ -1046,3 +1057,6 @@ Ações futuras já discutidas mas não implementadas — anotadas aqui pra não
 - **`ApiContract`/`apiEndpoints` (`src/shared/api/contract.ts`) só tem `health` cadastrado.** Esse é o mecanismo que dá tipagem ponta a ponta pro front (`callApi` em `src/client/config/api.ts` infere método/path/tipo de resposta a partir do contrato) — mas nenhuma das features já implementadas (professores, matérias, alunos, matrículas, horários, registros) foi cadastrada nele ainda, então hoje só o health check tem tipagem real do lado do client. Duas formas de resolver, sem decisão tomada:
   - Mover o `*.dto.ts` inteiro de cada feature de `src/server/features/*/` pra `src/shared/dto/` — mecânico, mas mexe em todo PR já mergeado em `main`. Zod não é server-only (roda no browser), então não há impedimento técnico, só reorganização.
   - Manter os DTOs onde estão e `contract.ts` importar só o tipo via `import type { XOutputType } from '../../server/features/x/x.dto'` — mudança pequena (import erasa em runtime, não vaza nada pro bundle), mas quebra a convenção atual de "só o que está em `shared/dto/` é compartilhado".
+- **UI: mostrar quando um aluno "ainda está na sala" por spillover de aula `REGULAR` (50min).** Levantado na revisão da PR 10 (painel): `ocupacaoPercentual` conta uma matrícula `REGULAR` como ocupando o próprio slot de 30min mais um "spillover" informativo no seguinte (ver `docs/pr-10-painel.md`, "Atualizações pós-revisão"). Caso raro e não tratado no cálculo: um aluno com 2 matrículas (mesmo professor) em horários adjacentes pode ser contado 2x no mesmo slot — spillover de uma matrícula + reserva nova da outra. Não é bug de cálculo, é sintoma de um conflito de agenda real (o professor não pode atender o mesmo aluno em 2 matérias ao mesmo tempo, e hoje nada no sistema impede esse overlap). Decisão de revisão: não vale a pena validar sobreposição de horário por aluno agora — só deixar isso visualmente claro na UI quando/se aparecer (ex.: distinguir "continuando aula anterior" de "reserva nova" numa view de agenda por horário).
+- **UI: construir as telas de agenda e painel.** `GET /painel` (seção 8) e os helpers `calcularAgregacoesPainel`/`derivarAgendaSlots` (`src/shared/dto/`) já existem e têm cobertura de teste, mas nenhuma tela consome isso ainda — o front-end de fato fica pra uma sessão futura.
+- **Migração multi-tenant (sessão futura, ainda sem nenhum código pra isso).** Discutido na revisão da PR 10: hoje não existe conceito de unidade/tenant no schema — tudo é implicitamente "uma unidade só". Se um dia precisar suportar múltiplas unidades, o padrão mais barato pro tamanho do projeto é "tenant por coluna": uma tabela `Unidade` e um `unidadeId` em `Professor`/`Aluno`/`Materia`/`Matricula` etc. (banco e schema compartilhados) — schema/banco por tenant só valeria a pena com exigência forte de isolamento (compliance), que não é o caso aqui. Ponto de atenção sobre performance: o número total de linhas somando todos os tenants não importa por si só, desde que exista índice liderando por `unidadeId` (composto, `unidadeId` primeiro) — o Postgres salta direto pro pedaço daquele tenant, custo escala com as linhas *daquele* tenant, não com a tabela inteira. Sem esse índice, vira scan completo e piora conforme a soma de todos os tenants cresce. Diferente do escopo por professor (que virou só filtro de UI nesta revisão, sem risco de segurança por ser leitura), o escopo por tenant **não pode** virar opcional do mesmo jeito: é limite de isolamento entre clientes diferentes, não preferência de UX — toda query (inclusive as que hoje são deliberadamente "sem escopo", tipo `totalProfessores`) precisaria de `unidadeId` obrigatório. Se `GET /painel` centralizar a busca bruta nesse cenário, o filtro de tenant deveria ser injetado por construção (ex.: um `prisma` já escopado por `unidadeId` no contexto da request), não algo que cada feature lembra de adicionar na mão.

@@ -105,6 +105,7 @@ interface CriarMatriculaOpcoes {
   professorId: string
   materiaId: string
   situacao?: 'ATIVA' | 'PAUSADA' | 'ENCERRADA'
+  tipoAtendimento?: 'REGULAR' | 'PRE_ESCOLAR'
 }
 
 /**
@@ -118,7 +119,7 @@ export async function criarMatricula(opcoes: CriarMatriculaOpcoes) {
       alunoId: opcoes.alunoId,
       professorId: opcoes.professorId,
       materiaId: opcoes.materiaId,
-      tipoAtendimento: 'REGULAR',
+      tipoAtendimento: opcoes.tipoAtendimento ?? 'REGULAR',
       situacao: opcoes.situacao ?? 'ATIVA',
     },
   })
