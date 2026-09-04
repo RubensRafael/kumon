@@ -86,3 +86,8 @@ mudanças que afetam esta branch diretamente, propagadas aqui:
   limite de expediente fora desse grid (ex.: `"08:15"`) não alinha com
   nenhum horário reservável de verdade, então faz sentido travar o mesmo
   formato aqui.
+- **`duracaoAulaMin` removido.** Campo nunca foi consumido por nenhuma lógica
+  (não dimensiona slot de agenda, não valida nada) — só era armazenado e
+  devolvido pelo CRUD. Removido de `schema.prisma`, `professores.dto.ts`
+  (`ProfessorOutput`/`ProfessorCreateInput`) e `professores.service.ts`, com
+  migration própria (`20260904200335_remove_professor_duracao_aula_min`).
