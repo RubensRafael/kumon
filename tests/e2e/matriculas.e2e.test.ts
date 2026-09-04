@@ -27,13 +27,13 @@ describe('matriculas', () => {
 
   describe('GET /api/alunos/:alunoId/matriculas', () => {
     it('professor so ve as proprias matriculas do aluno', async () => {
-      const materia = await criarMateria()
-      const aluno = await criarAluno()
+      const materia = await criarMateria({ nome: 'Materia' })
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const { usuario, professor, senha } = await criarUsuarioProfessor()
       const outroProfessor = await criarProfessor()
 
       const minha = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
-      const materia2 = await criarMateria()
+      const materia2 = await criarMateria({ nome: 'Materia 2' })
       await criarMatricula({ alunoId: aluno.id, professorId: outroProfessor.id, materiaId: materia2.id })
 
       const cookie = await obterCookie(usuario.email, senha)
@@ -47,9 +47,9 @@ describe('matriculas', () => {
     })
 
     it('admin ve todas as matriculas do aluno', async () => {
-      const materia1 = await criarMateria()
-      const materia2 = await criarMateria()
-      const aluno = await criarAluno()
+      const materia1 = await criarMateria({ nome: 'Materia 1' })
+      const materia2 = await criarMateria({ nome: 'Materia 2' })
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professor1 = await criarProfessor()
       const professor2 = await criarProfessor()
       await criarMatricula({ alunoId: aluno.id, professorId: professor1.id, materiaId: materia1.id })
@@ -69,9 +69,9 @@ describe('matriculas', () => {
   describe('POST /api/alunos/:alunoId/matriculas', () => {
     it('cria matricula sem herdar horarios de nenhuma outra', async () => {
       const cookie = await cookieAdmin()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
 
       const response = await app.request(
         `/api/alunos/${aluno.id}/matriculas`,
@@ -93,9 +93,9 @@ describe('matriculas', () => {
 
     it('rejeita segunda matricula ativa do mesmo aluno na mesma materia -> 400', async () => {
       const cookie = await cookieAdmin()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
 
       const response = await app.request(
@@ -112,10 +112,10 @@ describe('matriculas', () => {
 
     it('permite nova matricula ativa depois que a antiga foi encerrada (fluxo de troca)', async () => {
       const cookie = await cookieAdmin()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professorAntigo = await criarProfessor()
       const professorNovo = await criarProfessor()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const antiga = await criarMatricula({ alunoId: aluno.id, professorId: professorAntigo.id, materiaId: materia.id })
 
       const encerrar = await app.request(
@@ -139,9 +139,9 @@ describe('matriculas', () => {
 
     it('rejeita materia inativa -> 400', async () => {
       const cookie = await cookieAdmin()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
-      const materia = await criarMateria({ ativo: false })
+      const materia = await criarMateria({ nome: 'Materia', ativo: false })
 
       const response = await app.request(
         `/api/alunos/${aluno.id}/matriculas`,
@@ -158,9 +158,9 @@ describe('matriculas', () => {
     it('professor autenticado nao pode criar matricula -> 403', async () => {
       const { usuario, senha } = await criarUsuarioProfessor()
       const cookie = await obterCookie(usuario.email, senha)
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
 
       const response = await app.request(
         `/api/alunos/${aluno.id}/matriculas`,
@@ -178,9 +178,9 @@ describe('matriculas', () => {
   describe('PUT /api/matriculas/:id', () => {
     it('atualiza estagio/situacao/observacoes normalmente', async () => {
       const cookie = await cookieAdmin()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
 
       const response = await app.request(
@@ -200,10 +200,10 @@ describe('matriculas', () => {
 
     it('professorId no corpo -> 422 com mensagem explicando o caminho certo', async () => {
       const cookie = await cookieAdmin()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
       const outroProfessor = await criarProfessor()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
 
       const response = await app.request(
@@ -222,10 +222,10 @@ describe('matriculas', () => {
 
     it('materiaId no corpo -> 422', async () => {
       const cookie = await cookieAdmin()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
-      const materia = await criarMateria()
-      const outraMateria = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
+      const outraMateria = await criarMateria({ nome: 'Outra Materia' })
       const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
 
       const response = await app.request(

@@ -26,10 +26,12 @@ async function cookieAdmin() {
 }
 
 /** Monta professor + aluno + materia + matricula (com estagio) + horario num dia especifico, prontos pra um registro. */
-async function montarCenario(dataISO: string, estagio = 'Unidade 5') {
-  const materia = await criarMateria()
-  const { usuario, professor, senha } = await criarUsuarioProfessor()
-  const aluno = await criarAluno()
+async function montarCenario(dataISO: string, estagio = 'Unidade 5', emailProfessor?: string) {
+  const materia = await criarMateria({ nome: 'Materia' })
+  const { usuario, professor, senha } = await criarUsuarioProfessor(
+    emailProfessor ? { email: emailProfessor } : {},
+  )
+  const aluno = await criarAluno({ nome: 'Aluno' })
   const dia = diaSemanaDe(dataISO)
   const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
   await prismaAtualizarEstagio(matricula.id, estagio)
@@ -117,7 +119,7 @@ describe('registros de aula', () => {
     it('professor so ve os proprios horarios na lista do dia', async () => {
       const data = '2026-03-02'
       const cenarioMeu = await montarCenario(data)
-      await montarCenario(data) // outro professor, outro horario no mesmo dia
+      await montarCenario(data, 'Unidade 5', 'outro-professor-1@kflow.test') // outro professor, outro horario no mesmo dia
 
       const response = await app.request(
         `/api/registros?data=${data}`,
@@ -191,7 +193,7 @@ describe('registros de aula', () => {
     it('professor usando horarioId de outro professor -> 400 (referencia invalida, nao 403)', async () => {
       const data = '2026-03-02'
       const outroCenario = await montarCenario(data)
-      const { cookie } = await montarCenario(data)
+      const { cookie } = await montarCenario(data, 'Unidade 5', 'outro-professor-2@kflow.test')
 
       const response = await app.request(
         '/api/registros',
@@ -285,7 +287,7 @@ describe('registros de aula', () => {
     it('outro professor nao acessa o registro (404)', async () => {
       const data = '2026-03-02'
       const dono = await montarCenario(data)
-      const outro = await montarCenario(data)
+      const outro = await montarCenario(data, 'Unidade 5', 'outro-professor-3@kflow.test')
       const criado = await app.request(
         '/api/registros',
         { method: 'POST', headers: { ...jsonHeaders, ...authHeader(dono.cookie) }, body: JSON.stringify({ horarioId: dono.horario.id, data }) },

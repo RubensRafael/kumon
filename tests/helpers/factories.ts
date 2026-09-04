@@ -1,13 +1,6 @@
 import { hashSenha } from '../../src/server/lib/senha'
 import { prisma } from './setup'
 
-let contador = 0
-/** Sufixo curto e unico por chamada, para nao colidir campos `@unique` entre testes. */
-function unico(prefixo: string): string {
-  contador += 1
-  return `${prefixo}-${Date.now()}-${contador}`
-}
-
 interface CriarUsuarioOpcoes {
   nome?: string
   email?: string
@@ -21,7 +14,7 @@ export async function criarUsuarioAdmin(opcoes: CriarUsuarioOpcoes = {}) {
   const usuario = await prisma.usuario.create({
     data: {
       nome: opcoes.nome ?? 'Admin de Teste',
-      email: opcoes.email ?? `${unico('admin')}@kflow.test`,
+      email: opcoes.email ?? 'admin@kflow.test',
       papel: 'ADMIN',
       ativo: opcoes.ativo ?? true,
       senhaHash: await hashSenha(senha),
@@ -60,7 +53,7 @@ export async function criarUsuarioProfessor(opcoes: CriarUsuarioOpcoes = {}) {
   const usuario = await prisma.usuario.create({
     data: {
       nome: opcoes.nome ?? 'Professor de Teste',
-      email: opcoes.email ?? `${unico('professor')}@kflow.test`,
+      email: opcoes.email ?? 'professor@kflow.test',
       papel: 'PROFESSOR',
       ativo: opcoes.ativo ?? true,
       senhaHash: await hashSenha(senha),
@@ -71,7 +64,7 @@ export async function criarUsuarioProfessor(opcoes: CriarUsuarioOpcoes = {}) {
 }
 
 interface CriarMateriaOpcoes {
-  nome?: string
+  nome: string
   ativo?: boolean
 }
 
@@ -79,25 +72,30 @@ interface CriarMateriaOpcoes {
  * A feature de materias so chega no PR 04 — ate la, os testes que precisam
  * de um `materiaId` valido (ex.: `POST /professores`) semeiam a linha
  * direto pelo Prisma, do mesmo jeito que `criarProfessor` fez pro PR 02.
+ *
+ * `nome` e obrigatorio (nao tem default gerado) -- `Materia.nome` nao tem
+ * `@unique` no schema, entao nao ha colisao a evitar, e o mesmo campo e
+ * obrigatorio no DTO real (`MateriaCreateInput`).
  */
-export async function criarMateria(opcoes: CriarMateriaOpcoes = {}) {
+export async function criarMateria(opcoes: CriarMateriaOpcoes) {
   return prisma.materia.create({
     data: {
-      nome: opcoes.nome ?? unico('Materia'),
+      nome: opcoes.nome,
       ativo: opcoes.ativo ?? true,
     },
   })
 }
 
 interface CriarAlunoOpcoes {
-  nome?: string
+  nome: string
   dataMatricula?: Date
 }
 
-export async function criarAluno(opcoes: CriarAlunoOpcoes = {}) {
+/** `nome` obrigatorio -- mesmo raciocinio de `criarMateria`. */
+export async function criarAluno(opcoes: CriarAlunoOpcoes) {
   return prisma.aluno.create({
     data: {
-      nome: opcoes.nome ?? unico('Aluno'),
+      nome: opcoes.nome,
       dataMatricula: opcoes.dataMatricula ?? new Date(),
     },
   })
