@@ -27,9 +27,9 @@ describe('painel', () => {
     it('admin ve agregacoes da unidade inteira', async () => {
       const professor1 = await criarProfessor()
       const professor2 = await criarProfessor()
-      const materia = await criarMateria()
-      const aluno1 = await criarAluno()
-      const aluno2 = await criarAluno()
+      const materia = await criarMateria({ nome: 'Materia' })
+      const aluno1 = await criarAluno({ nome: 'Aluno 1' })
+      const aluno2 = await criarAluno({ nome: 'Aluno 2' })
       const matricula1 = await criarMatricula({ alunoId: aluno1.id, professorId: professor1.id, materiaId: materia.id })
       const matricula2 = await criarMatricula({ alunoId: aluno2.id, professorId: professor2.id, materiaId: materia.id })
       await criarHorario({ matriculaId: matricula1.id, diaSemana: 'SEG' })
@@ -54,13 +54,13 @@ describe('painel', () => {
     it('professor ve so as proprias agregacoes, mas totalProfessores continua sendo da unidade inteira', async () => {
       const { usuario, professor, senha } = await criarUsuarioProfessor()
       const outroProfessor = await criarProfessor()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
 
-      const meuAluno = await criarAluno()
+      const meuAluno = await criarAluno({ nome: 'Meu Aluno' })
       const matriculaMinha = await criarMatricula({ alunoId: meuAluno.id, professorId: professor.id, materiaId: materia.id })
       await criarHorario({ matriculaId: matriculaMinha.id })
 
-      const alunoDeOutro = await criarAluno()
+      const alunoDeOutro = await criarAluno({ nome: 'Aluno de Outro' })
       const matriculaDeOutro = await criarMatricula({ alunoId: alunoDeOutro.id, professorId: outroProfessor.id, materiaId: materia.id })
       await criarHorario({ matriculaId: matriculaDeOutro.id })
 
@@ -77,7 +77,7 @@ describe('painel', () => {
     it('alertas trazem so alunos em zona vermelha dentro do escopo', async () => {
       const { usuario, professor, senha } = await criarUsuarioProfessor()
       const outroProfessor = await criarProfessor()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
 
       const meuAlunoVermelho = await criarAluno({ nome: 'Aluno Vermelho' })
       await prisma.aluno.update({ where: { id: meuAlunoVermelho.id }, data: { zonaVermelha: true } })

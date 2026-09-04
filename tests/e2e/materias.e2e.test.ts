@@ -70,7 +70,7 @@ describe('materias e conteudos', () => {
   describe('PUT /api/materias/:id', () => {
     it('desativa via ativo:false (soft delete) — nao existe DELETE', async () => {
       const cookie = await cookieAdmin()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
 
       const response = await app.request(
         `/api/materias/${materia.id}`,
@@ -84,7 +84,7 @@ describe('materias e conteudos', () => {
 
     it('desativar materia nao desativa seus conteudos em cascata', async () => {
       const cookie = await cookieAdmin()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const conteudo = await prisma.conteudo.create({ data: { materiaId: materia.id, nome: 'Unidade 1' } })
 
       await app.request(
@@ -101,7 +101,7 @@ describe('materias e conteudos', () => {
   describe('GET /api/materias/:id/conteudos', () => {
     it('lista conteudos (ativos e inativos) da materia', async () => {
       const cookie = await cookieAdmin()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       await prisma.conteudo.create({ data: { materiaId: materia.id, nome: 'Ativo', ativo: true } })
       await prisma.conteudo.create({ data: { materiaId: materia.id, nome: 'Inativo', ativo: false } })
 
@@ -129,7 +129,7 @@ describe('materias e conteudos', () => {
   describe('POST /api/conteudos', () => {
     it('cria conteudo numa materia ativa', async () => {
       const cookie = await cookieAdmin()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
 
       const response = await app.request(
         '/api/conteudos',
@@ -159,7 +159,7 @@ describe('materias e conteudos', () => {
 
     it('rejeita materia inativa -> 400', async () => {
       const cookie = await cookieAdmin()
-      const materia = await criarMateria({ ativo: false })
+      const materia = await criarMateria({ nome: 'Materia', ativo: false })
       const response = await app.request(
         '/api/conteudos',
         {
@@ -176,7 +176,7 @@ describe('materias e conteudos', () => {
   describe('PUT /api/conteudos/:id', () => {
     it('desativa via ativo:false (soft delete)', async () => {
       const cookie = await cookieAdmin()
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const conteudo = await prisma.conteudo.create({ data: { materiaId: materia.id, nome: 'Unidade 1' } })
 
       const response = await app.request(
