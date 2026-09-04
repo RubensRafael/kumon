@@ -475,7 +475,7 @@ export const RegistroResumoOutput = z.object({
   professorId: z.string().uuid(),
   materiaId: z.string().uuid(),
   data: z.string(),
-  horarioPrevisto: z.string(),
+  horarioPrevisto: z.string(), // "HH:mm", copiado de MatriculaHorario.horario (mesmo regex compartilhado da seção 6)
   status: StatusRegistroEnum,
 });
 
