@@ -395,13 +395,13 @@ export const HorarioOutput = z.object({
   id: z.string().uuid(),
   matriculaId: z.string().uuid(),
   diaSemana: DiaSemanaEnum,
-  horario: z.string(),
+  horario: z.string(), // "HH:mm", só em intervalos de 30 min (regex compartilhado, ver seção 6)
   ativo: z.boolean(),
 });
 
 export const HorarioCreateInput = z.object({
   diaSemana: DiaSemanaEnum,
-  horario: z.string(),
+  horario: z.string(), // "HH:mm", só em intervalos de 30 min
 });
 
 // diaSemana/horario não existem neste schema — só ativo é editável em uma linha existente.
@@ -426,6 +426,7 @@ export const HorarioUpdateInput = z
 - `PUT /horarios/:id` com corpo contendo `diaSemana` — o campo é descartado, sem erro; resposta normal só aplicando `ativo` se veio.
 - Trocar dia/horário, na prática, é `POST` um novo (`HorarioCreateInput`) + `PUT { ativo: false }` no antigo — duas chamadas, mesmo padrão do que ficou decidido pra matrícula.
 - `POST /matriculas/:matriculaId/horarios` deve rejeitar (`409`) se já existir um horário `ativo` na mesma `matriculaId` + `diaSemana` + `horario` exatos.
+- `horario` fora do formato `HH:mm` em `:00`/`:30` → `400` (validação de formato, não de horário de expediente do professor).
 
 ---
 

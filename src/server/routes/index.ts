@@ -5,6 +5,7 @@ import { prismaMiddleware } from '../db/prisma.middleware'
 import { alunosRoutes } from '../features/alunos/alunos.routes'
 import { authRoutes, meRoute, usuariosRoutes } from '../features/auth/auth.routes'
 import { conteudosRoutes, materiasRoutes } from '../features/materias/materias.routes'
+import { horariosRoutes, matriculaHorariosRoutes } from '../features/horarios/horarios.routes'
 import { alunoMatriculasRoutes, matriculasRoutes } from '../features/matriculas/matriculas.routes'
 import { professoresRoutes } from '../features/professores/professores.routes'
 import { envMiddleware } from '../middlewares/env.middleware'
@@ -33,6 +34,8 @@ apiRoutes.route('/conteudos', conteudosRoutes)
 apiRoutes.route('/alunos', alunosRoutes)
 apiRoutes.route('/alunos', alunoMatriculasRoutes)
 apiRoutes.route('/matriculas', matriculasRoutes)
+apiRoutes.route('/matriculas', matriculaHorariosRoutes)
+apiRoutes.route('/horarios', horariosRoutes)
 
 /**
  * Catch-all da API.
