@@ -477,7 +477,7 @@ export const RegistroResumoOutput = z.object({
 
 // retornado por GET /registros/:id e pelos endpoints de criação/atualização
 export const RegistroDetalheOutput = RegistroResumoOutput.extend({
-  estagio: z.string().nullable(),
+  estagio: z.string().nullable(), // lido de RegistroAula.matricula.estagio (relacao) -- sem coluna propria, ver "Regras de negocio"
   chegada: ChegadaEnum.nullable(),
   boletim: BoletimEnum.nullable(),
   atividadeCasa: AtividadeCasaEnum.nullable(),
@@ -551,7 +551,7 @@ app.put(
 - `status` nunca vem em nenhum input — é sempre derivado no backend na hora de montar o output: sem linha → `nao_iniciado`; linha existe e `fechado=false` → `em_andamento`; `fechado=true` → `concluido`.
 - `POST /registros` com `chegada: 'atrasado'` ou `'faltou'` — o endpoint só salva o que veio; se por algum motivo vierem também campos de detalhe (`boletim`, `foco` etc.) junto nesse mesmo payload, eles são simplesmente persistidos também, sem checagem de coerência. Não é uma configuração esperada (a UI não deveria enviar isso), mas o backend não trata como erro.
 - `POST /registros` duplicado pro mesmo `(horarioId, data)` → `409` (constraint única no banco — essa sim é uma checagem de integridade real, mantida independente da UI).
-- `estagio` nunca vem em `RegistroInput` nem `RegistroUpdateInput` — o backend copia de `MATRICULA.estagio` automaticamente no momento do `POST`. É a única cópia (snapshot) intencional no schema.
+- `estagio` nunca vem em `RegistroInput` nem `RegistroUpdateInput` — o output lê direto de `RegistroAula.matricula.estagio` (relação, sem coluna própria em `RegistroAula`). Antes era uma cópia (snapshot) feita no `POST`, necessária porque `Matricula.estagio` podia mudar depois; deixou de ser preciso desde que `estagio` virou imutável em `MatriculaUpdateInput` (seção 5) — a relação já é sempre o valor certo pra qualquer registro daquela matrícula.
 - `POST /registros/:id/finalizar` marca `fechado=true`; deve ser idempotente — chamar duas vezes não falha, só devolve o estado atual na segunda chamada.
 - Editar um registro já com `fechado=true` via `PUT` não é bloqueado pelo backend — é convenção de UI (form fica read-only depois de "Finalizar aula"). Ver apêndice final.
 - `scopeToProfessor` filtra pelo `professorId` da `MATRICULA` associada ao `horarioId`/`matriculaId` do registro — professor pedindo `horarioId` de outro professor em `POST /registros` → o `horarioId` "não existe" pra ele (`404`/`400` de referência inválida, não `403`).
@@ -888,7 +888,6 @@ model RegistroAula {
   matriculaId   String
   matricula     Matricula              @relation(fields: [matriculaId], references: [id])
   data          DateTime               @db.Date // so a data, sem hora -- ver "Regras de negocio" da secao 7
-  estagio       String?
   chegada       Chegada?
   boletim       Boletim?
   atividadeCasa AtividadeCasa?

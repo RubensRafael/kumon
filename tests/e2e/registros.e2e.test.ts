@@ -42,9 +42,9 @@ async function montarCenario(dataISO: string, estagio = 'Unidade 5', emailProfes
 }
 
 // Pequeno atalho local: os testes precisam de uma matricula com `estagio`
-// preenchido pra validar o snapshot automatico, e a feature de matriculas
-// (PR 06) nao expoe update de estagio junto com outros campos de forma
-// direta o bastante — mais simples semear via Prisma aqui mesmo.
+// preenchido pra validar que o registro reflete esse valor (via relacao,
+// ja que MatriculaUpdateInput nao expoe update de estagio) — mais simples
+// semear via Prisma aqui mesmo.
 async function prismaAtualizarEstagio(matriculaId: string, estagio: string) {
   await prisma.matricula.update({ where: { id: matriculaId }, data: { estagio } })
 }
@@ -130,7 +130,7 @@ describe('registros de aula', () => {
   })
 
   describe('POST /api/registros', () => {
-    it('cria o registro e copia estagio da matricula automaticamente', async () => {
+    it('cria o registro e reflete o estagio da matricula', async () => {
       const data = '2026-03-02'
       const { cookie, horario } = await montarCenario(data, 'Unidade 7')
 

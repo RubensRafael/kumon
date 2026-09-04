@@ -126,3 +126,16 @@ foi a maior propagação da decisão de uppercase até aqui:
   duplicata. Com a coluna `DATE`, o Postgres descarta fisicamente a hora
   na gravação, então o problema não existe mais na origem — não foi
   necessário mudar `z.coerce.date()` pra nada mais restrito.
+- **Coluna `RegistroAula.estagio` removida** (migration
+  `20260904204204_remove_registro_estagio_snapshot`). Era um snapshot
+  copiado de `Matricula.estagio` no momento do `POST /registros`,
+  necessário porque `Matricula.estagio` podia mudar depois daquela aula.
+  Deixou de ser preciso desde que `tipoAtendimento`/`estagio` viraram
+  imutáveis em `MatriculaUpdateInput` (PR 06, branch
+  `feat/matricula-imutavel` mergeada em `main`) — a matrícula nunca mais
+  muda de `estagio` durante sua vida, então `registro.matricula.estagio`
+  (via relação, já disponível em `INCLUDE_DETALHE`) é sempre o valor
+  certo. `paraDetalheOutput` passou a ler de lá; `criarRegistro` parou de
+  copiar o campo no `create`. `RegistroDetalheOutput` não mudou de schema
+  Zod — o campo `estagio` no output continua existindo, só mudou de onde
+  o valor vem no service.

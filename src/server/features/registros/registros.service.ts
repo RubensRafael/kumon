@@ -31,7 +31,9 @@ function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
     horarioPrevisto: registro.horario.horario,
     // Nunca vem de nenhum input — sempre derivado aqui na hora de montar o output.
     status: registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
-    estagio: registro.estagio,
+    // Sem coluna propria: Matricula.estagio e imutavel, entao a relacao ja e
+    // sempre o valor certo pra qualquer registro daquela matricula.
+    estagio: registro.matricula.estagio,
     chegada: registro.chegada,
     boletim: registro.boletim,
     atividadeCasa: registro.atividadeCasa,
@@ -170,8 +172,6 @@ export async function criarRegistro(
       horarioId: input.horarioId,
       matriculaId: horario.matriculaId,
       data: input.data,
-      // Unica copia (snapshot) intencional do schema: nunca vem do input.
-      estagio: horario.matricula.estagio,
       chegada: input.chegada,
       boletim: input.boletim,
       atividadeCasa: input.atividadeCasa,
