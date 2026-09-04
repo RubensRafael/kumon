@@ -29,11 +29,6 @@ function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
     materiaId: registro.matricula.materiaId,
     data: registro.data,
     horarioPrevisto: registro.horario.horario,
-    // Nunca vem de nenhum input — sempre derivado aqui na hora de montar o output.
-    status: registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
-    // Sem coluna propria: Matricula.estagio e imutavel, entao a relacao ja e
-    // sempre o valor certo pra qualquer registro daquela matricula.
-    estagio: registro.matricula.estagio,
     chegada: registro.chegada,
     boletim: registro.boletim,
     atividadeCasa: registro.atividadeCasa,
@@ -41,9 +36,11 @@ function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
     autonomia: registro.autonomia,
     comportamento: registro.comportamento,
     desempenho: registro.desempenho,
+    // Sem coluna propria: Matricula.estagio e imutavel, entao a relacao ja e
+    // sempre o valor certo pra qualquer registro daquela matricula.
+    estagio: registro.matricula.estagio,
     conteudoIds: registro.conteudos.map((c) => c.conteudoId),
     anotacao: registro.anotacao,
-    fechado: registro.fechado,
   }
 }
 
@@ -89,7 +86,8 @@ async function validarConteudoIds(
  * Nunca cria linha nenhuma: `LEFT JOIN` (aqui, um `include` filtrado) entre
  * `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana
  * de `data`) e `REGISTRO_AULA` existente pra aquela data. Sem linha -> `id:
- * VIRTUAL_REGISTRO_ID`, `status: 'NAO_INICIADO'`.
+ * VIRTUAL_REGISTRO_ID`, campos de nota todos `null` (front usa
+ * `isFalta`/`isCompleto` pra saber o que exibir a partir daqui).
  */
 export async function listarRegistrosDoDia(
   prisma: PrismaClient,
@@ -123,7 +121,13 @@ export async function listarRegistrosDoDia(
       materiaId: horario.matricula.materiaId,
       data,
       horarioPrevisto: horario.horario,
-      status: !registro ? 'NAO_INICIADO' : registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
+      chegada: registro?.chegada ?? null,
+      boletim: registro?.boletim ?? null,
+      atividadeCasa: registro?.atividadeCasa ?? null,
+      foco: registro?.foco ?? null,
+      autonomia: registro?.autonomia ?? null,
+      comportamento: registro?.comportamento ?? null,
+      desempenho: registro?.desempenho ?? null,
     }
   })
 }
@@ -187,7 +191,11 @@ export async function criarRegistro(
   return paraDetalheOutput(registro)
 }
 
-/** Nao bloqueia edicao de um registro `fechado: true` — convencao de UI (form read-only apos "Finalizar"). */
+/**
+ * Sempre aceita a edicao, mesmo que `isCompleto` (src/shared/dto/registro.dto.ts)
+ * ja seja `true` pro registro -- o backend nao trava nada; decidir se ainda
+ * mostra um formulario editavel e call do front.
+ */
 export async function atualizarRegistro(
   prisma: PrismaClient,
   id: string,
@@ -222,24 +230,4 @@ export async function atualizarRegistro(
   })
 
   return paraDetalheOutput(registro)
-}
-
-/** Marca `fechado: true`. Idempotente: numa segunda chamada, so devolve o estado atual. */
-export async function finalizarRegistro(
-  prisma: PrismaClient,
-  id: string,
-  escopoProfessorId: string | null,
-): Promise<RegistroDetalheOutputType> {
-  const registro = await buscarRegistroEscopado(prisma, id, escopoProfessorId)
-
-  if (registro.fechado) {
-    return paraDetalheOutput(registro)
-  }
-
-  const atualizado = await prisma.registroAula.update({
-    where: { id },
-    data: { fechado: true },
-    include: INCLUDE_DETALHE,
-  })
-  return paraDetalheOutput(atualizado)
 }

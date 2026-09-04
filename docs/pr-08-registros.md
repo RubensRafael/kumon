@@ -139,3 +139,35 @@ foi a maior propagação da decisão de uppercase até aqui:
   copiar o campo no `create`. `RegistroDetalheOutput` não mudou de schema
   Zod — o campo `estagio` no output continua existindo, só mudou de onde
   o valor vem no service.
+- **`status`/`fechado` removidos da API inteira.** Decisão de revisão:
+  como todo campo de um registro é opcional e pode ser preenchido aos
+  poucos, faz mais sentido a UI decidir "completo ou não" olhando os
+  campos preenchidos, em vez do backend expor um estado binário baseado
+  só em `fechado`. Mudanças:
+  - `POST /registros/:id/finalizar` **removido inteiramente** (rota,
+    `finalizarRegistro` em `registros.service.ts`, coluna
+    `RegistroAula.fechado` no schema — migration
+    `20260904210734_remove_registro_fechado`). Não existe mais nenhuma
+    trava vinda do backend: `PUT /registros/:id` sempre aceita edição,
+    independente do quão "completo" o registro já esteja — decidir se
+    ainda mostra formulário editável é call do front.
+  - `StatusRegistroEnum`/`status` removidos de `RegistroResumoOutput`
+    (`registros.dto.ts` e `shared/dto/enums.ts`). No lugar, `chegada`/
+    `boletim`/`atividadeCasa`/`foco`/`autonomia`/`comportamento`/
+    `desempenho` subiram de `RegistroDetalheOutput` pra
+    `RegistroResumoOutput` — decisão de revisão: a lista do dia (`GET
+    /registros?data=X`, pensada pra uma view tipo agenda com vários
+    horários) também precisa mostrar completo/em andamento/falta por
+    horário, não só o detalhe de um registro (`GET /registros/:id`).
+    `listarRegistrosDoDia` passou a mapear esses campos a partir do
+    `include` que já buscava (nunca precisou de outra query).
+  - **Novos helpers em `src/shared/dto/registro.dto.ts`**: `isFalta`
+    (`chegada === 'FALTOU'`, completo por definição — não há nota pra
+    dar quando o aluno não veio) e `isCompleto` (falta é sempre
+    completo; senão, exige as 6 notas — `boletim`, `atividadeCasa`,
+    `foco`, `autonomia`, `comportamento`, `desempenho` — todas
+    preenchidas). `anotacao`/`conteudoIds` nunca entram nessa conta,
+    ficam sempre opcionais (decisão explícita de revisão). Cobertos por
+    teste unitário novo, `tests/unit/registro.dto.test.ts` — primeiro
+    arquivo de teste não-e2e do repositório, `vitest.config.ts` ganhou
+    `tests/unit/**/*.test.ts` no `include` pra rodar isso.

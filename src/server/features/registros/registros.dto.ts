@@ -9,7 +9,6 @@ import {
   DesempenhoEnum,
   FocoEnum,
   HorarioDoDia,
-  StatusRegistroEnum,
 } from '../../../shared/dto/enums'
 import { VIRTUAL_REGISTRO_ID } from '../../../shared/dto/registro.dto'
 
@@ -31,12 +30,8 @@ export const RegistroResumoOutput = z.object({
   materiaId: z.uuid(),
   data: z.date(),
   horarioPrevisto: HorarioDoDia,
-  status: StatusRegistroEnum,
-})
-
-/** Retornado por `GET /registros/:id` e pelos endpoints de criacao/atualizacao. */
-export const RegistroDetalheOutput = RegistroResumoOutput.extend({
-  estagio: z.string().nullable(),
+  // Sem "status" derivado no backend -- os campos abaixo bastam pra `isFalta`/
+  // `isCompleto` (src/shared/dto/registro.dto.ts) calcularem isso no front.
   chegada: ChegadaEnum.nullable(),
   boletim: BoletimEnum.nullable(),
   atividadeCasa: AtividadeCasaEnum.nullable(),
@@ -44,9 +39,13 @@ export const RegistroDetalheOutput = RegistroResumoOutput.extend({
   autonomia: AutonomiaEnum.nullable(),
   comportamento: ComportamentoEnum.nullable(),
   desempenho: DesempenhoEnum.nullable(),
+})
+
+/** Retornado por `GET /registros/:id` e pelos endpoints de criacao/atualizacao. */
+export const RegistroDetalheOutput = RegistroResumoOutput.extend({
+  estagio: z.string().nullable(),
   conteudoIds: z.array(z.uuid()),
   anotacao: z.string().nullable(),
-  fechado: z.boolean(),
 })
 
 /**

@@ -261,7 +261,6 @@ model RegistroAula {
   comportamento Comportamento?
   desempenho    Desempenho?
   anotacao      String?
-  fechado       Boolean                @default(false)
   criadoEm      DateTime               @default(now())
   atualizadoEm  DateTime               @updatedAt
   conteudos     RegistroAulaConteudo[]

@@ -41,15 +41,6 @@ export const HorarioDoDia = z
   .regex(HORARIO_REGEX, 'Horario deve estar no formato HH:mm, em intervalos de 30 minutos (ex.: "14:00", "14:30").')
 export type HorarioDoDiaType = z.infer<typeof HorarioDoDia>
 
-/**
- * `status` e sempre derivado no backend — nunca aparece em nenhum input.
- * Sem coluna nativa no Postgres (nunca persistido, so calculado on-the-fly),
- * mas mantido no mesmo casing (MAIUSCULO) dos demais enums deste arquivo por
- * consistencia — nao ha razao pra esse ser o unico minusculo.
- */
-export const StatusRegistroEnum = z.enum(['NAO_INICIADO', 'EM_ANDAMENTO', 'CONCLUIDO'])
-export type StatusRegistro = z.infer<typeof StatusRegistroEnum>
-
 export const ChegadaEnum = z.enum(['PRESENTE', 'ATRASADO', 'FALTOU'])
 export type Chegada = z.infer<typeof ChegadaEnum>
 

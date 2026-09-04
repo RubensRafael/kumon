@@ -55,7 +55,7 @@ describe('registros de aula', () => {
   })
 
   describe('GET /api/registros?data=', () => {
-    it('sem nenhuma linha criada -> id virtual e status nao_iniciado', async () => {
+    it('sem nenhuma linha criada -> id virtual e campos de nota todos nulos', async () => {
       const data = '2026-03-02'
       const { cookie } = await montarCenario(data)
 
@@ -64,7 +64,7 @@ describe('registros de aula', () => {
       const body = (await response.json()) as RegistroResumoOutputType[]
       expect(body.length).toBe(1)
       expect(body[0].id).toBe(VIRTUAL_REGISTRO_ID)
-      expect(body[0].status).toBe('NAO_INICIADO')
+      expect(body[0].chegada).toBeNull()
     })
 
     it('nunca cria linha so por consultar a lista', async () => {
@@ -76,7 +76,7 @@ describe('registros de aula', () => {
       expect(contagem).toBe(0)
     })
 
-    it('com registro aberto -> em_andamento; apos finalizar -> concluido', async () => {
+    it('com registro criado, lista do dia reflete os campos de nota preenchidos', async () => {
       const data = '2026-03-02'
       const { cookie, horario } = await montarCenario(data)
 
@@ -91,16 +91,11 @@ describe('registros de aula', () => {
       )
       const registro = (await criado.json()) as RegistroDetalheOutputType
 
-      const listaAberta = await app.request(`/api/registros?data=${data}`, { headers: authHeader(cookie) }, testEnv)
-      const bodyAberta = (await listaAberta.json()) as RegistroResumoOutputType[]
-      expect(bodyAberta[0].id).toBe(registro.id)
-      expect(bodyAberta[0].status).toBe('EM_ANDAMENTO')
-
-      await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
-
-      const listaFechada = await app.request(`/api/registros?data=${data}`, { headers: authHeader(cookie) }, testEnv)
-      const bodyFechada = (await listaFechada.json()) as RegistroResumoOutputType[]
-      expect(bodyFechada[0].status).toBe('CONCLUIDO')
+      const lista = await app.request(`/api/registros?data=${data}`, { headers: authHeader(cookie) }, testEnv)
+      const body = (await lista.json()) as RegistroResumoOutputType[]
+      expect(body[0].id).toBe(registro.id)
+      expect(body[0].chegada).toBe('PRESENTE')
+      expect(body[0].boletim).toBeNull()
     })
 
     it('horario inativo nao aparece na lista', async () => {
@@ -146,8 +141,7 @@ describe('registros de aula', () => {
       expect(response.status).toBe(201)
       const body = (await response.json()) as RegistroDetalheOutputType
       expect(body.estagio).toBe('Unidade 7')
-      expect(body.fechado).toBe(false)
-      expect(body.status).toBe('EM_ANDAMENTO')
+      expect(body.chegada).toBe('PRESENTE')
     })
 
     it('persiste boletim/foco mesmo com chegada != presente, sem checar coerencia', async () => {
@@ -260,25 +254,38 @@ describe('registros de aula', () => {
       expect(body.chegada).toBe('PRESENTE') // preservado
     })
 
-    it('nao bloqueia editar um registro ja fechado', async () => {
+    it('aceita edicao mesmo com todos os campos de nota ja preenchidos (isCompleto no front, nao no backend)', async () => {
       const data = '2026-03-02'
       const { cookie, horario } = await montarCenario(data)
       const criado = await app.request(
         '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ horarioId: horario.id, data }) },
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({
+            horarioId: horario.id,
+            data,
+            chegada: 'PRESENTE',
+            boletim: 'PEGOU',
+            atividadeCasa: 'FEZ',
+            foco: 'BOM',
+            autonomia: 'BOA',
+            comportamento: 'ADEQUADO',
+            desempenho: 'BOM',
+          }),
+        },
         testEnv,
       )
       const registro = (await criado.json()) as RegistroDetalheOutputType
-      await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
 
       const resposta = await app.request(
         `/api/registros/${registro.id}`,
-        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ anotacao: 'editado depois de fechado' }) },
+        { method: 'PUT', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ anotacao: 'editado depois de completo' }) },
         testEnv,
       )
       expect(resposta.status).toBe(200)
       const body = (await resposta.json()) as RegistroDetalheOutputType
-      expect(body.anotacao).toBe('editado depois de fechado')
+      expect(body.anotacao).toBe('editado depois de completo')
     })
 
     it('outro professor nao acessa o registro (404)', async () => {
@@ -298,29 +305,6 @@ describe('registros de aula', () => {
         testEnv,
       )
       expect(resposta.status).toBe(404)
-    })
-  })
-
-  describe('POST /api/registros/:id/finalizar', () => {
-    it('marca fechado:true, e e idempotente (2a chamada nao falha)', async () => {
-      const data = '2026-03-02'
-      const { cookie, horario } = await montarCenario(data)
-      const criado = await app.request(
-        '/api/registros',
-        { method: 'POST', headers: { ...jsonHeaders, ...authHeader(cookie) }, body: JSON.stringify({ horarioId: horario.id, data }) },
-        testEnv,
-      )
-      const registro = (await criado.json()) as RegistroDetalheOutputType
-
-      const primeira = await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
-      const primeiroBody = (await primeira.json()) as RegistroDetalheOutputType
-      expect(primeiroBody.fechado).toBe(true)
-      expect(primeiroBody.status).toBe('CONCLUIDO')
-
-      const segunda = await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
-      expect(segunda.status).toBe(200)
-      const segundoBody = (await segunda.json()) as RegistroDetalheOutputType
-      expect(segundoBody.fechado).toBe(true)
     })
   })
 })
