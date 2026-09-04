@@ -15,7 +15,6 @@ function payloadProfessor(materiaId: string, overrides: Record<string, unknown> 
     horarioInicial: '08:00',
     horarioFinal: '18:00',
     capacidadePorHorario: 4,
-    duracaoAulaMin: 60,
     corAgenda: '#4f46e5',
     materiaIds: [materiaId],
     ...overrides,

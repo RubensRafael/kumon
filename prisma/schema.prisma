@@ -147,7 +147,6 @@ model Professor {
   horarioInicial       String
   horarioFinal         String
   capacidadePorHorario Int
-  duracaoAulaMin       Int
   corAgenda            String
   observacoes          String?
   criadoEm             DateTime           @default(now())

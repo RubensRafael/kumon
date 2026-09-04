@@ -19,7 +19,6 @@ function paraProfessorOutput(professor: ProfessorComMaterias): ProfessorOutputTy
     horarioInicial: professor.horarioInicial,
     horarioFinal: professor.horarioFinal,
     capacidadePorHorario: professor.capacidadePorHorario,
-    duracaoAulaMin: professor.duracaoAulaMin,
     corAgenda: professor.corAgenda,
     observacoes: professor.observacoes,
     materiaIds: professor.materias.map((m) => m.materiaId),
@@ -88,7 +87,6 @@ export async function criarProfessor(
       horarioInicial: input.horarioInicial,
       horarioFinal: input.horarioFinal,
       capacidadePorHorario: input.capacidadePorHorario,
-      duracaoAulaMin: input.duracaoAulaMin,
       corAgenda: input.corAgenda,
       observacoes: input.observacoes ?? null,
       materias: { create: input.materiaIds.map((materiaId) => ({ materiaId })) },
@@ -139,7 +137,6 @@ export async function atualizarProfessor(
         horarioInicial: input.horarioInicial,
         horarioFinal: input.horarioFinal,
         capacidadePorHorario: input.capacidadePorHorario,
-        duracaoAulaMin: input.duracaoAulaMin,
         corAgenda: input.corAgenda,
         observacoes: input.observacoes,
         materias:
