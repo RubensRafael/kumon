@@ -2,7 +2,6 @@ import { HTTPException } from 'hono/http-exception'
 
 import { diaDaSemana } from '../../lib/data'
 import type { Prisma, PrismaClient } from '../../db/generated/client'
-import { Prisma as PrismaNamespace } from '../../db/generated/client'
 import { VIRTUAL_REGISTRO_ID } from '../../../shared/dto/registro.dto'
 import type {
   RegistroDetalheOutputType,
@@ -156,35 +155,36 @@ export async function criarRegistro(
 
   const conteudoIds = await validarConteudoIds(prisma, input.conteudoIds)
 
-  try {
-    const registro = await prisma.registroAula.create({
-      data: {
-        horarioId: input.horarioId,
-        matriculaId: horario.matriculaId,
-        data: input.data,
-        // Unica copia (snapshot) intencional do schema: nunca vem do input.
-        estagio: horario.matricula.estagio,
-        chegada: input.chegada,
-        boletim: input.boletim,
-        atividadeCasa: input.atividadeCasa,
-        foco: input.foco,
-        autonomia: input.autonomia,
-        comportamento: input.comportamento,
-        desempenho: input.desempenho,
-        anotacao: input.anotacao,
-        conteudos: conteudoIds ? { create: conteudoIds.map((conteudoId) => ({ conteudoId })) } : undefined,
-      },
-      include: INCLUDE_DETALHE,
+  const existente = await prisma.registroAula.findFirst({
+    where: { horarioId: input.horarioId, data: input.data },
+    select: { id: true },
+  })
+  if (existente) {
+    throw new HTTPException(409, {
+      message: 'Ja existe um registro de aula para este horario nesta data.',
     })
-    return paraDetalheOutput(registro)
-  } catch (error) {
-    if (error instanceof PrismaNamespace.PrismaClientKnownRequestError && error.code === 'P2002') {
-      throw new HTTPException(409, {
-        message: 'Ja existe um registro de aula para este horario nesta data.',
-      })
-    }
-    throw error
   }
+
+  const registro = await prisma.registroAula.create({
+    data: {
+      horarioId: input.horarioId,
+      matriculaId: horario.matriculaId,
+      data: input.data,
+      // Unica copia (snapshot) intencional do schema: nunca vem do input.
+      estagio: horario.matricula.estagio,
+      chegada: input.chegada,
+      boletim: input.boletim,
+      atividadeCasa: input.atividadeCasa,
+      foco: input.foco,
+      autonomia: input.autonomia,
+      comportamento: input.comportamento,
+      desempenho: input.desempenho,
+      anotacao: input.anotacao,
+      conteudos: conteudoIds ? { create: conteudoIds.map((conteudoId) => ({ conteudoId })) } : undefined,
+    },
+    include: INCLUDE_DETALHE,
+  })
+  return paraDetalheOutput(registro)
 }
 
 /** Nao bloqueia edicao de um registro `fechado: true` — convencao de UI (form read-only apos "Finalizar"). */

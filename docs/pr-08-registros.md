@@ -106,3 +106,10 @@ foi a maior propagação da decisão de uppercase até aqui:
   `fechado: true`, mantendo a idempotência. Ver `plan.md`, seção final
   "Coisas pra lembrar", pra decisões relacionadas ainda não implementadas
   (`tipoAtendimento` imutável, futuro de `duracaoAulaMin`).
+- **`criarRegistro` passou a checar duplicata com `findFirst` antes do
+  `create`**, em vez de tentar o `create` direto e capturar `P2002`
+  (`PrismaClientKnownRequestError`) da violação de
+  `@@unique([horarioId, data])`. Mesmo padrão já usado em `criarMatricula`/
+  `criarHorario` — checagem explícita antes de escrever, em vez de
+  depender de código de erro do banco. Comportamento (`409` na duplicata)
+  não muda, só a forma de detectar.
