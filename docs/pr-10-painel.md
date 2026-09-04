@@ -109,6 +109,45 @@ Fórmula nova:
   (`tests/helpers/factories.ts`) ganhou um parâmetro opcional
   `tipoAtendimento` pra viabilizar isso.
 
+**`GET /painel` reescrito de novo — deixou de agregar, passou a devolver o
+snapshot bruto da unidade.** Discutindo como uma futura tela de agenda
+reaproveitaria dado com o painel, ficou claro que os dois são a mesma
+informação (professores, alunos, matrículas com horários, matérias e
+conteúdos) vista de duas formas — contagens/percentuais de um lado,
+lista de slots do outro. Antes disso resultar em duas queries e dois
+endpoints com lógica duplicada (e o risco de divergir), a decisão foi
+inverter: o backend só busca e devolve o bruto (`PainelDadosOutput`, em
+`src/shared/dto/painel.dto.ts`), e cada visão é uma função pura por cima
+desse mesmo payload:
+
+- `calcularAgregacoesPainel` (mesmo arquivo) — reproduz exatamente as
+  agregações que este documento já descreve acima (`totalAlunosAtivos`,
+  `ocupacaoPercentual`, `matriculasPorMateria`, `aulasPorDiaSemana`,
+  `alertas`), só que calculadas no client em vez de no banco.
+- `derivarAgendaSlots` (`src/shared/dto/agenda.dto.ts`) — substitui os
+  endpoints da PR 09, ver `docs/pr-09-agenda.md`, "Retirado".
+
+**Escopo por professor deixou de ser um corte na query.** `GET /painel` não
+usa mais `scopeToProfessor`/`escopoProfessorId` — é leitura pura
+(visualização), e um professor ver dados de outro professor não é um
+problema de segurança do mesmo tipo que editar; só não pode alterar o que
+não é seu (isso continua garantido nas rotas de escrita de cada feature,
+inalteradas). O que os testes antigos chamavam de "professor vê só as
+próprias agregações" agora é comportamento do **helper**, não do endpoint:
+`calcularAgregacoesPainel(dados, professorId)` filtra se receber um
+`professorId`, mas o `GET /painel` sempre devolve a unidade inteira pra
+qualquer usuário autenticado — quem decide filtrar (ex.: dashboard do
+professor mostrando só o próprio) é o client, não é mais imposto pelo
+backend. `totalProfessores` continua sempre da unidade inteira, com ou sem
+filtro, mesma lógica de sempre.
+
+**Ainda sem tela.** Esta rodada foi só backend + os dois módulos
+compartilhados (com testes de unidade em `tests/unit/painel.dto.test.ts` e
+`tests/unit/agenda.dto.test.ts`, migrados dos antigos testes e2e de
+agregação/agenda — mais rápidos que round-trip por HTTP pra testar lógica
+pura). Construir a UI de fato (agenda, painel) fica pra depois — ver
+`plan.md`, "Coisas pra fazer".
+
 ---
 
 ## Cadeia completa
