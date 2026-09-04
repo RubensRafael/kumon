@@ -1,6 +1,5 @@
 import { HTTPException } from 'hono/http-exception'
 
-import { formatarData, parseData } from '../../lib/data'
 import type { Aluno, PrismaClient } from '../../db/generated/client'
 import type { AlunoCreateInputType, AlunoOutputType, AlunoUpdateInputType } from './alunos.dto'
 
@@ -15,9 +14,9 @@ function paraAlunoOutput(aluno: Aluno): AlunoOutputType {
     telefone: aluno.telefone,
     whatsapp: aluno.whatsapp,
     email: aluno.email,
-    dataNascimento: aluno.dataNascimento ? formatarData(aluno.dataNascimento) : null,
+    dataNascimento: aluno.dataNascimento,
     observacoes: aluno.observacoes,
-    dataMatricula: formatarData(aluno.dataMatricula),
+    dataMatricula: aluno.dataMatricula,
     situacao: aluno.situacao,
     zonaVermelha: aluno.zonaVermelha,
     connect: aluno.connect,
@@ -73,9 +72,9 @@ export async function criarAluno(prisma: PrismaClient, input: AlunoCreateInputTy
       telefone: input.telefone ?? null,
       whatsapp: input.whatsapp ?? null,
       email: input.email ?? null,
-      dataNascimento: input.dataNascimento ? parseData(input.dataNascimento, 'dataNascimento') : null,
+      dataNascimento: input.dataNascimento ?? null,
       observacoes: input.observacoes ?? null,
-      dataMatricula: parseData(input.dataMatricula, 'dataMatricula'),
+      dataMatricula: input.dataMatricula,
       situacao: input.situacao,
       zonaVermelha: input.zonaVermelha,
       connect: input.connect,
@@ -95,25 +94,20 @@ export async function atualizarAluno(
     throw new HTTPException(404, { message: 'Aluno nao encontrado.' })
   }
 
+  // Prisma ignora chave com valor `undefined` em `data` -- `dataNascimento`/
+  // `dataMatricula` ja chegam como `Date` (coagidas pelo Zod em
+  // `alunos.dto.ts`), entao nao ha mais motivo pra tratamento especial.
   const aluno = await prisma.aluno.update({
     where: { id },
-    // Prisma ignora chave com valor `undefined` -- spread condicional so
-    // sobra pra `dataNascimento`/`dataMatricula`, onde a guarda nao e sobre
-    // o que o Prisma faz e sim pra nao chamar `parseData` (que exige
-    // `string`) com `undefined` quando o campo nao veio no corpo.
     data: {
       nome: input.nome,
       responsavel: input.responsavel,
       telefone: input.telefone,
       whatsapp: input.whatsapp,
       email: input.email,
-      ...(input.dataNascimento !== undefined
-        ? { dataNascimento: parseData(input.dataNascimento, 'dataNascimento') }
-        : {}),
+      dataNascimento: input.dataNascimento,
       observacoes: input.observacoes,
-      ...(input.dataMatricula !== undefined
-        ? { dataMatricula: parseData(input.dataMatricula, 'dataMatricula') }
-        : {}),
+      dataMatricula: input.dataMatricula,
       situacao: input.situacao,
       zonaVermelha: input.zonaVermelha,
       connect: input.connect,
