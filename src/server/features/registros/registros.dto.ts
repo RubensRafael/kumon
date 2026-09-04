@@ -11,6 +11,12 @@ import {
   StatusRegistroEnum,
 } from '../../../shared/dto/enums'
 
+/**
+ * `data` como `Date`, nao string -- mesmo raciocinio de `alunos.dto.ts`:
+ * `z.coerce.date()` no input valida sozinho (sem funcao de parse separada),
+ * `z.date()` no output deixa `c.json()` serializar como ISO completo.
+ */
+
 /** Retornado por `GET /registros` (lista do dia) e reaproveitado dentro de `RegistroDetalheOutput`. */
 export const RegistroResumoOutput = z.object({
   id: z.uuid().nullable(), // null = ainda nao existe linha, e virtual
@@ -20,7 +26,7 @@ export const RegistroResumoOutput = z.object({
   alunoNome: z.string(),
   professorId: z.uuid(),
   materiaId: z.uuid(),
-  data: z.string(),
+  data: z.date(),
   horarioPrevisto: z.string(),
   status: StatusRegistroEnum,
 })
@@ -52,7 +58,7 @@ export const RegistroDetalheOutput = RegistroResumoOutput.extend({
  */
 export const RegistroInput = z.object({
   horarioId: z.uuid(),
-  data: z.string(),
+  data: z.coerce.date(),
   chegada: ChegadaEnum.optional(),
   boletim: BoletimEnum.optional(),
   atividadeCasa: AtividadeCasaEnum.optional(),
@@ -68,7 +74,7 @@ export const RegistroInput = z.object({
 export const RegistroUpdateInput = RegistroInput.omit({ horarioId: true, data: true }).partial()
 
 export const ListarRegistrosQuery = z.object({
-  data: z.string(),
+  data: z.coerce.date(),
 })
 
 export type RegistroResumoOutputType = z.infer<typeof RegistroResumoOutput>

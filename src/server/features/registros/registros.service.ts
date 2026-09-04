@@ -1,6 +1,6 @@
 import { HTTPException } from 'hono/http-exception'
 
-import { diaDaSemana, formatarData, parseData } from '../../lib/data'
+import { diaDaSemana } from '../../lib/data'
 import type { Prisma, PrismaClient } from '../../db/generated/client'
 import { Prisma as PrismaNamespace } from '../../db/generated/client'
 import type {
@@ -27,7 +27,7 @@ function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
     alunoNome: registro.matricula.aluno.nome,
     professorId: registro.matricula.professorId,
     materiaId: registro.matricula.materiaId,
-    data: formatarData(registro.data),
+    data: registro.data,
     horarioPrevisto: registro.horario.horario,
     // Nunca vem de nenhum input — sempre derivado aqui na hora de montar o output.
     status: registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
@@ -94,10 +94,9 @@ async function validarConteudoIds(
  */
 export async function listarRegistrosDoDia(
   prisma: PrismaClient,
-  dataStr: string,
+  data: Date,
   escopoProfessorId: string | null,
 ): Promise<RegistroResumoOutputType[]> {
-  const data = parseData(dataStr, 'data')
   const diaSemana = diaDaSemana(data)
 
   const horarios = await prisma.matriculaHorario.findMany({
@@ -123,7 +122,7 @@ export async function listarRegistrosDoDia(
       alunoNome: horario.matricula.aluno.nome,
       professorId: horario.matricula.professorId,
       materiaId: horario.matricula.materiaId,
-      data: formatarData(data),
+      data,
       horarioPrevisto: horario.horario,
       status: !registro ? 'NAO_INICIADO' : registro.fechado ? 'CONCLUIDO' : 'EM_ANDAMENTO',
     }
@@ -157,7 +156,6 @@ export async function criarRegistro(
     throw new HTTPException(400, { message: 'horarioId nao corresponde a nenhum horario existente.' })
   }
 
-  const data = parseData(input.data, 'data')
   const conteudoIds = await validarConteudoIds(prisma, input.conteudoIds)
 
   try {
@@ -165,7 +163,7 @@ export async function criarRegistro(
       data: {
         horarioId: input.horarioId,
         matriculaId: horario.matriculaId,
-        data,
+        data: input.data,
         // Unica copia (snapshot) intencional do schema: nunca vem do input.
         estagio: horario.matricula.estagio,
         horaInicio: new Date(),
