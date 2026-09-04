@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { PainelOutputType } from '../../src/server/features/painel/painel.dto'
+import type { PainelDadosOutputType } from '../../src/shared/dto/painel.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
@@ -24,112 +24,60 @@ describe('painel', () => {
   })
 
   describe('GET /api/painel', () => {
-    it('admin ve agregacoes da unidade inteira', async () => {
-      const professor1 = await criarProfessor()
-      const professor2 = await criarProfessor()
+    it('devolve o snapshot bruto da unidade inteira, sem agregacao', async () => {
+      const professor = await criarProfessor()
       const materia = await criarMateria({ nome: 'Materia' })
-      const aluno1 = await criarAluno({ nome: 'Aluno 1' })
-      const aluno2 = await criarAluno({ nome: 'Aluno 2' })
-      const matricula1 = await criarMatricula({ alunoId: aluno1.id, professorId: professor1.id, materiaId: materia.id })
-      const matricula2 = await criarMatricula({ alunoId: aluno2.id, professorId: professor2.id, materiaId: materia.id })
-      await criarHorario({ matriculaId: matricula1.id, diaSemana: 'SEG' })
-      await criarHorario({ matriculaId: matricula2.id, diaSemana: 'TER' })
+      const aluno = await criarAluno({ nome: 'Aluno' })
+      const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
+      const horario = await criarHorario({ matriculaId: matricula.id, diaSemana: 'SEG' })
 
       const cookie = await cookieAdmin()
       const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
       expect(response.status).toBe(200)
-      const body = (await response.json()) as PainelOutputType
+      const body = (await response.json()) as PainelDadosOutputType
 
-      expect(body.totalAlunosAtivos).toBe(2)
-      expect(body.totalMatriculasAtivas).toBe(2)
-      expect(body.totalProfessores).toBe(2)
-      expect(body.matriculasPorMateria).toEqual([
-        { materiaId: materia.id, materiaNome: materia.nome, total: 2 },
+      expect(body.professores).toEqual([expect.objectContaining({ id: professor.id })])
+      expect(body.alunos).toEqual([expect.objectContaining({ id: aluno.id, situacao: 'ATIVO' })])
+      expect(body.materias).toEqual([expect.objectContaining({ id: materia.id, conteudos: [] })])
+      expect(body.matriculas).toEqual([
+        expect.objectContaining({
+          id: matricula.id,
+          horarios: [expect.objectContaining({ id: horario.id, diaSemana: 'SEG' })],
+        }),
       ])
-      expect(body.aulasPorDiaSemana.length).toBe(7) // todos os 7 dias, mesmo com total 0
-      const segunda = body.aulasPorDiaSemana.find((d) => d.diaSemana === 'SEG')
-      expect(segunda?.total).toBe(1)
     })
 
-    it('professor ve so as proprias agregacoes, mas totalProfessores continua sendo da unidade inteira', async () => {
+    it('professor autenticado ve o snapshot inteiro, nao so os proprios dados — e so leitura', async () => {
       const { usuario, professor, senha } = await criarUsuarioProfessor()
       const outroProfessor = await criarProfessor()
       const materia = await criarMateria({ nome: 'Materia' })
-
       const meuAluno = await criarAluno({ nome: 'Meu Aluno' })
-      const matriculaMinha = await criarMatricula({ alunoId: meuAluno.id, professorId: professor.id, materiaId: materia.id })
-      await criarHorario({ matriculaId: matriculaMinha.id })
-
       const alunoDeOutro = await criarAluno({ nome: 'Aluno de Outro' })
-      const matriculaDeOutro = await criarMatricula({ alunoId: alunoDeOutro.id, professorId: outroProfessor.id, materiaId: materia.id })
-      await criarHorario({ matriculaId: matriculaDeOutro.id })
+      await criarMatricula({ alunoId: meuAluno.id, professorId: professor.id, materiaId: materia.id })
+      await criarMatricula({ alunoId: alunoDeOutro.id, professorId: outroProfessor.id, materiaId: materia.id })
 
       const cookie = await obterCookie(usuario.email, senha)
       const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
-      const body = (await response.json()) as PainelOutputType
+      const body = (await response.json()) as PainelDadosOutputType
 
-      expect(body.totalAlunosAtivos).toBe(1)
-      expect(body.totalMatriculasAtivas).toBe(1)
-      // GET /professores (PR 03) ja e um diretorio nao-escopado — mesma logica aqui.
-      expect(body.totalProfessores).toBe(2)
+      expect(body.professores.length).toBe(2)
+      expect(body.alunos.length).toBe(2)
+      expect(body.matriculas.length).toBe(2)
     })
 
-    it('alertas trazem so alunos em zona vermelha dentro do escopo', async () => {
-      const { usuario, professor, senha } = await criarUsuarioProfessor()
-      const outroProfessor = await criarProfessor()
+    it('so traz horarios ativos dentro de cada matricula', async () => {
+      const professor = await criarProfessor()
       const materia = await criarMateria({ nome: 'Materia' })
+      const aluno = await criarAluno({ nome: 'Aluno' })
+      const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
+      const horario = await criarHorario({ matriculaId: matricula.id })
+      await prisma.matriculaHorario.update({ where: { id: horario.id }, data: { ativo: false } })
 
-      const meuAlunoVermelho = await criarAluno({ nome: 'Aluno Vermelho' })
-      await prisma.aluno.update({ where: { id: meuAlunoVermelho.id }, data: { zonaVermelha: true } })
-      const matriculaMinha = await criarMatricula({ alunoId: meuAlunoVermelho.id, professorId: professor.id, materiaId: materia.id })
-      await criarHorario({ matriculaId: matriculaMinha.id })
-
-      const alunoVermelhoDeOutro = await criarAluno({ nome: 'Vermelho de Outro' })
-      await prisma.aluno.update({ where: { id: alunoVermelhoDeOutro.id }, data: { zonaVermelha: true } })
-      const matriculaDeOutro = await criarMatricula({ alunoId: alunoVermelhoDeOutro.id, professorId: outroProfessor.id, materiaId: materia.id })
-      await criarHorario({ matriculaId: matriculaDeOutro.id })
-
-      const cookie = await obterCookie(usuario.email, senha)
-      const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
-      const body = (await response.json()) as PainelOutputType
-
-      expect(body.alertas.length).toBe(1)
-      expect(body.alertas[0].alunoId).toBe(meuAlunoVermelho.id)
-      expect(body.alertas[0].tipo).toBe('zona_vermelha')
-    })
-
-    it('ocupacaoPercentual e 0 quando nao ha capacidade nem horarios', async () => {
       const cookie = await cookieAdmin()
       const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
-      const body = (await response.json()) as PainelOutputType
-      expect(body.ocupacaoPercentual).toBe(0)
-    })
+      const body = (await response.json()) as PainelDadosOutputType
 
-    it('ocupacaoPercentual pesa REGULAR (2 slots de 30min) o dobro de PRE_ESCOLAR (1 slot)', async () => {
-      async function ocupacaoCom(tipoAtendimento: 'REGULAR' | 'PRE_ESCOLAR') {
-        await resetDb()
-        const cookie = await cookieAdmin()
-        const professor = await criarProfessor()
-        const materia = await criarMateria({ nome: 'Materia' })
-        const aluno = await criarAluno({ nome: 'Aluno' })
-        const matricula = await criarMatricula({
-          alunoId: aluno.id,
-          professorId: professor.id,
-          materiaId: materia.id,
-          tipoAtendimento,
-        })
-        await criarHorario({ matriculaId: matricula.id })
-
-        const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
-        const body = (await response.json()) as PainelOutputType
-        return body.ocupacaoPercentual
-      }
-
-      const ocupacaoRegular = await ocupacaoCom('REGULAR')
-      const ocupacaoPreEscolar = await ocupacaoCom('PRE_ESCOLAR')
-
-      expect(ocupacaoRegular).toBeGreaterThan(0)
-      expect(ocupacaoRegular).toBeCloseTo(ocupacaoPreEscolar * 2, 5)
+      expect(body.matriculas[0]?.horarios).toEqual([])
     })
 
     it('sem token -> 401', async () => {
