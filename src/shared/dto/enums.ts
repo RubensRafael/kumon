@@ -40,3 +40,29 @@ export const HorarioDoDia = z
   .string()
   .regex(HORARIO_REGEX, 'Horario deve estar no formato HH:mm, em intervalos de 30 minutos (ex.: "14:00", "14:30").')
 export type HorarioDoDiaType = z.infer<typeof HorarioDoDia>
+
+export const ChegadaEnum = z.enum(['PRESENTE', 'ATRASADO', 'FALTOU'])
+export type Chegada = z.infer<typeof ChegadaEnum>
+
+export const BoletimEnum = z.enum(['PEGOU', 'NAO_PEGOU', 'PROBLEMA'])
+export type Boletim = z.infer<typeof BoletimEnum>
+
+export const AtividadeCasaEnum = z.enum(['FEZ', 'FEZ_PARCIALMENTE', 'NAO_FEZ', 'NAO_HAVIA'])
+export type AtividadeCasa = z.infer<typeof AtividadeCasaEnum>
+
+export const FocoEnum = z.enum(['BAIXO', 'REGULAR', 'BOM', 'EXCELENTE'])
+export type Foco = z.infer<typeof FocoEnum>
+
+export const AutonomiaEnum = z.enum(['BAIXA', 'REGULAR', 'BOA', 'EXCELENTE'])
+export type Autonomia = z.infer<typeof AutonomiaEnum>
+
+export const ComportamentoEnum = z.enum(['NECESSITOU_INTERVENCAO', 'OSCILOU', 'ADEQUADO', 'EXCELENTE'])
+export type Comportamento = z.infer<typeof ComportamentoEnum>
+
+export const DesempenhoEnum = z.enum([
+  'PRECISOU_INTERVENCAO',
+  'APRESENTOU_DIFICULDADE',
+  'BOM',
+  'EXCELENTE',
+])
+export type Desempenho = z.infer<typeof DesempenhoEnum>

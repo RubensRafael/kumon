@@ -433,11 +433,6 @@ A lista do dia é **computada** (nunca gera linha sozinha), e o registro em si �
 ### DTOs
 
 ```ts
-export const StatusRegistroEnum = z.enum([
-  "nao_iniciado",
-  "em_andamento",
-  "concluido",
-]);
 export const ChegadaEnum = z.enum(["presente", "atrasado", "faltou"]);
 export const BoletimEnum = z.enum(["pegou", "nao_pegou", "problema"]);
 export const AtividadeCasaEnum = z.enum([
@@ -463,7 +458,7 @@ export const DesempenhoEnum = z.enum([
 
 // retornado por GET /registros (lista do dia) e reaproveitado dentro de RegistroDetalheOutput
 export const RegistroResumoOutput = z.object({
-  id: z.string().uuid().nullable(), // null = ainda não existe linha, é virtual
+  id: z.union([z.string().uuid(), z.literal(VIRTUAL_REGISTRO_ID)]), // sentinela compartilhado (shared/dto/registro.dto.ts) = ainda não existe linha, é virtual
   horarioId: z.string().uuid(),
   matriculaId: z.string().uuid(),
   alunoId: z.string().uuid(),
@@ -471,13 +466,11 @@ export const RegistroResumoOutput = z.object({
   professorId: z.string().uuid(),
   materiaId: z.string().uuid(),
   data: z.string(),
-  horarioPrevisto: z.string(),
-  status: StatusRegistroEnum,
-});
-
-// retornado por GET /registros/:id e pelos endpoints de criação/atualização
-export const RegistroDetalheOutput = RegistroResumoOutput.extend({
-  estagio: z.string().nullable(),
+  horarioPrevisto: z.string(), // "HH:mm", copiado de MatriculaHorario.horario (mesmo regex compartilhado da seção 6)
+  // Sem "status"/"fechado" -- isFalta/isCompleto (shared/dto/registro.dto.ts)
+  // calculam isso no front a partir destes 7 campos. Aqui (no resumo, nao só
+  // no detalhe) porque a lista do dia tambem precisa mostrar completo/em
+  // andamento/falta por horário, ver "Regras de negocio".
   chegada: ChegadaEnum.nullable(),
   boletim: BoletimEnum.nullable(),
   atividadeCasa: AtividadeCasaEnum.nullable(),
@@ -485,12 +478,13 @@ export const RegistroDetalheOutput = RegistroResumoOutput.extend({
   autonomia: AutonomiaEnum.nullable(),
   comportamento: ComportamentoEnum.nullable(),
   desempenho: DesempenhoEnum.nullable(),
+});
+
+// retornado por GET /registros/:id e pelos endpoints de criação/atualização
+export const RegistroDetalheOutput = RegistroResumoOutput.extend({
+  estagio: z.string().nullable(), // lido de RegistroAula.matricula.estagio (relacao) -- sem coluna propria, ver "Regras de negocio"
   conteudoIds: z.array(z.string().uuid()),
   anotacao: z.string().nullable(),
-  fechado: z.boolean(),
-  horaInicio: z.string().nullable(),
-  horaFim: z.string().nullable(),
-  duracaoMin: z.number().int().nullable(),
 });
 
 // um único formato de entrada, usado tanto na criação quanto em cada auto-save.
@@ -524,7 +518,6 @@ export const RegistroUpdateInput = RegistroInput.omit({
 | GET    | `/registros/:id`             | qualquer (escopo aplicado) | —                     | `RegistroDetalheOutput`  |
 | POST   | `/registros`                 | admin ou professor dono    | `RegistroInput`       | `RegistroDetalheOutput`  |
 | PUT    | `/registros/:id`             | admin ou professor dono    | `RegistroUpdateInput` | `RegistroDetalheOutput`  |
-| POST   | `/registros/:id/finalizar`   | admin ou professor dono    | —                     | `RegistroDetalheOutput`  |
 
 ### Exemplo de wiring (Hono + Zod)
 
@@ -549,13 +542,12 @@ app.put(
 
 ### Regras de negócio / testes
 
-- `GET /registros?data=X` nunca cria linha nenhuma — `LEFT JOIN` entre `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana de `X`) e `REGISTRO_AULA` existente pra aquela `data`. Sem linha → `id: null`, `status: 'nao_iniciado'`.
-- `status` nunca vem em nenhum input — é sempre derivado no backend na hora de montar o output: sem linha → `nao_iniciado`; linha existe e `fechado=false` → `em_andamento`; `fechado=true` → `concluido`.
+- `GET /registros?data=X` nunca cria linha nenhuma — `LEFT JOIN` entre `MATRICULA_HORARIO` (`ativo=true`, `diaSemana` batendo com o dia da semana de `X`) e `REGISTRO_AULA` existente pra aquela `data`. Sem linha → `id: VIRTUAL_REGISTRO_ID`, campos de nota todos `null`.
+- `RegistroAula.data` é `DATE` no banco (não `TIMESTAMP`) — o Postgres descarta a hora na gravação, então `POST /registros`/`GET /registros?data=X` casam por dia mesmo que o cliente mande um datetime completo em vez de `"YYYY-MM-DD"` puro (`z.coerce.date()` no input aceita ambos).
+- **Sem `status`/`fechado` na API** (decisão de revisão, reverte a spec original): como todo campo de um registro é opcional e pode ser preenchido aos poucos, é a UI quem decide "completo ou não" olhando os campos preenchidos, não o backend expondo um estado binário. `POST /registros/:id/finalizar` não existe mais — não há nenhuma trava vinda do backend, `PUT /registros/:id` sempre aceita edição, mesmo que o registro já esteja "completo" pra UI. `isFalta`/`isCompleto` (`shared/dto/registro.dto.ts`) calculam isso no front: `isFalta` é `chegada === 'faltou'` (completo por definição, não há nota pra dar); `isCompleto` é `isFalta` OU as 6 notas (`boletim`, `atividadeCasa`, `foco`, `autonomia`, `comportamento`, `desempenho`) todas preenchidas. `anotacao`/`conteudoIds` nunca entram nessa conta.
 - `POST /registros` com `chegada: 'atrasado'` ou `'faltou'` — o endpoint só salva o que veio; se por algum motivo vierem também campos de detalhe (`boletim`, `foco` etc.) junto nesse mesmo payload, eles são simplesmente persistidos também, sem checagem de coerência. Não é uma configuração esperada (a UI não deveria enviar isso), mas o backend não trata como erro.
-- `POST /registros` duplicado pro mesmo `(horarioId, data)` → `409` (constraint única no banco — essa sim é uma checagem de integridade real, mantida independente da UI).
-- `estagio` nunca vem em `RegistroInput` nem `RegistroUpdateInput` — o backend copia de `MATRICULA.estagio` automaticamente no momento do `POST`. É a única cópia (snapshot) intencional no schema.
-- `POST /registros/:id/finalizar` grava `horaFim = now()` e `duracaoMin`; deve ser idempotente — chamar duas vezes não recalcula a duração pela segunda `now()`.
-- Editar um registro já com `fechado=true` via `PUT` não é bloqueado pelo backend — é convenção de UI (form fica read-only depois de "Finalizar aula"). Ver apêndice final.
+- `POST /registros` duplicado pro mesmo `(horarioId, data)` → `409` (checagem explícita via `findFirst` antes do `create`, mesmo padrão do resto da API — não captura de código de erro do Prisma).
+- `estagio` nunca vem em `RegistroInput` nem `RegistroUpdateInput` — o output lê direto de `RegistroAula.matricula.estagio` (relação, sem coluna própria em `RegistroAula`). Antes era uma cópia (snapshot) feita no `POST`, necessária porque `Matricula.estagio` podia mudar depois; deixou de ser preciso desde que `estagio` virou imutável em `MatriculaUpdateInput` (seção 5) — a relação já é sempre o valor certo pra qualquer registro daquela matrícula.
 - `scopeToProfessor` filtra pelo `professorId` da `MATRICULA` associada ao `horarioId`/`matriculaId` do registro — professor pedindo `horarioId` de outro professor em `POST /registros` → o `horarioId` "não existe" pra ele (`404`/`400` de referência inválida, não `403`).
 
 ---
@@ -648,7 +640,7 @@ Casos que existem por causa da forma do produto, não por regra de integridade �
 | Professor tentando editar disponibilidade/capacidade própria | Campos não aparecem editáveis na tela de perfil do professor                              | Ignora silenciosamente os campos fora do escopo permitido        |
 | Editar dia/horário de um horário existente                   | Só existe um toggle de ativo na UI; trocar dia/hora sempre passa por "criar novo horário" | Ignora silenciosamente `diaSemana`/`horario` num `PUT`           |
 | Preencher boletim/foco/etc. quando chegada ≠ presente        | Formulário de detalhe só renderiza depois de marcar "Presente"                            | Aceita e persiste o que vier, sem checar coerência com `chegada` |
-| Editar um registro depois de "Finalizar aula"                | Formulário vira somente-leitura depois do clique em finalizar                             | Não bloqueia tecnicamente — se for chamado, aplica a mudança     |
+| Editar um registro já "completo" (`isCompleto`, ver seção 7) | Formulário fica somente-leitura quando `isCompleto` é `true` — decisão só de UI, não existe "finalizar" no backend   | Não bloqueia tecnicamente — se for chamado, aplica a mudança     |
 
 Casos parecidos, mas onde o backend **mantém** uma checagem mesmo com a UI prevenindo, porque envolvem corrida de dados (duas abas, duas pessoas) ou segurança de credencial, não só forma de formulário:
 
@@ -889,8 +881,7 @@ model RegistroAula {
   horario       MatriculaHorario       @relation(fields: [horarioId], references: [id])
   matriculaId   String
   matricula     Matricula              @relation(fields: [matriculaId], references: [id])
-  data          DateTime
-  estagio       String?
+  data          DateTime               @db.Date // so a data, sem hora -- ver "Regras de negocio" da secao 7
   chegada       Chegada?
   boletim       Boletim?
   atividadeCasa AtividadeCasa?
@@ -899,10 +890,6 @@ model RegistroAula {
   comportamento Comportamento?
   desempenho    Desempenho?
   anotacao      String?
-  fechado       Boolean                @default(false)
-  horaInicio    DateTime?
-  horaFim       DateTime?
-  duracaoMin    Int?
   criadoEm      DateTime               @default(now())
   atualizadoEm  DateTime               @updatedAt
   conteudos     RegistroAulaConteudo[]
@@ -1056,3 +1043,6 @@ Ações futuras já discutidas mas não implementadas — anotadas aqui pra não
 
 - **Issue de UI**: [#14 — UI: esconder que "editar" professor/matéria/tipo de atendimento cria uma matrícula nova](https://github.com/RubensRafael/kumon/issues/14). Passou a valer também pra `tipoAtendimento`/`estagio` desde que os dois viraram imutáveis (branch `feat/matricula-imutavel`) — ver "Regras de negócio" da seção 5.
 - **Issue: tipografia/mensagens de erro da API estão muito técnicas**: [#15 — API: revisar tipografia/clareza das mensagens de erro](https://github.com/RubensRafael/kumon/issues/15).
+- **`ApiContract`/`apiEndpoints` (`src/shared/api/contract.ts`) só tem `health` cadastrado.** Esse é o mecanismo que dá tipagem ponta a ponta pro front (`callApi` em `src/client/config/api.ts` infere método/path/tipo de resposta a partir do contrato) — mas nenhuma das features já implementadas (professores, matérias, alunos, matrículas, horários, registros) foi cadastrada nele ainda, então hoje só o health check tem tipagem real do lado do client. Duas formas de resolver, sem decisão tomada:
+  - Mover o `*.dto.ts` inteiro de cada feature de `src/server/features/*/` pra `src/shared/dto/` — mecânico, mas mexe em todo PR já mergeado em `main`. Zod não é server-only (roda no browser), então não há impedimento técnico, só reorganização.
+  - Manter os DTOs onde estão e `contract.ts` importar só o tipo via `import type { XOutputType } from '../../server/features/x/x.dto'` — mudança pequena (import erasa em runtime, não vaza nada pro bundle), mas quebra a convenção atual de "só o que está em `shared/dto/` é compartilhado".
