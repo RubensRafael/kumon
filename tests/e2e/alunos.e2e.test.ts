@@ -36,7 +36,7 @@ describe('alunos', () => {
     })
 
     it('professor so ve alunos com matricula ativa vinculada a ele (via EXISTS, sem duplicar linha)', async () => {
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const { usuario, professor, senha } = await criarUsuarioProfessor()
       const outroProfessor = await criarProfessor()
 
@@ -54,9 +54,9 @@ describe('alunos', () => {
     })
 
     it('professor nao ve aluno cuja unica matricula com ele esta encerrada', async () => {
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const { usuario, professor, senha } = await criarUsuarioProfessor()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       await criarMatricula({
         alunoId: aluno.id,
         professorId: professor.id,
@@ -71,10 +71,10 @@ describe('alunos', () => {
     })
 
     it('um aluno com duas matriculas com o mesmo professor aparece uma unica vez', async () => {
-      const materia1 = await criarMateria()
-      const materia2 = await criarMateria()
+      const materia1 = await criarMateria({ nome: 'Materia 1' })
+      const materia2 = await criarMateria({ nome: 'Materia 2' })
       const { usuario, professor, senha } = await criarUsuarioProfessor()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia1.id })
       await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia2.id })
 
@@ -87,10 +87,10 @@ describe('alunos', () => {
 
   describe('GET /api/alunos/:id', () => {
     it('professor pedindo aluno de outro professor -> 404 (nunca 403)', async () => {
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const { usuario, senha } = await criarUsuarioProfessor()
       const outroProfessor = await criarProfessor()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       await criarMatricula({ alunoId: aluno.id, professorId: outroProfessor.id, materiaId: materia.id })
 
       const cookie = await obterCookie(usuario.email, senha)
@@ -99,7 +99,7 @@ describe('alunos', () => {
     })
 
     it('admin encontra qualquer aluno por id', async () => {
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const cookie = await cookieAdmin()
       const response = await app.request(`/api/alunos/${aluno.id}`, { headers: authHeader(cookie) }, testEnv)
       expect(response.status).toBe(200)
@@ -122,7 +122,7 @@ describe('alunos', () => {
       expect(response.status).toBe(201)
       const body = (await response.json()) as AlunoOutputType
       expect(body.situacao).toBe('ATIVO')
-      expect(body.dataMatricula).toBe('2026-01-15')
+      expect(body.dataMatricula).toBe('2026-01-15T00:00:00.000Z')
 
       const matriculas = await app.request(
         `/api/alunos/${body.id}`,
@@ -164,9 +164,9 @@ describe('alunos', () => {
 
   describe('PUT /api/alunos/:id', () => {
     it('admin-only mesmo para o professor "dono" do aluno', async () => {
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
       const { usuario, professor, senha } = await criarUsuarioProfessor()
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
 
       const cookie = await obterCookie(usuario.email, senha)
@@ -183,7 +183,7 @@ describe('alunos', () => {
     })
 
     it('admin atualiza aluno', async () => {
-      const aluno = await criarAluno()
+      const aluno = await criarAluno({ nome: 'Aluno' })
       const cookie = await cookieAdmin()
       const response = await app.request(
         `/api/alunos/${aluno.id}`,
