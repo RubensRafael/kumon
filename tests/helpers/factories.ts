@@ -40,7 +40,6 @@ export async function criarProfessor(opcoes: CriarProfessorOpcoes = {}) {
       horarioInicial: '08:00',
       horarioFinal: '18:00',
       capacidadePorHorario: 4,
-      duracaoAulaMin: 60,
       corAgenda: '#4f46e5',
     },
   })

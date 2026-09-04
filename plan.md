@@ -160,7 +160,6 @@ export const ProfessorOutput = z.object({
   horarioInicial: z.string(), // "HH:mm", só em intervalos de 30 min (mesmo regex compartilhado da seção 6)
   horarioFinal: z.string(),
   capacidadePorHorario: z.number().int(),
-  duracaoAulaMin: z.number().int(),
   corAgenda: z.string(),
   observacoes: z.string().nullable(),
   materiaIds: z.array(z.string().uuid()),
@@ -175,7 +174,6 @@ export const ProfessorCreateInput = z.object({
   horarioInicial: z.string(),
   horarioFinal: z.string(),
   capacidadePorHorario: z.number().int().positive(),
-  duracaoAulaMin: z.number().int().positive(),
   corAgenda: z.string(),
   observacoes: z.string().optional(),
   materiaIds: z.array(z.string().uuid()).min(1),
@@ -353,11 +351,9 @@ export const MatriculaCreateInput = z.object({
   observacoes: z.string().optional(),
 });
 
-// professorId e materiaId não existem neste schema de propósito — ver regra abaixo
+// professorId, materiaId, tipoAtendimento e estagio não existem neste schema de propósito — ver regra abaixo
 export const MatriculaUpdateInput = z
   .object({
-    estagio: z.string().optional(),
-    tipoAtendimento: TipoAtendimentoEnum.optional(),
     situacao: SituacaoMatriculaEnum.optional(),
     observacoes: z.string().optional(),
   })
@@ -379,7 +375,7 @@ Não existe um endpoint dedicado de "transferir". Trocar professor ou matéria d
 
 ### Regras de negócio / testes
 
-- `PUT /matriculas/:id` **não aceita** `professorId`/`materiaId` — não trocar professor/matéria de uma matrícula existente por aqui (o caminho é encerrar + criar nova, abaixo). `MatriculaUpdateInput` nem declara esses campos, então o Zod os descarta em silêncio se vierem no corpo — sem `422` explícito; é responsabilidade da UI não enviá-los (ex.: desabilitando-os no formulário de edição), já que o único cliente da API é o próprio front.
+- `PUT /matriculas/:id` **não aceita** `professorId`/`materiaId`/`tipoAtendimento`/`estagio` — nenhum dos quatro é trocável numa matrícula existente por aqui (o caminho é encerrar + criar nova, abaixo), pra manter um histórico interno de mudanças por matrícula em vez de sobrescrever o valor antigo. `MatriculaUpdateInput` nem declara esses campos, então o Zod os descarta em silêncio se vierem no corpo — sem `422` explícito; é responsabilidade da UI não enviá-los (ex.: desabilitando-os no formulário de edição), já que o único cliente da API é o próprio front. Campos que continuam mutáveis: `situacao` (é o próprio mecanismo de encerrar/pausar) e `observacoes` (texto livre).
 - Ordem recomendada pro fluxo de troca: **encerrar a antiga primeiro, depois criar a nova** — porque `POST` rejeita (`400`) criar uma segunda matrícula `ativa` pra mesma `alunoId` + `materiaId`. Isso deixa uma janela real (ainda que pequena) em que, se o segundo passo falhar, o aluno fica sem matrícula ativa daquela matéria até alguém tentar de novo — não é uma transação atômica entre as duas chamadas. Vale a pena o frontend tratar essa falha mostrando claramente "a matrícula antiga foi encerrada mas a nova não foi criada, tente de novo" em vez de simplesmente reportar um erro genérico.
 - A nova matrícula **não herda automaticamente os horários** (`MATRICULA_HORARIO`) da antiga — nasce sem nenhum, forçando recadastro. Vale confirmar com a equipe se faz mais sentido copiar os horários da antiga e deixar quem transferiu só ajustar o que mudou.
 - `GET /alunos/:alunoId/matriculas` com `papel=professor` só retorna matrículas onde `professorId = usuario.professorId`.
@@ -785,7 +781,6 @@ model Professor {
   horarioInicial       String
   horarioFinal         String
   capacidadePorHorario Int
-  duracaoAulaMin       Int
   corAgenda            String
   observacoes          String?
   criadoEm             DateTime           @default(now())
@@ -1049,11 +1044,9 @@ model RegistroAulaConteudo {
 
 ---
 
-## Coisas pra lembrar
+## Coisas pra fazer
 
-Decisões futuras já discutidas mas não implementadas — anotadas aqui pra não perder o fio quando chegar a hora.
+Ações futuras já discutidas mas não implementadas — anotadas aqui pra não perder o fio quando chegar a hora.
 
-- **`tipoAtendimento` (Matrícula) deveria ser imutável, igual `professorId`/`materiaId`.** Hoje é livremente editável via `PUT /matriculas/:id` (seção 5) — não devia ser, porque a intenção é manter um histórico interno de mudanças de tipo de atendimento por matrícula (trocar tipo = encerrar a matrícula atual + criar uma nova, mesmo fluxo já usado pra trocar professor/matéria). Não implementado ainda; quando for, é o mesmo padrão do bloqueio de `professorId`/`materiaId` (Zod não declara o campo em `MatriculaUpdateInput`).
-  - **Issue de UI associada** (vale tanto pra esse caso quanto pro de `professorId`/`materiaId`): o usuário final não deveria perceber que "editar" na verdade cria uma matrícula nova por baixo dos panos — a UI precisa apresentar isso como uma edição normal, escondendo o histórico técnico. Vale pensar no fluxo antes de implementar o bloqueio no backend.
-- **`tipoAtendimento` provavelmente vai ser mais útil em cálculos feitos no frontend** (ex.: duração de aula/exibição na agenda) do que em lógica de backend — considerar isso ao decidir o que mais construir em cima desse campo.
-- **`Professor.duracaoAulaMin`** — hoje é só armazenado e devolvido pelo CRUD de professores, não é consumido por nenhuma lógica (não dimensiona slot de agenda, não valida nada). Bem provável que esse campo seja descartado mais pra frente.
+- **Issue de UI**: [#14 — UI: esconder que "editar" professor/matéria/tipo de atendimento cria uma matrícula nova](https://github.com/RubensRafael/kumon/issues/14). Passou a valer também pra `tipoAtendimento`/`estagio` desde que os dois viraram imutáveis (branch `feat/matricula-imutavel`) — ver "Regras de negócio" da seção 5.
+- **Issue: tipografia/mensagens de erro da API estão muito técnicas**: [#15 — API: revisar tipografia/clareza das mensagens de erro](https://github.com/RubensRafael/kumon/issues/15).

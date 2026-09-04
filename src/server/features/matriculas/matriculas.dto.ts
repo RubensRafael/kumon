@@ -21,15 +21,14 @@ export const MatriculaCreateInput = z.object({
   observacoes: z.string().optional(),
 })
 
-// professorId e materiaId nao existem neste schema de proposito: trocar
-// professor/materia de uma matricula existente nao e suportado por aqui
-// (encerre e crie uma nova). O Zod descarta esses campos em silencio se
-// vierem no corpo -- nao ha checagem explicita, a UI e quem deve impedir o
-// envio.
+// professorId, materiaId, tipoAtendimento e estagio nao existem neste schema
+// de proposito: trocar qualquer um deles numa matricula existente nao e
+// suportado por aqui (encerre e crie uma nova) -- mantem um historico
+// interno de mudancas por matricula, em vez de sobrescrever o valor antigo.
+// O Zod descarta esses campos em silencio se vierem no corpo -- nao ha
+// checagem explicita, a UI e quem deve impedir o envio.
 export const MatriculaUpdateInput = z
   .object({
-    estagio: z.string().optional(),
-    tipoAtendimento: TipoAtendimentoEnum.optional(),
     situacao: SituacaoMatriculaEnum.optional(),
     observacoes: z.string().optional(),
   })
