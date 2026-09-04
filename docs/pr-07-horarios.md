@@ -15,7 +15,7 @@ Seção 6 da spec, completa:
   próprio Zod (schema não declara o campo) — comportamento diferente do
   `PUT /matriculas/:id` (PR 06), que usa um `422` explícito. A spec pede
   exatamente essa diferença entre as duas rotas.
-- 12 testes e2e em `tests/e2e/horarios.e2e.test.ts`.
+- 9 testes e2e em `tests/e2e/horarios.e2e.test.ts`.
 - `tests/helpers/factories.ts`: `criarHorario`, seed direto — vai ser
   reaproveitado pelo PR 08 (registro de aula depende de um `horarioId`
   existente).
@@ -65,3 +65,11 @@ usar o tipo `DiaSemana` gerado pelo Prisma direto. `tests/e2e/horarios.e2e.test.
 migrado para `obterCookie`/`authHeader` (auth por cookie) e os literais de
 `diaSemana` nos corpos de request (`'sex'`, `'ter'`, `'qui'`, `'seg'`) para
 maiúsculo.
+- **`horario` passou a ser validado no formato `HH:mm`, só em intervalos de
+  30 min** (`HorarioDoDia` em `src/shared/dto/enums.ts`, um `z.string().regex(...)`
+  compartilhável), em vez de aceitar qualquer string. Fecha de quebra a
+  fragilidade da checagem de duplicidade (`409`): antes, duas strings
+  representando o mesmo horário mas escritas diferente (ex.: `"14:3"` vs.
+  `"14:30"`) não colidiam porque a comparação é por igualdade de string —
+  agora a string sempre chega canônica. Novo teste cobrindo `400` pra
+  horário fora do formato.
