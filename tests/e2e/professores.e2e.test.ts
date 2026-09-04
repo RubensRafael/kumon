@@ -61,7 +61,7 @@ describe('professores', () => {
     it('admin cria professor vinculado a materias ativas', async () => {
       const admin = await criarUsuarioAdmin()
       const cookie = await obterCookie(admin.usuario.email, admin.senha)
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
 
       const response = await app.request(
         '/api/professores',
@@ -82,7 +82,7 @@ describe('professores', () => {
     it('professor autenticado nao pode criar professor -> 403', async () => {
       const { usuario, senha } = await criarUsuarioProfessor()
       const cookie = await obterCookie(usuario.email, senha)
-      const materia = await criarMateria()
+      const materia = await criarMateria({ nome: 'Materia' })
 
       const response = await app.request(
         '/api/professores',
@@ -99,7 +99,7 @@ describe('professores', () => {
     it('rejeita materiaId de materia inativa -> 400', async () => {
       const admin = await criarUsuarioAdmin()
       const cookie = await obterCookie(admin.usuario.email, admin.senha)
-      const materiaInativa = await criarMateria({ ativo: false })
+      const materiaInativa = await criarMateria({ nome: 'Materia', ativo: false })
 
       const response = await app.request(
         '/api/professores',

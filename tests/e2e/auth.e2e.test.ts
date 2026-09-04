@@ -307,7 +307,7 @@ describe('auth', () => {
 
     it('e-mail duplicado -> 409', async () => {
       const cookie = await cookieAdmin()
-      const existente = await criarUsuarioAdmin()
+      const existente = await criarUsuarioAdmin({ email: 'existente@kflow.test' })
       const response = await app.request(
         '/api/usuarios',
         {
@@ -346,7 +346,7 @@ describe('auth', () => {
       const admin = await criarUsuarioAdmin()
       const { cookie: cookieAdmin } = await login(admin.usuario.email, admin.senha)
 
-      const alvo = await criarUsuarioAdmin()
+      const alvo = await criarUsuarioAdmin({ email: 'alvo@kflow.test' })
 
       const response = await app.request(
         `/api/usuarios/${alvo.usuario.id}`,
