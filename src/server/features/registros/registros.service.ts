@@ -42,9 +42,6 @@ function paraDetalheOutput(registro: RegistroRow): RegistroDetalheOutputType {
     conteudoIds: registro.conteudos.map((c) => c.conteudoId),
     anotacao: registro.anotacao,
     fechado: registro.fechado,
-    horaInicio: registro.horaInicio ? registro.horaInicio.toISOString() : null,
-    horaFim: registro.horaFim ? registro.horaFim.toISOString() : null,
-    duracaoMin: registro.duracaoMin,
   }
 }
 
@@ -166,7 +163,6 @@ export async function criarRegistro(
         data: input.data,
         // Unica copia (snapshot) intencional do schema: nunca vem do input.
         estagio: horario.matricula.estagio,
-        horaInicio: new Date(),
         chegada: input.chegada,
         boletim: input.boletim,
         atividadeCasa: input.atividadeCasa,
@@ -227,11 +223,7 @@ export async function atualizarRegistro(
   return paraDetalheOutput(registro)
 }
 
-/**
- * Grava `horaFim = now()` e `duracaoMin`. Idempotente: numa segunda chamada
- * (`fechado` ja `true`), devolve o estado atual sem recalcular nada a partir
- * de um novo `now()`.
- */
+/** Marca `fechado: true`. Idempotente: numa segunda chamada, so devolve o estado atual. */
 export async function finalizarRegistro(
   prisma: PrismaClient,
   id: string,
@@ -243,13 +235,9 @@ export async function finalizarRegistro(
     return paraDetalheOutput(registro)
   }
 
-  const horaFim = new Date()
-  const horaInicio = registro.horaInicio ?? registro.criadoEm
-  const duracaoMin = Math.max(0, Math.round((horaFim.getTime() - horaInicio.getTime()) / 60_000))
-
   const atualizado = await prisma.registroAula.update({
     where: { id },
-    data: { fechado: true, horaFim, duracaoMin },
+    data: { fechado: true },
     include: INCLUDE_DETALHE,
   })
   return paraDetalheOutput(atualizado)

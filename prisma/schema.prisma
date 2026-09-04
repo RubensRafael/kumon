@@ -264,9 +264,6 @@ model RegistroAula {
   desempenho    Desempenho?
   anotacao      String?
   fechado       Boolean                @default(false)
-  horaInicio    DateTime?
-  horaFim       DateTime?
-  duracaoMin    Int?
   criadoEm      DateTime               @default(now())
   atualizadoEm  DateTime               @updatedAt
   conteudos     RegistroAulaConteudo[]

@@ -492,9 +492,6 @@ export const RegistroDetalheOutput = RegistroResumoOutput.extend({
   conteudoIds: z.array(z.string().uuid()),
   anotacao: z.string().nullable(),
   fechado: z.boolean(),
-  horaInicio: z.string().nullable(),
-  horaFim: z.string().nullable(),
-  duracaoMin: z.number().int().nullable(),
 });
 
 // um único formato de entrada, usado tanto na criação quanto em cada auto-save.
@@ -558,7 +555,7 @@ app.put(
 - `POST /registros` com `chegada: 'atrasado'` ou `'faltou'` — o endpoint só salva o que veio; se por algum motivo vierem também campos de detalhe (`boletim`, `foco` etc.) junto nesse mesmo payload, eles são simplesmente persistidos também, sem checagem de coerência. Não é uma configuração esperada (a UI não deveria enviar isso), mas o backend não trata como erro.
 - `POST /registros` duplicado pro mesmo `(horarioId, data)` → `409` (constraint única no banco — essa sim é uma checagem de integridade real, mantida independente da UI).
 - `estagio` nunca vem em `RegistroInput` nem `RegistroUpdateInput` — o backend copia de `MATRICULA.estagio` automaticamente no momento do `POST`. É a única cópia (snapshot) intencional no schema.
-- `POST /registros/:id/finalizar` grava `horaFim = now()` e `duracaoMin`; deve ser idempotente — chamar duas vezes não recalcula a duração pela segunda `now()`.
+- `POST /registros/:id/finalizar` marca `fechado=true`; deve ser idempotente — chamar duas vezes não falha, só devolve o estado atual na segunda chamada.
 - Editar um registro já com `fechado=true` via `PUT` não é bloqueado pelo backend — é convenção de UI (form fica read-only depois de "Finalizar aula"). Ver apêndice final.
 - `scopeToProfessor` filtra pelo `professorId` da `MATRICULA` associada ao `horarioId`/`matriculaId` do registro — professor pedindo `horarioId` de outro professor em `POST /registros` → o `horarioId` "não existe" pra ele (`404`/`400` de referência inválida, não `403`).
 
@@ -905,9 +902,6 @@ model RegistroAula {
   desempenho    Desempenho?
   anotacao      String?
   fechado       Boolean                @default(false)
-  horaInicio    DateTime?
-  horaFim       DateTime?
-  duracaoMin    Int?
   criadoEm      DateTime               @default(now())
   atualizadoEm  DateTime               @updatedAt
   conteudos     RegistroAulaConteudo[]
@@ -1052,3 +1046,14 @@ model RegistroAulaConteudo {
 > - [ ] Testes e2e cobrindo caminho feliz + escopo + a(s) regra(s) de negócio da seção.
 > - [ ] `docs/pr-XX-<nome>.md` criado, com três seções: **"O que foi implementado"**, **"Decisões tomadas"** (toda vez que você resolveu uma ambiguidade sozinho, listar aqui o que decidiu e por quê), e **"Pontos para revisão"** (o que eu deveria olhar com atenção antes de mergear — inclui qualquer trade-off, qualquer coisa que a spec deixou em aberto e você teve que resolver, e qualquer risco que você percebeu ao implementar).
 > - [ ] PR aberto contra a branch anterior, título e descrição batendo com o `docs/*.md` daquele PR.
+
+---
+
+## Coisas pra lembrar
+
+Decisões futuras já discutidas mas não implementadas — anotadas aqui pra não perder o fio quando chegar a hora.
+
+- **`tipoAtendimento` (Matrícula) deveria ser imutável, igual `professorId`/`materiaId`.** Hoje é livremente editável via `PUT /matriculas/:id` (seção 5) — não devia ser, porque a intenção é manter um histórico interno de mudanças de tipo de atendimento por matrícula (trocar tipo = encerrar a matrícula atual + criar uma nova, mesmo fluxo já usado pra trocar professor/matéria). Não implementado ainda; quando for, é o mesmo padrão do bloqueio de `professorId`/`materiaId` (Zod não declara o campo em `MatriculaUpdateInput`).
+  - **Issue de UI associada** (vale tanto pra esse caso quanto pro de `professorId`/`materiaId`): o usuário final não deveria perceber que "editar" na verdade cria uma matrícula nova por baixo dos panos — a UI precisa apresentar isso como uma edição normal, escondendo o histórico técnico. Vale pensar no fluxo antes de implementar o bloqueio no backend.
+- **`tipoAtendimento` provavelmente vai ser mais útil em cálculos feitos no frontend** (ex.: duração de aula/exibição na agenda) do que em lógica de backend — considerar isso ao decidir o que mais construir em cima desse campo.
+- **`Professor.duracaoAulaMin`** — hoje é só armazenado e devolvido pelo CRUD de professores, não é consumido por nenhuma lógica (não dimensiona slot de agenda, não valida nada). Bem provável que esse campo seja descartado mais pra frente.

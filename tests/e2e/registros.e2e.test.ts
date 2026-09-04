@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { RegistroDetalheOutputType, RegistroResumoOutputType } from '../../src/server/features/registros/registros.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
@@ -51,10 +51,6 @@ async function prismaAtualizarEstagio(matriculaId: string, estagio: string) {
 describe('registros de aula', () => {
   beforeEach(async () => {
     await resetDb()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   describe('GET /api/registros?data=', () => {
@@ -305,13 +301,8 @@ describe('registros de aula', () => {
   })
 
   describe('POST /api/registros/:id/finalizar', () => {
-    it('grava horaFim e duracaoMin, e e idempotente (2a chamada nao recalcula)', async () => {
+    it('marca fechado:true, e e idempotente (2a chamada nao falha)', async () => {
       const data = '2026-03-02'
-      // So o relogio (`Date`) e mockado — `setTimeout`/event loop seguem reais,
-      // senao o I/O de verdade contra o Postgres (via `pg`) trava.
-      vi.useFakeTimers({ toFake: ['Date'] })
-      vi.setSystemTime(new Date('2026-03-02T14:00:00.000Z'))
-
       const { cookie, horario } = await montarCenario(data)
       const criado = await app.request(
         '/api/registros',
@@ -320,17 +311,15 @@ describe('registros de aula', () => {
       )
       const registro = (await criado.json()) as RegistroDetalheOutputType
 
-      vi.setSystemTime(new Date('2026-03-02T14:05:00.000Z'))
       const primeira = await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
       const primeiroBody = (await primeira.json()) as RegistroDetalheOutputType
       expect(primeiroBody.fechado).toBe(true)
-      expect(primeiroBody.duracaoMin).toBe(5)
       expect(primeiroBody.status).toBe('CONCLUIDO')
 
-      vi.setSystemTime(new Date('2026-03-02T14:20:00.000Z'))
       const segunda = await app.request(`/api/registros/${registro.id}/finalizar`, { method: 'POST', headers: authHeader(cookie) }, testEnv)
+      expect(segunda.status).toBe(200)
       const segundoBody = (await segunda.json()) as RegistroDetalheOutputType
-      expect(segundoBody.duracaoMin).toBe(5) // nao virou 20
+      expect(segundoBody.fechado).toBe(true)
     })
   })
 })

@@ -25,20 +25,12 @@ Seção 7 da spec, completa — a feature mais complexa da API até aqui:
   `PrismaClientKnownRequestError` código `P2002`) em vez de um `findFirst`
   prévio — essa checagem *é* a exceção "constraint de banco real" que a
   spec descreve para este caso especificamente.
-- `POST /registros/:id/finalizar`: idempotente — testado com
-  `vi.useFakeTimers({ toFake: ['Date'] })` avançando o relógio entre duas
-  chamadas e confirmando que `duracaoMin` não muda na segunda.
+- `POST /registros/:id/finalizar`: marca `fechado: true`, idempotente — uma
+  segunda chamada não falha, só devolve o estado atual.
 - 15 testes e2e em `tests/e2e/registros.e2e.test.ts`.
 
 ## Decisões tomadas
 
-- **`horaInicio` é definido em `POST /registros` (o momento em que a linha
-  é criada), nunca depois.** A spec não diz explicitamente quando esse
-  campo é preenchido — só que existe no schema e que `duracaoMin` é
-  calculado a partir dele em `finalizar`. Interpretação natural: é o
-  instante em que o professor começa a preencher o registro (equivalente a
-  "marcar chegada"), e `duracaoMin = finalizar.horaFim - criar.horaInicio`,
-  em minutos, arredondado.
 - **`GET /registros/:id` e `PUT`/`finalizar` usam a mesma convenção geral de
   escopo por filtragem (404 pra registro de outro professor), não um `403`
   explícito.** A spec só documenta essa regra explicitamente pra `POST`
@@ -71,9 +63,6 @@ Seção 7 da spec, completa — a feature mais complexa da API até aqui:
   específica minha. Não afeta o resultado (84/84 testes passam de forma
   consistente), mas vale investigar antes de ir pra produção — pode
   indicar uma versão do `pg` que vale atualizar.
-- `duracaoMin` é arredondado pro minuto mais próximo
-  (`Math.round(...).60_000`); uma finalização a menos de 30s da criação
-  arredonda pra `0`. A spec não define a granularidade esperada.
 
 ## Atualizações pós-revisão
 
@@ -105,3 +94,15 @@ foi a maior propagação da decisão de uppercase até aqui:
 - **`horarioPrevisto` passou a usar `HorarioDoDia`** (regex `HH:mm` do
   PR 07), em vez de `z.string()` puro — é um valor copiado direto de
   `MatriculaHorario.horario`, então herda a mesma validação de formato.
+- **`horaInicio`/`horaFim`/`duracaoMin` removidos inteiramente** (DTO,
+  service, schema Prisma — nova migration
+  `20260904175328_remove_registro_duracao` fazendo o `DROP COLUMN` das três
+  colunas). Eram uma medição de tempo real decorrido entre `POST /registros`
+  (criação da linha) e `POST /registros/:id/finalizar`, sem nenhum
+  consumidor downstream (nada em `painel` ou em qualquer outro lugar lia
+  `duracaoMin`) e sem nenhuma relação com `Matricula.tipoAtendimento` ou
+  `Professor.duracaoAulaMin` — três conceitos de "duração" que nunca
+  se conectavam entre si. `finalizarRegistro` ficou só marcando
+  `fechado: true`, mantendo a idempotência. Ver `plan.md`, seção final
+  "Coisas pra lembrar", pra decisões relacionadas ainda não implementadas
+  (`tipoAtendimento` imutável, futuro de `duracaoAulaMin`).

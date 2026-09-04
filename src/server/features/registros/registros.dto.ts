@@ -45,9 +45,6 @@ export const RegistroDetalheOutput = RegistroResumoOutput.extend({
   conteudoIds: z.array(z.uuid()),
   anotacao: z.string().nullable(),
   fechado: z.boolean(),
-  horaInicio: z.iso.datetime().nullable(),
-  horaFim: z.iso.datetime().nullable(),
-  duracaoMin: z.number().int().nullable(),
 })
 
 /**
