@@ -174,6 +174,10 @@ npm test          # roda uma vez
 npm run test:watch
 ```
 
+O GitHub Actions (`.github/workflows/ci.yml`) roda exatamente essa mesma
+sequencia — Postgres em container, `prisma migrate deploy`, typecheck, testes
+e build — em todo push pra `main` e em toda pull request.
+
 Nao existe `.dev.vars` neste projeto: quando ele esta ausente, o Wrangler carrega
 o `.env` automaticamente, entao um unico arquivo serve ao Vite, ao Worker e ao
 Prisma CLI.

@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Mesmo Postgres do docker-compose.yml local, na porta padrao do
+    # container (5432) — nao ha o problema de colisao de porta do host que
+    # forcou a 54329 em dev (ver docs/pr-01-prisma-setup.md).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: kflow
+          POSTGRES_PASSWORD: kflow
+          POSTGRES_DB: kflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kflow -d kflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Testes e2e rodam em Node puro (nunca no workerd), entao o Prisma
+      # fala com este Postgres via @prisma/adapter-pg — mesmo caminho de
+      # codigo do dev local. Ver src/server/db/client.ts.
+      BACKEND_DATABASE_URL: postgresql://kflow:kflow@localhost:5432/kflow
+      BACKEND_ENVIRONMENT: development
+      BACKEND_JWT_SECRET: ci-secret-nao-usar-em-producao
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # `postinstall` roda `prisma generate` + `wrangler types` automaticamente.
+      - run: npm ci
+
+      # Nao-interativo, so aplica as migrations ja commitadas (ao contrario
+      # de `migrate dev`, feito para o fluxo local).
+      - run: npx prisma migrate deploy
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      # typecheck (de novo, dos 3 projetos) + build do front-end. Sem
+      # `wrangler deploy --dry-run` aqui: precisaria de credenciais da
+      # Cloudflare que este workflow nao tem.
+      - run: npm run build
