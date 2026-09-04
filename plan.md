@@ -572,7 +572,7 @@ app.put(
 export const AgendaSlotOutput = z.object({
   horarioId: z.string().uuid(),
   diaSemana: DiaSemanaEnum,
-  horario: z.string(),
+  horario: z.string(), // "HH:mm", só em intervalos de 30 min (mesmo regex compartilhado da seção 6)
   matriculaId: z.string().uuid(),
   alunoId: z.string().uuid(),
   alunoNome: z.string(),

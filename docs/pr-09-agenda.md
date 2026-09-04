@@ -54,3 +54,6 @@ passa direto do Prisma pro output, sem cast. `tests/e2e/agenda.e2e.test.ts`
 migrado para `obterCookie`/`authHeader` (auth por cookie); sem literais de
 enum pra corrigir nesta feature (agenda é só leitura, nenhum `diaSemana`
 aparece em corpo de request).
+- **`AgendaSlotOutput.horario` passou a usar `HorarioDoDia`** (regex `HH:mm`
+  do PR 07), mesmo raciocínio de `registros.horarioPrevisto`: valor copiado
+  direto de `MatriculaHorario.horario`.
