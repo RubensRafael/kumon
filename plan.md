@@ -157,7 +157,7 @@ export const ProfessorOutput = z.object({
   email: z.string().email().nullable(),
   photoUrl: z.string().url().nullable(),
   diasDisponiveis: z.array(DiaSemanaEnum),
-  horarioInicial: z.string(), // "HH:mm"
+  horarioInicial: z.string(), // "HH:mm", só em intervalos de 30 min (mesmo regex compartilhado da seção 6)
   horarioFinal: z.string(),
   capacidadePorHorario: z.number().int(),
   duracaoAulaMin: z.number().int(),
