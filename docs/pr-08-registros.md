@@ -102,3 +102,6 @@ foi a maior propagação da decisão de uppercase até aqui:
   `diaSemanaDe` ficou órfão — `DiaSemanaEnum` já era uppercase desde o
   PR 03, então a API nunca usou esse valor — removido, junto com o campo
   `.api` que ele alimentava.
+- **`horarioPrevisto` passou a usar `HorarioDoDia`** (regex `HH:mm` do
+  PR 07), em vez de `z.string()` puro — é um valor copiado direto de
+  `MatriculaHorario.horario`, então herda a mesma validação de formato.

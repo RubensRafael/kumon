@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { MatriculaOutputType } from '../../src/server/features/matriculas/matriculas.dto'
-import type { ApiError } from '../../src/shared/dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
@@ -198,32 +197,11 @@ describe('matriculas', () => {
       expect(body.situacao).toBe('PAUSADA')
     })
 
-    it('professorId no corpo -> 422 com mensagem explicando o caminho certo', async () => {
+    it('professorId/materiaId no corpo sao ignorados em silencio (nao existem em MatriculaUpdateInput)', async () => {
       const cookie = await cookieAdmin()
       const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
       const outroProfessor = await criarProfessor()
-      const materia = await criarMateria({ nome: 'Materia' })
-      const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
-
-      const response = await app.request(
-        `/api/matriculas/${matricula.id}`,
-        {
-          method: 'PUT',
-          headers: { ...jsonHeaders, ...authHeader(cookie) },
-          body: JSON.stringify({ professorId: outroProfessor.id }),
-        },
-        testEnv,
-      )
-      expect(response.status).toBe(422)
-      const body = (await response.json()) as ApiError
-      expect(body.message).toContain('Encerre esta matricula')
-    })
-
-    it('materiaId no corpo -> 422', async () => {
-      const cookie = await cookieAdmin()
-      const aluno = await criarAluno({ nome: 'Aluno' })
-      const professor = await criarProfessor()
       const materia = await criarMateria({ nome: 'Materia' })
       const outraMateria = await criarMateria({ nome: 'Outra Materia' })
       const matricula = await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
@@ -233,11 +211,19 @@ describe('matriculas', () => {
         {
           method: 'PUT',
           headers: { ...jsonHeaders, ...authHeader(cookie) },
-          body: JSON.stringify({ materiaId: outraMateria.id }),
+          body: JSON.stringify({
+            professorId: outroProfessor.id,
+            materiaId: outraMateria.id,
+            estagio: 'Unidade 4',
+          }),
         },
         testEnv,
       )
-      expect(response.status).toBe(422)
+      expect(response.status).toBe(200)
+      const body = (await response.json()) as MatriculaOutputType
+      expect(body.professorId).toBe(professor.id)
+      expect(body.materiaId).toBe(materia.id)
+      expect(body.estagio).toBe('Unidade 4')
     })
   })
 })

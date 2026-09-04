@@ -1,18 +1,18 @@
 import { z } from 'zod'
 
-import { DiaSemanaEnum } from '../../../shared/dto/enums'
+import { DiaSemanaEnum, HorarioDoDia } from '../../../shared/dto/enums'
 
 export const HorarioOutput = z.object({
   id: z.uuid(),
   matriculaId: z.uuid(),
   diaSemana: DiaSemanaEnum,
-  horario: z.string(),
+  horario: HorarioDoDia,
   ativo: z.boolean(),
 })
 
 export const HorarioCreateInput = z.object({
   diaSemana: DiaSemanaEnum,
-  horario: z.string(),
+  horario: HorarioDoDia,
 })
 
 // diaSemana/horario nao existem neste schema — so `ativo` e editavel numa

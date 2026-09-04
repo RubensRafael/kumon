@@ -4,28 +4,17 @@
 
 Seção 5 da spec, completa:
 
-- `src/server/features/matriculas/matriculas.middleware.ts`:
-  `rejeitarTrocaProfessorMateria` — o `422` explícito quando `PUT /matriculas/:id`
-  recebe `professorId` ou `materiaId` no corpo, com a mensagem exata que a
-  spec pede, explicando o caminho certo (encerrar + criar nova).
 - `src/server/features/matriculas/{matriculas.dto,matriculas.service,matriculas.routes}.ts`:
   os 3 endpoints da seção 5. `matriculas.routes.ts` exporta dois routers —
   `alunoMatriculasRoutes` (montado em `/alunos`, convive com `alunosRoutes`
   porque os padrões de rota não colidem: `/:id` tem um segmento, `/:alunoId/matriculas`
   tem dois) e `matriculasRoutes` (montado em `/matriculas`).
-- 12 testes e2e em `tests/e2e/matriculas.e2e.test.ts`, incluindo o fluxo
+- 9 testes e2e em `tests/e2e/matriculas.e2e.test.ts`, incluindo o fluxo
   completo de troca de professor/matéria (encerrar a antiga → criar a nova)
   e a checagem de que a matrícula nova nasce com zero `MatriculaHorario`.
 
 ## Decisões tomadas
 
-- **`rejeitarTrocaProfessorMateria` lê o corpo com `c.req.json()` antes do
-  `zValidator` rodar.** A checagem depende de saber se `professorId`/`materiaId`
-  *vieram* no corpo — informação que o `MatriculaUpdateInput` já não carrega
-  (ele nem declara esses campos), então tem que ser antes da validação, não
-  depois. `c.req.json()` é seguro de chamar mais de uma vez na mesma request
-  (o Hono cacheia o corpo parseado), então o `zValidator` que roda em
-  seguida, no mesmo handler, não recebe stream já consumido.
 - **`POST /alunos/:alunoId/matriculas` valida existência do `professorId` e
   do `materiaId`, além do `materiaId` estar ativo.** Mesmo padrão de todas
   as PRs anteriores: `400` legível em vez de erro cru de FK. Adicionalmente,
@@ -66,3 +55,14 @@ Merge em cascata de `feat/05-alunos` (que já trouxe o merge do PR 02/03, ver
 - **`tests/e2e/matriculas.e2e.test.ts`** migrado para `obterCookie`/`authHeader`
   (auth por cookie) e os literais (`'regular'`, `'ativa'`, `'pausada'`,
   `'encerrada'`) para maiúsculo.
+- **`rejeitarTrocaProfessorMateria` removido.** A spec original pedia um
+  `422` explícito quando `PUT /matriculas/:id` recebe `professorId`/`materiaId`
+  no corpo, em vez de deixar o Zod descartar os campos em silêncio (eles nem
+  são declarados em `MatriculaUpdateInput`) — a justificativa era proteger
+  contra clientes que não passam pela UI. Decisão revertida em revisão: não
+  há outro cliente da API além do próprio front, então esse caso não existe
+  na prática, e a UI simplesmente não deve enviar esses campos (ex.:
+  desabilitando-os no formulário de edição). `matriculas.middleware.ts` foi
+  removido, `matriculas.routes.ts`/`matriculas.service.ts` perderam a
+  referência, e os dois testes de `422` viraram um teste único confirmando
+  que `professorId`/`materiaId` são ignorados em silêncio.

@@ -82,7 +82,7 @@ export async function criarMatricula(
   return paraMatriculaOutput(matricula)
 }
 
-/** Admin-only — `professorId`/`materiaId` ja foram barrados a montante, por `rejeitarTrocaProfessorMateria`. */
+/** Admin-only. `professorId`/`materiaId` nem existem em `MatriculaUpdateInput` -- o Zod ja os descarta em silencio. */
 export async function atualizarMatricula(
   prisma: PrismaClient,
   id: string,
