@@ -157,7 +157,7 @@ export const ProfessorOutput = z.object({
   email: z.string().email().nullable(),
   photoUrl: z.string().url().nullable(),
   diasDisponiveis: z.array(DiaSemanaEnum),
-  horarioInicial: z.string(), // "HH:mm"
+  horarioInicial: z.string(), // "HH:mm", só em intervalos de 30 min (mesmo regex compartilhado da seção 6)
   horarioFinal: z.string(),
   capacidadePorHorario: z.number().int(),
   duracaoAulaMin: z.number().int(),
@@ -379,7 +379,7 @@ Não existe um endpoint dedicado de "transferir". Trocar professor ou matéria d
 
 ### Regras de negócio / testes
 
-- `PUT /matriculas/:id` com corpo contendo `professorId` ou `materiaId` → **`422`**, com mensagem explicando o caminho certo, algo como: _"Não é possível trocar o professor ou a matéria de uma matrícula existente por aqui. Encerre esta matrícula (`situacao: 'encerrada'`) e crie uma nova para o aluno com o professor/matéria correto."_ Essa checagem é um middleware explícito (não é omissão silenciosa do Zod) justamente pra devolver essa mensagem — vale pra admin também, não é questão de permissão, é regra de integridade do dado.
+- `PUT /matriculas/:id` **não aceita** `professorId`/`materiaId` — não trocar professor/matéria de uma matrícula existente por aqui (o caminho é encerrar + criar nova, abaixo). `MatriculaUpdateInput` nem declara esses campos, então o Zod os descarta em silêncio se vierem no corpo — sem `422` explícito; é responsabilidade da UI não enviá-los (ex.: desabilitando-os no formulário de edição), já que o único cliente da API é o próprio front.
 - Ordem recomendada pro fluxo de troca: **encerrar a antiga primeiro, depois criar a nova** — porque `POST` rejeita (`400`) criar uma segunda matrícula `ativa` pra mesma `alunoId` + `materiaId`. Isso deixa uma janela real (ainda que pequena) em que, se o segundo passo falhar, o aluno fica sem matrícula ativa daquela matéria até alguém tentar de novo — não é uma transação atômica entre as duas chamadas. Vale a pena o frontend tratar essa falha mostrando claramente "a matrícula antiga foi encerrada mas a nova não foi criada, tente de novo" em vez de simplesmente reportar um erro genérico.
 - A nova matrícula **não herda automaticamente os horários** (`MATRICULA_HORARIO`) da antiga — nasce sem nenhum, forçando recadastro. Vale confirmar com a equipe se faz mais sentido copiar os horários da antiga e deixar quem transferiu só ajustar o que mudou.
 - `GET /alunos/:alunoId/matriculas` com `papel=professor` só retorna matrículas onde `professorId = usuario.professorId`.
@@ -395,13 +395,13 @@ export const HorarioOutput = z.object({
   id: z.string().uuid(),
   matriculaId: z.string().uuid(),
   diaSemana: DiaSemanaEnum,
-  horario: z.string(),
+  horario: z.string(), // "HH:mm", só em intervalos de 30 min (regex compartilhado, ver seção 6)
   ativo: z.boolean(),
 });
 
 export const HorarioCreateInput = z.object({
   diaSemana: DiaSemanaEnum,
-  horario: z.string(),
+  horario: z.string(), // "HH:mm", só em intervalos de 30 min
 });
 
 // diaSemana/horario não existem neste schema — só ativo é editável em uma linha existente.
@@ -426,6 +426,7 @@ export const HorarioUpdateInput = z
 - `PUT /horarios/:id` com corpo contendo `diaSemana` — o campo é descartado, sem erro; resposta normal só aplicando `ativo` se veio.
 - Trocar dia/horário, na prática, é `POST` um novo (`HorarioCreateInput`) + `PUT { ativo: false }` no antigo — duas chamadas, mesmo padrão do que ficou decidido pra matrícula.
 - `POST /matriculas/:matriculaId/horarios` deve rejeitar (`409`) se já existir um horário `ativo` na mesma `matriculaId` + `diaSemana` + `horario` exatos.
+- `horario` fora do formato `HH:mm` em `:00`/`:30` → `400` (validação de formato, não de horário de expediente do professor).
 
 ---
 
@@ -474,7 +475,7 @@ export const RegistroResumoOutput = z.object({
   professorId: z.string().uuid(),
   materiaId: z.string().uuid(),
   data: z.string(),
-  horarioPrevisto: z.string(),
+  horarioPrevisto: z.string(), // "HH:mm", copiado de MatriculaHorario.horario (mesmo regex compartilhado da seção 6)
   status: StatusRegistroEnum,
 });
 
