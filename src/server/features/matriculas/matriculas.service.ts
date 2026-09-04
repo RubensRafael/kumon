@@ -82,7 +82,7 @@ export async function criarMatricula(
   return paraMatriculaOutput(matricula)
 }
 
-/** Admin-only. `professorId`/`materiaId` nem existem em `MatriculaUpdateInput` -- o Zod ja os descarta em silencio. */
+/** Admin-only. `professorId`/`materiaId`/`tipoAtendimento`/`estagio` nem existem em `MatriculaUpdateInput` -- o Zod ja os descarta em silencio. */
 export async function atualizarMatricula(
   prisma: PrismaClient,
   id: string,
@@ -98,8 +98,6 @@ export async function atualizarMatricula(
   const matricula = await prisma.matricula.update({
     where: { id },
     data: {
-      estagio: input.estagio,
-      tipoAtendimento: input.tipoAtendimento,
       situacao: input.situacao,
       observacoes: input.observacoes,
     },

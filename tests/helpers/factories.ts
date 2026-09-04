@@ -40,7 +40,6 @@ export async function criarProfessor(opcoes: CriarProfessorOpcoes = {}) {
       horarioInicial: '08:00',
       horarioFinal: '18:00',
       capacidadePorHorario: 4,
-      duracaoAulaMin: 60,
       corAgenda: '#4f46e5',
     },
   })
@@ -106,6 +105,7 @@ interface CriarMatriculaOpcoes {
   professorId: string
   materiaId: string
   situacao?: 'ATIVA' | 'PAUSADA' | 'ENCERRADA'
+  tipoAtendimento?: 'REGULAR' | 'PRE_ESCOLAR'
 }
 
 /**
@@ -119,7 +119,7 @@ export async function criarMatricula(opcoes: CriarMatriculaOpcoes) {
       alunoId: opcoes.alunoId,
       professorId: opcoes.professorId,
       materiaId: opcoes.materiaId,
-      tipoAtendimento: 'REGULAR',
+      tipoAtendimento: opcoes.tipoAtendimento ?? 'REGULAR',
       situacao: opcoes.situacao ?? 'ATIVA',
     },
   })

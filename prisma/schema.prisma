@@ -147,7 +147,6 @@ model Professor {
   horarioInicial       String
   horarioFinal         String
   capacidadePorHorario Int
-  duracaoAulaMin       Int
   corAgenda            String
   observacoes          String?
   criadoEm             DateTime           @default(now())
@@ -253,8 +252,7 @@ model RegistroAula {
   horario       MatriculaHorario       @relation(fields: [horarioId], references: [id])
   matriculaId   String
   matricula     Matricula              @relation(fields: [matriculaId], references: [id])
-  data          DateTime
-  estagio       String?
+  data          DateTime               @db.Date
   chegada       Chegada?
   boletim       Boletim?
   atividadeCasa AtividadeCasa?
@@ -263,10 +261,6 @@ model RegistroAula {
   comportamento Comportamento?
   desempenho    Desempenho?
   anotacao      String?
-  fechado       Boolean                @default(false)
-  horaInicio    DateTime?
-  horaFim       DateTime?
-  duracaoMin    Int?
   criadoEm      DateTime               @default(now())
   atualizadoEm  DateTime               @updatedAt
   conteudos     RegistroAulaConteudo[]

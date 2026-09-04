@@ -7,7 +7,7 @@ import { workerdWasmModules } from './vite-plugins/workerd-wasm-modules.ts'
 const resolvePath = (relative: string) => fileURLToPath(new URL(relative, import.meta.url))
 
 /**
- * Config do Vitest para os testes e2e.
+ * Config do Vitest para os testes e2e e unitarios.
  *
  * Roda inteiramente em Node (nunca no workerd), entao o Prisma Client fala
  * com o Postgres via `@prisma/adapter-pg`. O plugin de WASM ainda e
@@ -27,7 +27,7 @@ export default defineConfig({
   },
 
   test: {
-    include: ['tests/e2e/**/*.e2e.test.ts'],
+    include: ['tests/e2e/**/*.e2e.test.ts', 'tests/unit/**/*.test.ts'],
     environment: 'node',
     // e2e contra um Postgres real (docker-compose): serializado para evitar
     // que dois arquivos rodando em paralelo disputem o mesmo TRUNCATE.

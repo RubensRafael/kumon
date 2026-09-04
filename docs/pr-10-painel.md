@@ -76,6 +76,39 @@ por cookie) e o literal `d.diaSemana === 'seg'` para `'SEG'`. `alertas[].tipo`
 `painel.dto.ts`, não um enum compartilhado espelhando um enum nativo do
 Postgres, então ficou como estava.
 
+**`ocupacaoPercentual` reescrito — `Professor.duracaoAulaMin` nunca deveria
+ter sido a fonte da duração.** Descoberto durante a revisão da PR 09
+(registros): `duracaoAulaMin` foi removido do schema por parecer não ter
+nenhum consumidor (verdade em todas as branches revisadas até então) — só
+que `capacidadeSemanal` aqui em `painel.service.ts` o usava de verdade pra
+calcular quantos slots cabem no expediente de um professor. A correção não
+foi restaurar o campo: a duração de uma aula é da **matrícula**
+(`tipoAtendimento`), não do professor — `REGULAR` = 50min, `PRE_ESCOLAR` =
+30min (fato de domínio que não estava codificado em lugar nenhum antes
+disso).
+
+Fórmula nova:
+- **Capacidade teórica** (`capacidadeSemanal`) volta a usar o grid fixo de
+  30min que `HorarioDoDia` já força em todo `MatriculaHorario.horario` — dias
+  disponíveis × slots de 30min no expediente × `capacidadePorHorario`.
+- **Ocupação** deixa de ser uma contagem crua de `MatriculaHorario` ativos e
+  passa a pesar cada linha por `slotsOcupados(tipoAtendimento)`: `REGULAR`
+  conta como 2 slots (o próprio horário reservado + um "spillover"
+  informativo no slot seguinte, já que 50min ultrapassa o grid de 30 mas só
+  existe uma reserva no slot inicial), `PRE_ESCOLAR` conta como 1.
+- **Caso deliberadamente não tratado**: um aluno com 2 matrículas (mesmo
+  professor) em horários adjacentes pode, em teoria, ser contado 2x no mesmo
+  slot (spillover de uma + reserva nova da outra). Decisão de revisão: isso
+  é sintoma de um conflito de agenda real (o professor não pode atender o
+  mesmo aluno em 2 matérias ao mesmo tempo), não um bug de cálculo — resolver
+  de verdade exigiria validação de sobreposição de horário por aluno, fora
+  do escopo desta PR. Fica só como nota visual/futura pra UI, não como ajuste
+  no agregado. Ver `plan.md`, "Coisas pra fazer".
+- Coberto por um novo teste (`tests/e2e/painel.e2e.test.ts`) que confirma que
+  `REGULAR` pesa o dobro de `PRE_ESCOLAR` na ocupação — `criarMatricula`
+  (`tests/helpers/factories.ts`) ganhou um parâmetro opcional
+  `tipoAtendimento` pra viabilizar isso.
+
 ---
 
 ## Cadeia completa

@@ -105,6 +105,33 @@ describe('painel', () => {
       expect(body.ocupacaoPercentual).toBe(0)
     })
 
+    it('ocupacaoPercentual pesa REGULAR (2 slots de 30min) o dobro de PRE_ESCOLAR (1 slot)', async () => {
+      async function ocupacaoCom(tipoAtendimento: 'REGULAR' | 'PRE_ESCOLAR') {
+        await resetDb()
+        const cookie = await cookieAdmin()
+        const professor = await criarProfessor()
+        const materia = await criarMateria({ nome: 'Materia' })
+        const aluno = await criarAluno({ nome: 'Aluno' })
+        const matricula = await criarMatricula({
+          alunoId: aluno.id,
+          professorId: professor.id,
+          materiaId: materia.id,
+          tipoAtendimento,
+        })
+        await criarHorario({ matriculaId: matricula.id })
+
+        const response = await app.request('/api/painel', { headers: authHeader(cookie) }, testEnv)
+        const body = (await response.json()) as PainelOutputType
+        return body.ocupacaoPercentual
+      }
+
+      const ocupacaoRegular = await ocupacaoCom('REGULAR')
+      const ocupacaoPreEscolar = await ocupacaoCom('PRE_ESCOLAR')
+
+      expect(ocupacaoRegular).toBeGreaterThan(0)
+      expect(ocupacaoRegular).toBeCloseTo(ocupacaoPreEscolar * 2, 5)
+    })
+
     it('sem token -> 401', async () => {
       const response = await app.request('/api/painel', {}, testEnv)
       expect(response.status).toBe(401)
