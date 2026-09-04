@@ -1,26 +1,11 @@
 import { HTTPException } from 'hono/http-exception'
 
-import type { DiaSemana, PrismaClient } from '../../db/generated/client'
+import type { Prisma, PrismaClient } from '../../db/generated/client'
 import type { ProfessorCreateInputType, ProfessorOutputType } from './professores.dto'
 
-type ProfessorComMaterias = {
-  id: string
-  usuarioId: string | null
-  nome: string
-  telefone: string | null
-  email: string | null
-  photoUrl: string | null
-  diasDisponiveis: DiaSemana[]
-  horarioInicial: string
-  horarioFinal: string
-  capacidadePorHorario: number
-  duracaoAulaMin: number
-  corAgenda: string
-  observacoes: string | null
-  materias: { materiaId: string }[]
-}
-
 const INCLUDE_MATERIAS = { materias: { select: { materiaId: true } } } as const
+
+type ProfessorComMaterias = Prisma.ProfessorGetPayload<{ include: typeof INCLUDE_MATERIAS }>
 
 function paraProfessorOutput(professor: ProfessorComMaterias): ProfessorOutputType {
   return {
@@ -141,25 +126,26 @@ export async function atualizarProfessor(
 
     return tx.professor.update({
       where: { id },
+      // Prisma ignora chave com valor `undefined` em `data` — spread
+      // condicional so e necessario pra `materias`, que e escrita de
+      // relacao (nao campo escalar) e teria que ser omitida por inteiro,
+      // nao só ter um valor `undefined`.
       data: {
-        ...(input.nome !== undefined ? { nome: input.nome } : {}),
-        ...(input.telefone !== undefined ? { telefone: input.telefone } : {}),
-        ...(input.email !== undefined ? { email: input.email } : {}),
-        ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl } : {}),
-        ...(input.diasDisponiveis !== undefined
-          ? { diasDisponiveis: input.diasDisponiveis }
-          : {}),
-        ...(input.horarioInicial !== undefined ? { horarioInicial: input.horarioInicial } : {}),
-        ...(input.horarioFinal !== undefined ? { horarioFinal: input.horarioFinal } : {}),
-        ...(input.capacidadePorHorario !== undefined
-          ? { capacidadePorHorario: input.capacidadePorHorario }
-          : {}),
-        ...(input.duracaoAulaMin !== undefined ? { duracaoAulaMin: input.duracaoAulaMin } : {}),
-        ...(input.corAgenda !== undefined ? { corAgenda: input.corAgenda } : {}),
-        ...(input.observacoes !== undefined ? { observacoes: input.observacoes } : {}),
-        ...(input.materiaIds !== undefined
-          ? { materias: { create: input.materiaIds.map((materiaId) => ({ materiaId })) } }
-          : {}),
+        nome: input.nome,
+        telefone: input.telefone,
+        email: input.email,
+        photoUrl: input.photoUrl,
+        diasDisponiveis: input.diasDisponiveis,
+        horarioInicial: input.horarioInicial,
+        horarioFinal: input.horarioFinal,
+        capacidadePorHorario: input.capacidadePorHorario,
+        duracaoAulaMin: input.duracaoAulaMin,
+        corAgenda: input.corAgenda,
+        observacoes: input.observacoes,
+        materias:
+          input.materiaIds !== undefined
+            ? { create: input.materiaIds.map((materiaId) => ({ materiaId })) }
+            : undefined,
       },
       include: INCLUDE_MATERIAS,
     })

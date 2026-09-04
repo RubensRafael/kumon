@@ -1,25 +1,12 @@
 import { HTTPException } from 'hono/http-exception'
 
-import { formatarData, parseData } from '../../lib/data'
-import type { PrismaClient, SituacaoAluno } from '../../db/generated/client'
+import type { Aluno, PrismaClient } from '../../db/generated/client'
 import type { AlunoCreateInputType, AlunoOutputType, AlunoUpdateInputType } from './alunos.dto'
 
-interface AlunoRow {
-  id: string
-  nome: string
-  responsavel: string | null
-  telefone: string | null
-  whatsapp: string | null
-  email: string | null
-  dataNascimento: Date | null
-  observacoes: string | null
-  dataMatricula: Date
-  situacao: SituacaoAluno
-  zonaVermelha: boolean
-  connect: boolean
-}
-
-function paraAlunoOutput(aluno: AlunoRow): AlunoOutputType {
+// Nenhuma query de aluno usa `include`/`select` -- a linha sempre vem
+// completa, entao o model `Aluno` exportado pelo client ja e o shape certo,
+// sem precisar de uma interface copiada campo a campo.
+function paraAlunoOutput(aluno: Aluno): AlunoOutputType {
   return {
     id: aluno.id,
     nome: aluno.nome,
@@ -27,9 +14,9 @@ function paraAlunoOutput(aluno: AlunoRow): AlunoOutputType {
     telefone: aluno.telefone,
     whatsapp: aluno.whatsapp,
     email: aluno.email,
-    dataNascimento: aluno.dataNascimento ? formatarData(aluno.dataNascimento) : null,
+    dataNascimento: aluno.dataNascimento,
     observacoes: aluno.observacoes,
-    dataMatricula: formatarData(aluno.dataMatricula),
+    dataMatricula: aluno.dataMatricula,
     situacao: aluno.situacao,
     zonaVermelha: aluno.zonaVermelha,
     connect: aluno.connect,
@@ -85,9 +72,9 @@ export async function criarAluno(prisma: PrismaClient, input: AlunoCreateInputTy
       telefone: input.telefone ?? null,
       whatsapp: input.whatsapp ?? null,
       email: input.email ?? null,
-      dataNascimento: input.dataNascimento ? parseData(input.dataNascimento, 'dataNascimento') : null,
+      dataNascimento: input.dataNascimento ?? null,
       observacoes: input.observacoes ?? null,
-      dataMatricula: parseData(input.dataMatricula, 'dataMatricula'),
+      dataMatricula: input.dataMatricula,
       situacao: input.situacao,
       zonaVermelha: input.zonaVermelha,
       connect: input.connect,
@@ -107,24 +94,23 @@ export async function atualizarAluno(
     throw new HTTPException(404, { message: 'Aluno nao encontrado.' })
   }
 
+  // Prisma ignora chave com valor `undefined` em `data` -- `dataNascimento`/
+  // `dataMatricula` ja chegam como `Date` (coagidas pelo Zod em
+  // `alunos.dto.ts`), entao nao ha mais motivo pra tratamento especial.
   const aluno = await prisma.aluno.update({
     where: { id },
     data: {
-      ...(input.nome !== undefined ? { nome: input.nome } : {}),
-      ...(input.responsavel !== undefined ? { responsavel: input.responsavel } : {}),
-      ...(input.telefone !== undefined ? { telefone: input.telefone } : {}),
-      ...(input.whatsapp !== undefined ? { whatsapp: input.whatsapp } : {}),
-      ...(input.email !== undefined ? { email: input.email } : {}),
-      ...(input.dataNascimento !== undefined
-        ? { dataNascimento: parseData(input.dataNascimento, 'dataNascimento') }
-        : {}),
-      ...(input.observacoes !== undefined ? { observacoes: input.observacoes } : {}),
-      ...(input.dataMatricula !== undefined
-        ? { dataMatricula: parseData(input.dataMatricula, 'dataMatricula') }
-        : {}),
-      ...(input.situacao !== undefined ? { situacao: input.situacao } : {}),
-      ...(input.zonaVermelha !== undefined ? { zonaVermelha: input.zonaVermelha } : {}),
-      ...(input.connect !== undefined ? { connect: input.connect } : {}),
+      nome: input.nome,
+      responsavel: input.responsavel,
+      telefone: input.telefone,
+      whatsapp: input.whatsapp,
+      email: input.email,
+      dataNascimento: input.dataNascimento,
+      observacoes: input.observacoes,
+      dataMatricula: input.dataMatricula,
+      situacao: input.situacao,
+      zonaVermelha: input.zonaVermelha,
+      connect: input.connect,
     },
   })
   return paraAlunoOutput(aluno)
