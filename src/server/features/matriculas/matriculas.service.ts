@@ -1,20 +1,12 @@
 import { HTTPException } from 'hono/http-exception'
 
-import type { PrismaClient, SituacaoMatricula, TipoAtendimento } from '../../db/generated/client'
+import type { Matricula, PrismaClient } from '../../db/generated/client'
 import type { MatriculaCreateInputType, MatriculaOutputType, MatriculaUpdateInputType } from './matriculas.dto'
 
-interface MatriculaRow {
-  id: string
-  alunoId: string
-  professorId: string
-  materiaId: string
-  estagio: string | null
-  tipoAtendimento: TipoAtendimento
-  situacao: SituacaoMatricula
-  observacoes: string | null
-}
-
-function paraMatriculaOutput(matricula: MatriculaRow): MatriculaOutputType {
+// Nenhuma query de matricula usa include/select -- a linha sempre vem
+// completa, entao o model Matricula exportado pelo client ja e o shape
+// certo.
+function paraMatriculaOutput(matricula: Matricula): MatriculaOutputType {
   return {
     id: matricula.id,
     alunoId: matricula.alunoId,
