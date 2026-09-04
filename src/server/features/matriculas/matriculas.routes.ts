@@ -6,7 +6,6 @@ import { requireAdmin } from '../../middlewares/require-admin.middleware'
 import { scopeToProfessor } from '../../middlewares/scope-to-professor.middleware'
 import type { AppEnv } from '../../types'
 import { MatriculaCreateInput, MatriculaOutput, MatriculaUpdateInput } from './matriculas.dto'
-import { rejeitarTrocaProfessorMateria } from './matriculas.middleware'
 import * as matriculasService from './matriculas.service'
 
 /** Montada em `/alunos` — convive com `alunosRoutes` (patterns nao colidem: `/:id` vs `/:alunoId/matriculas`). */
@@ -41,7 +40,6 @@ export const matriculasRoutes = new Hono<AppEnv>().put(
   '/:id',
   authMiddleware,
   requireAdmin,
-  rejeitarTrocaProfessorMateria,
   validate('json', MatriculaUpdateInput),
   async (c) => {
     const input = c.req.valid('json')
