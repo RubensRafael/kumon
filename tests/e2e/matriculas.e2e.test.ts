@@ -175,7 +175,7 @@ describe('matriculas', () => {
   })
 
   describe('PUT /api/matriculas/:id', () => {
-    it('atualiza estagio/situacao/observacoes normalmente', async () => {
+    it('atualiza situacao/observacoes normalmente', async () => {
       const cookie = await cookieAdmin()
       const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
@@ -187,17 +187,17 @@ describe('matriculas', () => {
         {
           method: 'PUT',
           headers: { ...jsonHeaders, ...authHeader(cookie) },
-          body: JSON.stringify({ estagio: 'Unidade 3', situacao: 'PAUSADA' }),
+          body: JSON.stringify({ observacoes: 'Nota qualquer', situacao: 'PAUSADA' }),
         },
         testEnv,
       )
       expect(response.status).toBe(200)
       const body = (await response.json()) as MatriculaOutputType
-      expect(body.estagio).toBe('Unidade 3')
+      expect(body.observacoes).toBe('Nota qualquer')
       expect(body.situacao).toBe('PAUSADA')
     })
 
-    it('professorId/materiaId no corpo sao ignorados em silencio (nao existem em MatriculaUpdateInput)', async () => {
+    it('professorId/materiaId/tipoAtendimento/estagio no corpo sao ignorados em silencio (nao existem em MatriculaUpdateInput)', async () => {
       const cookie = await cookieAdmin()
       const aluno = await criarAluno({ nome: 'Aluno' })
       const professor = await criarProfessor()
@@ -214,7 +214,9 @@ describe('matriculas', () => {
           body: JSON.stringify({
             professorId: outroProfessor.id,
             materiaId: outraMateria.id,
+            tipoAtendimento: 'PRE_ESCOLAR',
             estagio: 'Unidade 4',
+            observacoes: 'Nota qualquer',
           }),
         },
         testEnv,
@@ -223,7 +225,9 @@ describe('matriculas', () => {
       const body = (await response.json()) as MatriculaOutputType
       expect(body.professorId).toBe(professor.id)
       expect(body.materiaId).toBe(materia.id)
-      expect(body.estagio).toBe('Unidade 4')
+      expect(body.tipoAtendimento).toBe('REGULAR')
+      expect(body.estagio).toBeNull()
+      expect(body.observacoes).toBe('Nota qualquer')
     })
   })
 })
