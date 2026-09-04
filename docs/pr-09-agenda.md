@@ -57,3 +57,22 @@ aparece em corpo de request).
 - **`AgendaSlotOutput.horario` passou a usar `HorarioDoDia`** (regex `HH:mm`
   do PR 07), mesmo raciocínio de `registros.horarioPrevisto`: valor copiado
   direto de `MatriculaHorario.horario`.
+
+## Retirado (feature virou helper compartilhado)
+
+Esta PR foi fechada sem merge — `GET /agenda` e `GET /alunos/:id/agenda`
+deixaram de existir como endpoints. Motivo: discutindo a PR 10 (painel),
+ficou claro que agenda e painel são duas leituras diferentes do mesmo dado
+bruto (professores, alunos, matrículas com seus horários, matérias) — em vez
+de dois endpoints com duas queries próprias, `GET /painel` passou a devolver
+esse snapshot bruto da unidade inteira, e a agenda virou uma função pura,
+`derivarAgendaSlots` (`src/shared/dto/agenda.dto.ts`), que reduz esse mesmo
+payload pro formato `AgendaSlotOutput` no client, com `professorId`/`alunoId`
+como filtros opcionais.
+
+`AgendaSlotOutput` (o shape de saída) sobrevive, só mudou de lugar — de
+`src/server/features/agenda/agenda.dto.ts` para `src/shared/dto/agenda.dto.ts`
+— e de endpoint pra helper. Ver `docs/pr-10-painel.md`, "Atualizações
+pós-revisão", pro raciocínio completo (inclui a mudança de escopo: como
+agora é tudo leitura sobre o mesmo payload, o corte por professor deixou de
+ser feito na query e virou só um filtro que o helper aplica se quiser).
