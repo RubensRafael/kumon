@@ -50,9 +50,34 @@ devServer({
 `workerdWasmModules` continua necessário e resolve o WASM do Query Compiler
 normalmente, exatamente como já faz no Vitest.
 
-Esse arquivo **não foi commitado** — é ferramenta de sessão. Vale a pena
-versioná-lo junto com um script `npm run dev:qa`: é o que separa "não deu
-pra verificar visualmente" de uma verificação de verdade a cada PR.
+Esse arquivo **não foi commitado** — é ferramenta de sessão.
+
+**Decisão:** em vez de manter um segundo arquivo de config, uma única env
+resolve — mas ela precisa atuar **antes** do workerd subir, não dentro do
+`isCloudflareWorkers()`. Dentro do workerd, sockets TCP crus são bloqueados
+pelo próprio runtime (é por isso que o adapter do Neon é obrigatório ali);
+uma env lida só nesse ponto trocaria o driver do Prisma sem trocar o
+runtime, e a chamada quebraria do mesmo jeito, só que com outro erro. O
+ponto certo é o `vite.config.ts`, na montagem dos `plugins`, que roda em
+Node normal antes do Worker existir:
+
+```ts
+devServer({
+  entry: './src/server.tsx',
+  adapter: process.env.LOCAL_DEV_SERVER === 'true' ? undefined : cloudflareAdapter,
+  env: process.env.LOCAL_DEV_SERVER === 'true' ? loadEnv('development', process.cwd(), '') : undefined,
+  exclude: HONO_EXCLUDE,
+  injectClientScript: false,
+})
+```
+
+`LOCAL_DEV_SERVER` — string `"true"`/`"false"`, default `"false"` (mantém o
+comportamento atual, com o `cloudflareAdapter`). Com `"true"`, o dev server
+roda em Node puro, sem workerd, e o Prisma usa `PrismaPg` contra o Postgres
+local — mesmo caminho dos testes e2e. Um único `vite.config.ts`, sem
+arquivo duplicado; um script tipo `"dev:local": "LOCAL_DEV_SERVER=true vite"`
+no `package.json` é o que separa "não deu pra verificar visualmente" de uma
+verificação de verdade a cada PR.
 
 ## Ambiente
 
