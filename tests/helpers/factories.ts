@@ -25,6 +25,8 @@ export async function criarUsuarioAdmin(opcoes: CriarUsuarioOpcoes = {}) {
 
 interface CriarProfessorOpcoes {
   nome?: string
+  horarioInicial?: string
+  horarioFinal?: string
 }
 
 /**
@@ -37,8 +39,8 @@ export async function criarProfessor(opcoes: CriarProfessorOpcoes = {}) {
     data: {
       nome: opcoes.nome ?? 'Professor de Teste',
       diasDisponiveis: ['SEG', 'QUA', 'SEX'],
-      horarioInicial: '08:00',
-      horarioFinal: '18:00',
+      horarioInicial: opcoes.horarioInicial ?? '08:00',
+      horarioFinal: opcoes.horarioFinal ?? '18:00',
       capacidadePorHorario: 4,
       corAgenda: '#4f46e5',
     },

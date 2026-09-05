@@ -51,7 +51,38 @@
   já aceita `papel`, então é só questão de acrescentar um controle depois
   se for preciso.
 
+## Correções de QA (PR #26)
+
+`docs/qa-fe-03-professores.md` encontrou 4 achados, todos corrigidos:
+
+- **`horarioFinal <= horarioInicial` aceito — corrigido no backend.** Novo
+  helper `janelaDeAtendimentoValida` (`server/lib/horario.ts`) usado em
+  `criarProfessor` e `atualizarProfessor` (este último comparando contra o
+  valor existente quando o `PUT` só manda um dos dois campos) — rejeita
+  com 400 "O horario final deve ser depois do horario inicial.". Sem
+  `.refine()` no schema Zod (decisão: só backend, sem lógica especial no
+  front) — 2 novos testes e2e.
+- **Falha de escrita sem feedback** (`professor-form-full.tsx`,
+  `professor-form-self.tsx`) — já resolvido globalmente na fe-01
+  (`useApiMutation`); confirmado em browser (screenshot do toast + dialog
+  permanecendo aberto ao tentar criar com horário invertido).
+- **UI oferece ações que o backend recusa — corrigido.** "Novo professor"
+  agora só aparece pra `isAdmin`; o lápis de editar no card só aparece
+  quando `podeEditarProfessor(professor.id)` é `true` (admin, ou o próprio
+  professor) — `ProfessorFormDialog` nem é montado quando não pode editar,
+  em vez de abrir um formulário que o backend sempre rejeitaria.
+- **Card mostrava contagem de dias, não os dias — corrigido.** "DIAS: 5"
+  virou os chips abreviados (`Seg`/`Ter`/.../`Sáb`) a partir de
+  `professor.diasDisponiveis`.
+
 ## Pontos para revisão
 
-- Mesma ressalva de verificação visual das PRs anteriores. `npm run
-  typecheck`, `npm test` (109/109) e `npx vite build` passam limpos.
+- Visualmente verificado em browser real (Playwright/Chromium,
+  `LOCAL_DEV_SERVER=true`): criação de professor com horário invertido
+  (toast de erro + dialog permanece aberto), chips de dias no card. Não
+  cheguei a validar via login real o caso "professor vendo o próprio
+  card" (exigiria reset de senha do usuário vinculado) — a lógica
+  (`podeEditarProfessor`) é a mesma já usada por `ProfessorFormDialog`
+  desde a versão original desta PR, só que agora também controla se o
+  botão aparece. `npm run typecheck`, `npm test` (111/111) e
+  `npx vite build` passam limpos.

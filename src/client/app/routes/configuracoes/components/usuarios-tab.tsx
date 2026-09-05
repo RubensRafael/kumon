@@ -5,8 +5,7 @@ import { Badge } from '../../../components/ui/badge'
 import { Button } from '../../../components/ui/button'
 import { Switch } from '../../../components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table'
-import { useApiMutation } from '../../../hooks/use-api-mutation'
-import { useApiQuery } from '../../../hooks/use-api-query'
+import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
 import { NovoUsuarioDialog } from './novo-usuario-dialog'
 
 export function UsuariosTab() {

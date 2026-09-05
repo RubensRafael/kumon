@@ -8,7 +8,7 @@ import { DialogFooter } from '../../../components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../components/ui/form'
 import { Input } from '../../../components/ui/input'
 import { Textarea } from '../../../components/ui/textarea'
-import { useApiMutation } from '../../../hooks/use-api-mutation'
+import { useApiMutation } from '../../../hooks/use-api'
 
 /**
  * Professor editando o próprio perfil: só os 4 campos que

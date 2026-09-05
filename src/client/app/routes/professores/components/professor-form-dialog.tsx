@@ -18,8 +18,9 @@ export function ProfessorFormDialog({
   materias: MateriaOutputType[]
   onSalvo: () => void
 }) {
-  const { usuario } = useAuth()
-  const ehAutoEdicao = Boolean(professor) && usuario?.papel === 'PROFESSOR' && usuario.professorId === professor?.id
+  const { usuario, podeEditarProfessor } = useAuth()
+  const ehAutoEdicao =
+    Boolean(professor) && usuario?.papel === 'PROFESSOR' && podeEditarProfessor(professor?.id ?? '')
 
   function aoSalvar() {
     onOpenChange(false)
