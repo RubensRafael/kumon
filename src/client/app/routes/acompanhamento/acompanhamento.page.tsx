@@ -6,6 +6,7 @@ import { statusRegistro, type RegistroResumoOutputType, type StatusRegistro } fr
 import { STATUS_REGISTRO_LABEL } from '../../components/common/registro-form/enum-labels'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
+import { Skeleton } from '../../components/ui/skeleton'
 import { useApiQuery } from '../../hooks/use-api'
 import { RegistrarAulaDialog } from './components/registrar-aula-dialog'
 import { RegistroRow } from './components/registro-row'
@@ -91,7 +92,13 @@ export function AcompanhamentoPage() {
         className="max-w-sm"
       />
 
-      {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 rounded-lg" />
+          ))}
+        </div>
+      ) : null}
 
       {!loading && registrosFiltrados.length === 0 ? (
         <p className="text-sm text-muted-foreground">
