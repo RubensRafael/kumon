@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { ProfessorOutputType } from '../../src/server/features/professores/professores.dto'
+import type { ProfessorOutputType } from '../../src/shared/dto/professores.dto'
 import type { ApiError } from '../../src/shared/dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import { criarMateria, criarProfessor, criarUsuarioAdmin, criarUsuarioProfessor } from '../helpers/factories'
