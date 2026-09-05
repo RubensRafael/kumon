@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 import type { UsuarioOutputType } from '../../../shared/dto'
-import { callApi } from '../../config/api'
+import { useApiLazyQuery, useApiMutation } from './use-api'
 
 interface AuthContextValue {
   usuario: UsuarioOutputType | null
@@ -32,23 +32,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<UsuarioOutputType | null>(null)
   const [carregando, setCarregando] = useState(true)
 
+  const { execute: verificarSessao } = useApiLazyQuery('me')
+  // Silenciosas: `login` já mostra erro inline na própria tela (ver
+  // `login.page.tsx`), e uma falha ao deslogar ainda limpa `usuario` local --
+  // nenhuma das duas precisa do toast automático que `useApiMutation` dispara
+  // por padrão.
+  const { mutate: autenticar } = useApiMutation('login', { silent: true })
+  const { mutate: encerrarSessao } = useApiMutation('logout', { silent: true })
+
   useEffect(() => {
     let ativo = true
 
-    void (async () => {
-      try {
-        const data = await callApi('me', {})
+    verificarSessao({})
+      .then((data) => {
         if (ativo) setUsuario(data)
-      } catch {
+      })
+      .catch(() => {
         if (ativo) setUsuario(null)
-      } finally {
+      })
+      .finally(() => {
         if (ativo) setCarregando(false)
-      }
-    })()
+      })
 
     return () => {
       ativo = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so deve rodar uma vez, no boot
   }, [])
 
   useEffect(() => {
@@ -57,15 +66,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('kflow:unauthorized', aoDeslogar)
   }, [])
 
-  const login = useCallback(async (email: string, senha: string) => {
-    const { usuario: usuarioLogado } = await callApi('login', { body: { email, senha } })
-    setUsuario(usuarioLogado)
-  }, [])
+  const login = useCallback(
+    async (email: string, senha: string) => {
+      const { usuario: usuarioLogado } = await autenticar({ body: { email, senha } })
+      setUsuario(usuarioLogado)
+    },
+    [autenticar],
+  )
 
   const logout = useCallback(async () => {
-    await callApi('logout', {})
+    await encerrarSessao({})
     setUsuario(null)
-  }, [])
+  }, [encerrarSessao])
 
   const isAdmin = usuario?.papel === 'ADMIN'
 

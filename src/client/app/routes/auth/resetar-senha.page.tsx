@@ -4,14 +4,13 @@ import { useForm } from 'react-hook-form'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
-import { ApiError } from '@client/config/api'
 import { ResetarSenhaInput } from '@shared/dto'
 
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form'
 import { Input } from '../../components/ui/input'
-import { useApiMutation } from '../../hooks/use-api-mutation'
+import { ApiError, useApiMutation } from '../../hooks/use-api'
 import { AuthLayout } from './components/auth-layout'
 
 const NovaSenhaInput = ResetarSenhaInput.pick({ novaSenha: true })

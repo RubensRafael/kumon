@@ -3,13 +3,13 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router'
 
-import { ApiError } from '@client/config/api'
 import { LoginInput, type LoginInputType } from '@shared/dto'
 
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form'
 import { Input } from '../../components/ui/input'
+import { ApiError } from '../../hooks/use-api'
 import { useAuth } from '../../hooks/use-auth'
 import { AuthLayout } from './components/auth-layout'
 

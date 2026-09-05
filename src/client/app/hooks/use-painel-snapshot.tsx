@@ -1,12 +1,12 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
 import type { PainelDadosOutputType } from '../../../shared/dto'
-import { useApiQuery } from './use-api-query'
+import { type ApiError, useApiQuery } from './use-api'
 
 interface PainelSnapshotContextValue {
   dados: PainelDadosOutputType | undefined
   loading: boolean
-  error: Error | null
+  error: ApiError | null
   refetch: () => void
 }
 
