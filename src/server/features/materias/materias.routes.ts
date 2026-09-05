@@ -12,7 +12,7 @@ import {
   MateriaCreateInput,
   MateriaOutput,
   MateriaUpdateInput,
-} from './materias.dto'
+} from '../../../shared/dto/materias.dto'
 import * as materiasService from './materias.service'
 
 export const materiasRoutes = new Hono<AppEnv>()

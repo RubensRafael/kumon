@@ -1,7 +1,14 @@
 import type {
+  ConteudoCreateInputType,
+  ConteudoOutputType,
+  ConteudoUpdateInputType,
   HealthResponse,
+  ListarMateriasQueryType,
   LoginInputType,
   LoginOutputType,
+  MateriaCreateInputType,
+  MateriaOutputType,
+  MateriaUpdateInputType,
   PainelDadosOutputType,
   ResetarSenhaInputType,
   SolicitarResetInputType,
@@ -29,6 +36,12 @@ export const apiEndpoints = {
   solicitarReset: { method: 'POST', path: '/auth/solicitar-reset' },
   resetarSenha: { method: 'POST', path: '/auth/resetar-senha' },
   obterPainel: { method: 'GET', path: '/painel' },
+  listarMaterias: { method: 'GET', path: '/materias' },
+  criarMateria: { method: 'POST', path: '/materias' },
+  atualizarMateria: { method: 'PUT', path: '/materias/:id' },
+  listarConteudosDaMateria: { method: 'GET', path: '/materias/:id/conteudos' },
+  criarConteudo: { method: 'POST', path: '/conteudos' },
+  atualizarConteudo: { method: 'PUT', path: '/conteudos/:id' },
 } as const
 
 export type ApiEndpointName = keyof typeof apiEndpoints
@@ -39,6 +52,20 @@ interface EndpointShape {
   response: unknown
 }
 
+/** Nomes de segmento `:param` de um path, ex.: `'/alunos/:alunoId/matriculas'` -> `'alunoId'`. */
+type ExtractParamNames<TPath extends string> = TPath extends `${string}:${infer Param}/${infer Rest}`
+  ? Param | ExtractParamNames<`/${Rest}`>
+  : TPath extends `${string}:${infer Param}`
+    ? Param
+    : never
+
+/** Params de path de uma rota, ou `undefined` se ela não tem nenhum `:param`. */
+export type ApiParams<TName extends ApiEndpointName> = [
+  ExtractParamNames<(typeof apiEndpoints)[TName]['path']>,
+] extends [never]
+  ? undefined
+  : Record<ExtractParamNames<(typeof apiEndpoints)[TName]['path']>, string>
+
 export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   health: { response: HealthResponse }
   login: { body: LoginInputType; response: LoginOutputType }
@@ -47,6 +74,12 @@ export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   solicitarReset: { body: SolicitarResetInputType; response: void }
   resetarSenha: { body: ResetarSenhaInputType; response: void }
   obterPainel: { response: PainelDadosOutputType }
+  listarMaterias: { query: ListarMateriasQueryType; response: MateriaOutputType[] }
+  criarMateria: { body: MateriaCreateInputType; response: MateriaOutputType }
+  atualizarMateria: { body: MateriaUpdateInputType; response: MateriaOutputType }
+  listarConteudosDaMateria: { response: ConteudoOutputType[] }
+  criarConteudo: { body: ConteudoCreateInputType; response: ConteudoOutputType }
+  atualizarConteudo: { body: ConteudoUpdateInputType; response: ConteudoOutputType }
 }
 
 /** Tipo de retorno de uma rota: `ApiResponse<'listUsers'>`. */
@@ -67,10 +100,11 @@ export type ApiBody<TName extends ApiEndpointName> = ApiContract[TName] extends 
   : never
 
 /**
- * Argumentos de uma chamada, montados a partir do contrato: rotas sem query e
- * sem body ficam sem argumento obrigatorio.
+ * Argumentos de uma chamada, montados a partir do contrato: rotas sem query,
+ * sem body e sem `:param` no path ficam sem argumento obrigatorio.
  */
 export type ApiRequestArgs<TName extends ApiEndpointName> = ([ApiQuery<TName>] extends [never]
   ? { query?: undefined }
   : { query: ApiQuery<TName> }) &
-  ([ApiBody<TName>] extends [never] ? { body?: undefined } : { body: ApiBody<TName> })
+  ([ApiBody<TName>] extends [never] ? { body?: undefined } : { body: ApiBody<TName> }) &
+  (ApiParams<TName> extends undefined ? { params?: undefined } : { params: ApiParams<TName> })

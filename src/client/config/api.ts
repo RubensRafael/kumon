@@ -43,10 +43,12 @@ export async function callApi<TName extends ApiEndpointName>(
   options: CallOptions<TName>,
 ): Promise<ApiResponse<TName>> {
   const endpoint = apiEndpoints[name]
-  const url = new URL(
-    `${clientEnv.FRONTEND_API_BASE_URL}${endpoint.path}`,
-    window.location.origin,
-  )
+  let path: string = endpoint.path
+  for (const [key, value] of Object.entries(options.params ?? {})) {
+    path = path.replace(`:${key}`, encodeURIComponent(String(value)))
+  }
+
+  const url = new URL(`${clientEnv.FRONTEND_API_BASE_URL}${path}`, window.location.origin)
 
   for (const [key, value] of Object.entries(options.query ?? {})) {
     if (value !== undefined && value !== null) url.searchParams.set(key, String(value))
