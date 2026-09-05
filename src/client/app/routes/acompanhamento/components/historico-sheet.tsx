@@ -4,6 +4,7 @@ import type { PeriodoHistorico } from '@shared/dto'
 
 import { useApiQuery } from '../../../hooks/use-api'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../../components/ui/sheet'
+import { Skeleton } from '../../../components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs'
 
 const PERIODOS: { valor: PeriodoHistorico; label: string }[] = [
@@ -77,7 +78,19 @@ export function HistoricoSheet({
           </Tabs>
 
           {loading || !data ? (
-            <p className="text-sm text-muted-foreground">Carregando...</p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-lg" />
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-lg" />
+                ))}
+              </div>
+              <Skeleton className="h-24 rounded-lg" />
+            </div>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3">
