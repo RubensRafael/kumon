@@ -1,4 +1,4 @@
-import { Settings } from 'lucide-react'
+import { GraduationCap, Settings } from 'lucide-react'
 import type { ComponentType, ReactElement } from 'react'
 
 import { EsqueciSenhaPage } from '../app/routes/auth/esqueci-senha.page'
@@ -7,6 +7,7 @@ import { ResetarSenhaPage } from '../app/routes/auth/resetar-senha.page'
 import { ConfiguracoesPage } from '../app/routes/configuracoes/configuracoes.page'
 import { InicioPage } from '../app/routes/inicio.page'
 import { NotFoundPage } from '../app/routes/not-found.page'
+import { ProfessoresPage } from '../app/routes/professores/professores.page'
 
 export interface AppRoute {
   path: string
@@ -25,6 +26,7 @@ export interface AppRoute {
  */
 export const appRoutes: AppRoute[] = [
   { path: '/', element: <InicioPage /> },
+  { path: '/professores', element: <ProfessoresPage />, label: 'Professores', icon: GraduationCap },
   { path: '/configuracoes', element: <ConfiguracoesPage />, label: 'Configurações', icon: Settings, adminOnly: true },
   { path: '*', element: <NotFoundPage /> },
 ]

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { ProfessorOutputType } from '../../src/server/features/professores/professores.dto'
+import type { ProfessorOutputType } from '../../src/shared/dto/professores.dto'
 import type { ApiError } from '../../src/shared/dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import { criarMateria, criarProfessor, criarUsuarioAdmin, criarUsuarioProfessor } from '../helpers/factories'
@@ -130,6 +130,28 @@ describe('professores', () => {
       )
       expect(response.status).toBe(400)
     })
+
+    it('rejeita horarioFinal <= horarioInicial -> 400', async () => {
+      const admin = await criarUsuarioAdmin()
+      const cookie = await obterCookie(admin.usuario.email, admin.senha)
+      const materia = await criarMateria({ nome: 'Materia' })
+
+      const response = await app.request(
+        '/api/professores',
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify(
+            payloadProfessor(materia.id, { horarioInicial: '18:00', horarioFinal: '08:00' }),
+          ),
+        },
+        testEnv,
+      )
+
+      expect(response.status).toBe(400)
+      const body = (await response.json()) as ApiError
+      expect(body.message).toContain('horario final')
+    })
   })
 
   describe('PUT /api/professores/:id', () => {
@@ -188,6 +210,26 @@ describe('professores', () => {
         testEnv,
       )
       expect(response.status).toBe(400)
+    })
+
+    it('rejeita PUT que so muda horarioInicial e cria janela invertida -> 400', async () => {
+      const admin = await criarUsuarioAdmin()
+      const cookie = await obterCookie(admin.usuario.email, admin.senha)
+      const professor = await criarProfessor({ horarioInicial: '08:00', horarioFinal: '18:00' })
+
+      const response = await app.request(
+        `/api/professores/${professor.id}`,
+        {
+          method: 'PUT',
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ horarioInicial: '19:00' }),
+        },
+        testEnv,
+      )
+
+      expect(response.status).toBe(400)
+      const body = (await response.json()) as ApiError
+      expect(body.message).toContain('horario final')
     })
 
     it('professor editando registro de outro professor -> 403', async () => {
