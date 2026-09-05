@@ -4,11 +4,14 @@ import { useForm } from 'react-hook-form'
 import { ProfessorCreateInput, type MateriaOutputType, type ProfessorCreateInputType, type ProfessorOutputType } from '@shared/dto'
 
 import { Button } from '../../../components/ui/button'
-import { DialogFooter } from '../../../components/ui/dialog'
+import { DialogClose, DialogFooter } from '../../../components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../components/ui/form'
 import { Input } from '../../../components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '../../../components/ui/toggle-group'
 import { useApiMutation } from '../../../hooks/use-api'
+
+const PILL_ITEM_CLASSNAME =
+  'h-auto rounded-full px-3 py-1.5 font-normal data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground'
 
 /** Sem "Dom" de propósito — nenhuma unidade Kumon funciona aos domingos (ver docs/pr-fe-03-professores.md). */
 const DIAS_DISPONIVEIS = [
@@ -125,12 +128,13 @@ export function ProfessorFormFull({
                 <ToggleGroup
                   type="multiple"
                   variant="outline"
+                  spacing={2}
                   value={field.value}
                   onValueChange={field.onChange}
                   className="flex-wrap justify-start"
                 >
                   {materias.map((materia) => (
-                    <ToggleGroupItem key={materia.id} value={materia.id}>
+                    <ToggleGroupItem key={materia.id} value={materia.id} className={PILL_ITEM_CLASSNAME}>
                       {materia.nome}
                     </ToggleGroupItem>
                   ))}
@@ -151,12 +155,13 @@ export function ProfessorFormFull({
                 <ToggleGroup
                   type="multiple"
                   variant="outline"
+                  spacing={2}
                   value={field.value}
                   onValueChange={field.onChange}
                   className="flex-wrap justify-start"
                 >
                   {DIAS_DISPONIVEIS.map((dia) => (
-                    <ToggleGroupItem key={dia.valor} value={dia.valor}>
+                    <ToggleGroupItem key={dia.valor} value={dia.valor} className={PILL_ITEM_CLASSNAME}>
                       {dia.label}
                     </ToggleGroupItem>
                   ))}
@@ -231,7 +236,12 @@ export function ProfessorFormFull({
         </div>
 
         <DialogFooter>
-          <Button type="submit" disabled={salvando}>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button type="submit" className="rounded-xl" disabled={salvando}>
             {salvando ? 'Salvando...' : 'Salvar'}
           </Button>
         </DialogFooter>

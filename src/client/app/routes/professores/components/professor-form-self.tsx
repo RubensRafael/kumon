@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { ProfessorUpdateInputSelf, type ProfessorOutputType, type ProfessorUpdateInputSelfType } from '@shared/dto'
 
 import { Button } from '../../../components/ui/button'
-import { DialogFooter } from '../../../components/ui/dialog'
+import { DialogClose, DialogFooter } from '../../../components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../components/ui/form'
 import { Input } from '../../../components/ui/input'
 import { Textarea } from '../../../components/ui/textarea'
@@ -83,7 +83,12 @@ export function ProfessorFormSelf({
           )}
         />
         <DialogFooter>
-          <Button type="submit" disabled={loading}>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button type="submit" className="rounded-xl" disabled={loading}>
             {loading ? 'Salvando...' : 'Salvar'}
           </Button>
         </DialogFooter>

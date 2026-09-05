@@ -29,7 +29,7 @@ export function ProfessorFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{professor ? 'Editar professor' : 'Novo professor'}</DialogTitle>
         </DialogHeader>
