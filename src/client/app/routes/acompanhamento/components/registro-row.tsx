@@ -5,12 +5,16 @@ import { Button } from '../../../components/ui/button'
 
 export function RegistroRow({
   registro,
+  bloqueadoFuturo,
   onAbrir,
 }: {
   registro: RegistroResumoOutputType
+  /** `true` bloqueia só a escrita ("Registrar aula") -- "Ver acompanhamento" (leitura) continua sempre liberado. */
+  bloqueadoFuturo: boolean
   onAbrir: () => void
 }) {
   const status = statusRegistro(registro)
+  const concluido = status === 'CONCLUIDO'
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
@@ -21,8 +25,13 @@ export function RegistroRow({
           <StatusRegistroBadge status={status} />
         </div>
       </div>
-      <Button variant={status === 'CONCLUIDO' ? 'outline' : 'default'} size="sm" onClick={onAbrir}>
-        {status === 'CONCLUIDO' ? 'Ver acompanhamento' : 'Registrar aula'}
+      <Button
+        variant={concluido ? 'outline' : 'default'}
+        size="sm"
+        onClick={onAbrir}
+        disabled={!concluido && bloqueadoFuturo}
+      >
+        {concluido ? 'Ver acompanhamento' : 'Registrar aula'}
       </Button>
     </div>
   )
