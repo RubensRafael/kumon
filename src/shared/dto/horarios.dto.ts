@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { DiaSemanaEnum, HorarioDoDia } from '../../../shared/dto/enums'
+import { DiaSemanaEnum, HorarioDoDia } from './enums'
 
 export const HorarioOutput = z.object({
   id: z.uuid(),

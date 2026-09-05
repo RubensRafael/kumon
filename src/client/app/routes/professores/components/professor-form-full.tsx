@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 
 import { ProfessorCreateInput, type MateriaOutputType, type ProfessorCreateInputType, type ProfessorOutputType } from '@shared/dto'
 
+import { DIAS_SEMANA } from '../../../components/common/dias-semana'
 import { Button } from '../../../components/ui/button'
 import { DialogClose, DialogFooter } from '../../../components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../components/ui/form'
@@ -12,16 +13,6 @@ import { useApiMutation } from '../../../hooks/use-api'
 
 const PILL_ITEM_CLASSNAME =
   'h-auto rounded-full px-3 py-1.5 font-normal data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground'
-
-/** Sem "Dom" de propósito — nenhuma unidade Kumon funciona aos domingos (ver docs/pr-fe-03-professores.md). */
-const DIAS_DISPONIVEIS = [
-  { valor: 'SEG', label: 'Seg' },
-  { valor: 'TER', label: 'Ter' },
-  { valor: 'QUA', label: 'Qua' },
-  { valor: 'QUI', label: 'Qui' },
-  { valor: 'SEX', label: 'Sex' },
-  { valor: 'SAB', label: 'Sáb' },
-] as const
 
 export function ProfessorFormFull({
   professor,
@@ -160,7 +151,7 @@ export function ProfessorFormFull({
                   onValueChange={field.onChange}
                   className="flex-wrap justify-start"
                 >
-                  {DIAS_DISPONIVEIS.map((dia) => (
+                  {DIAS_SEMANA.map((dia) => (
                     <ToggleGroupItem key={dia.valor} value={dia.valor} className={PILL_ITEM_CLASSNAME}>
                       {dia.label}
                     </ToggleGroupItem>

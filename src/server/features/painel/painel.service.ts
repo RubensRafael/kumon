@@ -20,6 +20,7 @@ export async function obterDadosPainel(prisma: PrismaClient): Promise<PainelDado
         horarioInicial: true,
         horarioFinal: true,
         capacidadePorHorario: true,
+        materias: { select: { materiaId: true } },
       },
     }),
     prisma.aluno.findMany({
@@ -38,6 +39,7 @@ export async function obterDadosPainel(prisma: PrismaClient): Promise<PainelDado
         alunoId: true,
         professorId: true,
         materiaId: true,
+        estagio: true,
         situacao: true,
         tipoAtendimento: true,
         horarios: {
@@ -48,5 +50,13 @@ export async function obterDadosPainel(prisma: PrismaClient): Promise<PainelDado
     }),
   ])
 
-  return { professores, alunos, materias, matriculas }
+  return {
+    professores: professores.map((professor) => ({
+      ...professor,
+      materiaIds: professor.materias.map((m) => m.materiaId),
+    })),
+    alunos,
+    materias,
+    matriculas,
+  }
 }

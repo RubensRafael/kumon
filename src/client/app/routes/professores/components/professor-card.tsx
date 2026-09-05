@@ -5,6 +5,7 @@ import type { MateriaOutputType, ProfessorOutputType } from '@shared/dto'
 
 import { Button } from '../../../components/ui/button'
 import { Card } from '../../../components/ui/card'
+import { Skeleton } from '../../../components/ui/skeleton'
 import { useAuth } from '../../../hooks/use-auth'
 import { ProfessorFormDialog } from './professor-form-dialog'
 
@@ -20,10 +21,12 @@ const DIAS_ABREVIADOS: Record<string, string> = {
 export function ProfessorCard({
   professor,
   materias,
+  alunosAtivos,
   onAtualizado,
 }: {
   professor: ProfessorOutputType
   materias: MateriaOutputType[]
+  alunosAtivos?: number
   onAtualizado: () => void
 }) {
   const { podeEditarProfessor } = useAuth()
@@ -50,7 +53,13 @@ export function ProfessorCard({
         </div>
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-2 text-center">
+      <dl className="mt-5 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <dt className="text-[11px] text-muted-foreground uppercase">Alunos</dt>
+          <dd className="font-semibold">
+            {alunosAtivos === undefined ? <Skeleton className="mx-auto h-5 w-5" /> : alunosAtivos}
+          </dd>
+        </div>
         <div>
           <dt className="text-[11px] text-muted-foreground uppercase">Cap./horário</dt>
           <dd className="font-semibold">{professor.capacidadePorHorario}</dd>

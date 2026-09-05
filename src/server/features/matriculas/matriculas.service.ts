@@ -1,7 +1,7 @@
 import { HTTPException } from 'hono/http-exception'
 
 import type { Matricula, PrismaClient } from '../../db/generated/client'
-import type { MatriculaCreateInputType, MatriculaOutputType, MatriculaUpdateInputType } from './matriculas.dto'
+import type { MatriculaCreateInputType, MatriculaOutputType, MatriculaUpdateInputType } from '../../../shared/dto/matriculas.dto'
 
 // Nenhuma query de matricula usa include/select -- a linha sempre vem
 // completa, entao o model Matricula exportado pelo client ja e o shape
@@ -43,7 +43,7 @@ export async function criarMatricula(
 
   const professor = await prisma.professor.findUnique({
     where: { id: input.professorId },
-    select: { id: true },
+    select: { id: true, materias: { select: { materiaId: true } } },
   })
   if (!professor) {
     throw new HTTPException(400, { message: 'professorId nao corresponde a nenhum professor existente.' })
@@ -55,6 +55,13 @@ export async function criarMatricula(
   }
   if (!materia.ativo) {
     throw new HTTPException(400, { message: 'Nao e possivel matricular numa materia inativa.' })
+  }
+
+  const professorLecionaMateria = professor.materias.some((m) => m.materiaId === input.materiaId)
+  if (!professorLecionaMateria) {
+    throw new HTTPException(400, {
+      message: 'O professor selecionado nao leciona a materia desta matricula.',
+    })
   }
 
   const matriculaAtivaExistente = await prisma.matricula.findFirst({
@@ -72,7 +79,10 @@ export async function criarMatricula(
       alunoId,
       professorId: input.professorId,
       materiaId: input.materiaId,
-      estagio: input.estagio ?? null,
+      // `|| null`, nao `?? null`: o form manda `''` quando o campo fica em
+      // branco (nao omite a chave) -- sem isso, string vazia gravava como
+      // tal e virava uma opcao fantasma no filtro "Estagio" da Agenda.
+      estagio: input.estagio || null,
       tipoAtendimento: input.tipoAtendimento,
       observacoes: input.observacoes ?? null,
       // MATRICULA_HORARIO nao e copiado de nenhuma matricula anterior:

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { HorarioOutputType } from '../../src/server/features/horarios/horarios.dto'
+import type { HorarioOutputType } from '../../src/shared/dto/horarios.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
@@ -90,14 +90,14 @@ describe('horarios', () => {
       const cookie = await cookieAdmin()
       const professor = await criarProfessor()
       const matricula = await novaMatricula(professor.id)
-      await criarHorario({ matriculaId: matricula.id, diaSemana: 'TER', horario: '10:00' })
+      await criarHorario({ matriculaId: matricula.id, diaSemana: 'QUA', horario: '10:00' })
 
       const response = await app.request(
         `/api/matriculas/${matricula.id}/horarios`,
         {
           method: 'POST',
           headers: { ...jsonHeaders, ...authHeader(cookie) },
-          body: JSON.stringify({ diaSemana: 'TER', horario: '10:00' }),
+          body: JSON.stringify({ diaSemana: 'QUA', horario: '10:00' }),
         },
         testEnv,
       )
@@ -108,7 +108,7 @@ describe('horarios', () => {
       const cookie = await cookieAdmin()
       const professor = await criarProfessor()
       const matricula = await novaMatricula(professor.id)
-      const antigo = await criarHorario({ matriculaId: matricula.id, diaSemana: 'QUI', horario: '09:00' })
+      const antigo = await criarHorario({ matriculaId: matricula.id, diaSemana: 'SEG', horario: '09:00' })
 
       await app.request(
         `/api/horarios/${antigo.id}`,
@@ -121,7 +121,7 @@ describe('horarios', () => {
         {
           method: 'POST',
           headers: { ...jsonHeaders, ...authHeader(cookie) },
-          body: JSON.stringify({ diaSemana: 'QUI', horario: '09:00' }),
+          body: JSON.stringify({ diaSemana: 'SEG', horario: '09:00' }),
         },
         testEnv,
       )
@@ -143,6 +143,44 @@ describe('horarios', () => {
         testEnv,
       )
       expect(response.status).toBe(400)
+    })
+
+    it('rejeita dia da semana fora da disponibilidade do professor -> 400', async () => {
+      const cookie = await cookieAdmin()
+      const professor = await criarProfessor({ diasDisponiveis: ['TER', 'QUI'] })
+      const matricula = await novaMatricula(professor.id)
+
+      const response = await app.request(
+        `/api/matriculas/${matricula.id}/horarios`,
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ diaSemana: 'SEG', horario: '14:00' }),
+        },
+        testEnv,
+      )
+      expect(response.status).toBe(400)
+      const body = (await response.json()) as { message: string }
+      expect(body.message).toContain('nao atende')
+    })
+
+    it('rejeita horario fora da janela de atendimento do professor -> 400', async () => {
+      const cookie = await cookieAdmin()
+      const professor = await criarProfessor({ horarioInicial: '13:00', horarioFinal: '19:00' })
+      const matricula = await novaMatricula(professor.id)
+
+      const response = await app.request(
+        `/api/matriculas/${matricula.id}/horarios`,
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({ diaSemana: 'SEG', horario: '08:00' }),
+        },
+        testEnv,
+      )
+      expect(response.status).toBe(400)
+      const body = (await response.json()) as { message: string }
+      expect(body.message).toContain('janela de atendimento')
     })
 
     it('professor autenticado nao pode criar horario -> 403', async () => {

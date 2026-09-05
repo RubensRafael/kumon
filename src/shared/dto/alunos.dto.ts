@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { SituacaoAlunoEnum } from '../../../shared/dto/enums'
+import { SituacaoAlunoEnum } from './enums'
 
 /**
  * Datas como `Date`, nao string: `z.coerce.date()` no input aceita

@@ -29,6 +29,7 @@ export const PainelDadosOutput = z.object({
       horarioInicial: HorarioDoDia,
       horarioFinal: HorarioDoDia,
       capacidadePorHorario: z.number().int(),
+      materiaIds: z.array(z.uuid()),
     }),
   ),
   alunos: z.array(
@@ -58,6 +59,7 @@ export const PainelDadosOutput = z.object({
       alunoId: z.uuid(),
       professorId: z.uuid(),
       materiaId: z.uuid(),
+      estagio: z.string().nullable(),
       situacao: SituacaoMatriculaEnum,
       tipoAtendimento: TipoAtendimentoEnum,
       horarios: z.array(

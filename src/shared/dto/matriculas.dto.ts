@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { SituacaoMatriculaEnum, TipoAtendimentoEnum } from '../../../shared/dto/enums'
+import { SituacaoMatriculaEnum, TipoAtendimentoEnum } from './enums'
 
 export const MatriculaOutput = z.object({
   id: z.uuid(),
