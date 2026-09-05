@@ -12,7 +12,7 @@ import type {
   UsuarioCreateInputType,
   UsuarioOutputType,
   UsuarioUpdateInputType,
-} from './auth.dto'
+} from '../../../shared/dto/auth.dto'
 
 /** Validade do JWT de sessao — tambem o `maxAge` do cookie que o carrega. */
 export const SETE_DIAS_EM_SEGUNDOS = 7 * 24 * 60 * 60

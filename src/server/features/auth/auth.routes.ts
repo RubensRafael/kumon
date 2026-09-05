@@ -12,7 +12,7 @@ import {
   UsuarioCreateInput,
   UsuarioOutput,
   UsuarioUpdateInput,
-} from './auth.dto'
+} from '../../../shared/dto/auth.dto'
 import * as authService from './auth.service'
 
 /** `/auth/*` — publico, nunca passa por `authMiddleware`. */

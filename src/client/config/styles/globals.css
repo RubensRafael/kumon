@@ -1,18 +1,108 @@
 @import "tailwindcss";
 
-/* Tokens do design system. No Tailwind v4 a configuracao vive no CSS:
-   cada entrada de @theme vira uma utility (ex.: bg-brand-500). */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Paleta extraida por amostragem de pixel direto dos prints do KFlow (ver
+ * plan-frontend.md, "Paleta"). A maior parte do app usa a escala padrao do
+ * Tailwind quase sem alteracao (blue-600, emerald-500/600, orange-500/600,
+ * rose-700, slate-100/500) -- so o azul da sidebar/botoes primarios e o azul
+ * do item ativo nao existem na escala padrao, por isso viram token proprio
+ * (`--primary`) em vez de reusar algum `--color-blue-*`.
+ */
 @theme {
-  --color-brand-50: oklch(0.97 0.02 255);
-  --color-brand-100: oklch(0.93 0.04 255);
-  --color-brand-500: oklch(0.62 0.19 258);
-  --color-brand-600: oklch(0.55 0.19 258);
-  --color-brand-700: oklch(0.47 0.17 258);
-
-  --color-surface: oklch(0.99 0.003 255);
-  --color-surface-muted: oklch(0.96 0.006 255);
-
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --radius: 0.625rem;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  /* #1842b4 amostrado do fundo da sidebar e dos botoes primarios ("Salvar",
+     "Novo aluno", "Registrar aula") -- o mesmo azul em ambos os lugares. */
+  --primary: #1842b4;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+
+  /* rose-700 exato, amostrado do alerta de "zona vermelha" no painel. */
+  --destructive: #be123c;
+  --destructive-foreground: #ffffff;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #1842b4;
+
+  /* Cores de grafico -- todas batem exato com a escala padrao do Tailwind
+     (blue-600/green-600/orange-500/emerald-500), usadas no donut e nas
+     barras do painel. */
+  --chart-1: #2563eb;
+  --chart-2: #16a34a;
+  --chart-3: #f97316;
+  --chart-4: #10b981;
+  --chart-5: #f5600a;
+
+  /* Sidebar: unico lugar do app com uma paleta propria, nao-neutra. */
+  --sidebar: #1842b4;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #1842b4;
+  /* #3a5ebf amostrado do fundo do item de navegacao ativo/hover. */
+  --sidebar-accent: #3a5ebf;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2c4ec2;
+  --sidebar-ring: #93b4ff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 @layer base {
@@ -21,6 +111,6 @@
   }
 
   body {
-    @apply bg-surface text-slate-900 antialiased;
+    @apply bg-background text-foreground antialiased;
   }
 }

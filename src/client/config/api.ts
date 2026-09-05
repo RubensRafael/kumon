@@ -66,6 +66,15 @@ export async function callApi<TName extends ApiEndpointName>(
 
   if (!response.ok) {
     const error = payload as ApiErrorBody | null
+
+    // Sessao expirada/invalida em qualquer chamada, nao so `GET /me` -- o
+    // `AuthProvider` escuta este evento pra zerar o usuario, o que faz o
+    // `RequireAuth` redirecionar pra `/login` no proximo render, mesmo
+    // quando o 401 veio de uma chamada no meio de outra tela.
+    if (response.status === 401) {
+      window.dispatchEvent(new Event('kflow:unauthorized'))
+    }
+
     throw new ApiError(
       response.status,
       error?.error ?? 'unknown_error',
