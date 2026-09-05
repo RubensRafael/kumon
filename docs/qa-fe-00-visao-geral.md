@@ -123,6 +123,15 @@ Uma correção só resolve os oito: tratar o erro dentro do `useApiMutation`
 (um `toast.error` por padrão, com opção de desligar) em vez de exigir que
 cada chamador se lembre.
 
+**Decisão:** corrigir. Não precisa necessariamente de `try/catch` por
+componente, mas o erro tem que chegar ao usuário — com um fallback genérico
+quando não houver mensagem específica do backend. Antes de implementar,
+verificar se já existe algum padrão de desempacotamento de erro (na
+`callApi`/`ApiError`, por exemplo); se existir, reaproveitar; se não
+existir, criar um dentro do `useApiMutation`. A régua é: nenhum componente
+deve precisar extrair/tratar o erro por conta própria — os 8 PRs que hoje
+ignoram o `error` devem ser atualizados para consumir esse ponto único.
+
 ### 2. Mensagem de validação crua do Zod, em inglês
 
 Aparece em todo formulário: `Too small: expected string to have >=1
@@ -136,6 +145,13 @@ não exige tocar em schema nenhum.
 Relacionado: a validação é inconsistente. Nome/matérias/dias mostram erro
 inline; e-mail e capacidade dependem só do balão nativo do browser (que sai
 no idioma do browser, não no do app).
+
+**Decisão:** o schema Zod é compartilhado entre front e back (`shared/dto/`),
+então a correção deve ser um `errorMap` global em pt-BR, configurado num
+entry point comum que rode antes de qualquer uso do Zod no app — não um
+ajuste por schema. Testar manualmente depois, em mais de uma tela, para
+garantir que o entry point é carregado antes de qualquer validação e que a
+tradução realmente se propaga para todo o Zod importado.
 
 ### 3. Contadores e estados vazios
 

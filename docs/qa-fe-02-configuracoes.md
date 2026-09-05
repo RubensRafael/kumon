@@ -56,6 +56,9 @@ Sugestão: `@unique` em `nome` (ou `@@unique([nome])` case-insensitive via
 índice funcional) + tratamento do erro de constraint na UI. Mesma questão
 provavelmente vale para `Conteudo.nome` dentro de uma matéria.
 
+**Decisão:** não vale a pena arrumar agora. Criar issue para adicionar a
+constraint/check no backend futuramente, quando o app virar multi-tenant.
+
 ### 2. Mensagem de validação crua do Zod, em inglês — Alto
 
 Salvar com o nome vazio mostra, dentro do dialog:
@@ -65,6 +68,13 @@ Salvar com o nome vazio mostra, dentro do dialog:
 É o padrão que atravessa toda a cadeia — detalhado em
 [`qa-fe-00-visao-geral.md`](./qa-fe-00-visao-geral.md#2-mensagem-de-validação-crua-do-zod-em-inglês).
 Registro aqui porque esta é a primeira tela onde ele aparece.
+
+**Decisão:** o schema Zod é compartilhado entre front e back (`shared/dto/`),
+então a correção deve ser um `z.config`/`errorMap` global em pt-BR, num
+entry point comum que rode antes de qualquer uso do Zod no app — não um
+ajuste por schema. Isso traduz os erros em todo lugar de uma vez, front e
+back. Testar manualmente depois, em mais de uma tela, para garantir que o
+entry point realmente é carregado antes de qualquer validação.
 
 ### 3. Erro de escrita não chega ao usuário — Alto
 
@@ -77,6 +87,18 @@ Ver o [padrão consolidado](./qa-fe-00-visao-geral.md#1-erro-de-mutação-engoli
 a correção que vale a pena é dentro do próprio `useApiMutation`, não em cada
 uma destas duas telas.
 
+**Decisão:** corrigir. Não precisa necessariamente de `try/catch` em cada
+componente, mas o erro tem que chegar ao usuário — com um fallback genérico
+quando não houver mensagem específica do backend. Antes de mexer, verificar
+se já existe algum padrão de desempacotamento de erro (na própria
+`callApi`/`ApiError`, por exemplo); se existir, reaproveitar; se não
+existir, criar um dentro do `useApiMutation` — o objetivo é que nenhum
+componente precise extrair/tratar o erro por conta própria, e que os PRs que
+hoje ignoram o `error` sejam todos atualizados para usar esse ponto único.
+Esta decisão é geral o bastante para valer para toda a cadeia — anotada
+também em
+[`qa-fe-00-visao-geral.md`](./qa-fe-00-visao-geral.md#1-erro-de-mutação-engolido-o-mais-grave).
+
 ### 4. Item inativo não se distingue visualmente — Baixo
 
 Uma matéria ou conteúdo desativado fica idêntico a um ativo na lista; a
@@ -86,6 +108,9 @@ trabalho localizar as inativas.
 Um `text-muted-foreground` no nome, ou um badge "Inativa", já resolve — e
 seria coerente com o `SITUACAO_ALUNO_LABEL`/badges que a fe-04 usa nos cards
 de aluno.
+
+**Decisão:** adicionar estilo (`text-muted-foreground` e/ou badge "Inativa")
+para resolver.
 
 ## Diálogo com o doc da PR
 
