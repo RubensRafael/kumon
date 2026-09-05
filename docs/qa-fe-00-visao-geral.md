@@ -1,0 +1,273 @@
+# QA manual da cadeia fe-01 → fe-07 — visão geral
+
+Teste manual em navegador real (Chromium via Playwright) da cadeia de PRs de
+front-end, feito a partir de `feat/fe-07-acompanhamento` — o topo da pilha,
+que contém as sete features acumuladas.
+
+Cada `docs/qa-fe-0X-*.md` cobre uma branch e dialoga com o
+`docs/pr-fe-0X-*.md` correspondente: o que a decisão documentada previa, o
+que o app faz de fato, e onde os dois divergem.
+
+## Por que isso existe
+
+Todos os sete `docs/pr-fe-*.md` fecham com a mesma ressalva:
+
+> Não consegui verificar o login visualmente num browser real.
+
+O motivo está em `docs/pr-fe-01-setup.md`: `npm run dev` usa
+`@hono/vite-dev-server/cloudflare`, que sobe um workerd de verdade
+(Miniflare). Lá `navigator.userAgent === 'Cloudflare-Workers'`, então
+`isCloudflareWorkers()` (`src/server/db/client.ts`) escolhe o adapter do
+Neon — que não existe localmente — e toda chamada de API morre com
+`TypeError: fetch failed`, mesmo com `BACKEND_DATABASE_URL` apontando pro
+Postgres local.
+
+Essa ressalva agora está fechada. Estes relatórios são o resultado.
+
+## Como o ambiente foi montado
+
+O diagnóstico da fe-01 está correto e a saída é trocar o adapter só no dev
+server. Um config paralelo, sem o `cloudflareAdapter`, faz o Hono rodar em
+Node puro — o mesmo caminho dos testes e2e do Vitest, onde o Prisma fala com
+o Postgres via `@prisma/adapter-pg`:
+
+```ts
+// vite.config.qa.ts — igual ao vite.config.ts, com duas diferenças no devServer
+import { loadEnv } from 'vite'
+
+devServer({
+  entry: './src/server.tsx',
+  // 1. sem `adapter: cloudflareAdapter` -> Node puro -> PrismaPg
+  // 2. sem o adapter, `c.env` precisa vir daqui (no lugar dos bindings do workerd)
+  env: loadEnv('development', process.cwd(), ''),
+  exclude: HONO_EXCLUDE,
+  injectClientScript: false,
+})
+```
+
+`npx vite --config vite.config.qa.ts`, e `GET /api/health` responde
+`{"database":{"connected":true,"latencyMs":44}}`. O plugin
+`workerdWasmModules` continua necessário e resolve o WASM do Query Compiler
+normalmente, exatamente como já faz no Vitest.
+
+Esse arquivo **não foi commitado** — é ferramenta de sessão.
+
+**Decisão:** em vez de manter um segundo arquivo de config, uma única env
+resolve — mas ela precisa atuar **antes** do workerd subir, não dentro do
+`isCloudflareWorkers()`. Dentro do workerd, sockets TCP crus são bloqueados
+pelo próprio runtime (é por isso que o adapter do Neon é obrigatório ali);
+uma env lida só nesse ponto trocaria o driver do Prisma sem trocar o
+runtime, e a chamada quebraria do mesmo jeito, só que com outro erro. O
+ponto certo é o `vite.config.ts`, na montagem dos `plugins`, que roda em
+Node normal antes do Worker existir — e lendo do **`.env`** (via `loadEnv`,
+não de `process.env` puro), pra não precisar de nenhum comando novo nem de
+prefixar a env na mão a cada vez: é só uma linha a mais no `.env` que cada
+um já mantém localmente (mesmo lugar de `BACKEND_DATABASE_URL`), e o
+`npm run dev` de sempre passa a respeitar:
+
+```ts
+// topo do vite.config.ts, antes do defineConfig
+const localEnv = loadEnv('development', process.cwd(), '')
+const useLocalDevServer = localEnv.LOCAL_DEV_SERVER === 'true'
+
+// dentro de plugins: [...]
+devServer({
+  entry: './src/server.tsx',
+  adapter: useLocalDevServer ? undefined : cloudflareAdapter,
+  env: useLocalDevServer ? localEnv : undefined,
+  exclude: HONO_EXCLUDE,
+  injectClientScript: false,
+})
+```
+
+`LOCAL_DEV_SERVER` — string `"true"`/`"false"` no `.env`, default `"false"`
+(mantém o comportamento atual, com o `cloudflareAdapter`, igual produção).
+Com `"true"`, o mesmo `npm run dev` roda em Node puro, sem workerd, e o
+Prisma usa `PrismaPg` contra o Postgres local — mesmo caminho dos testes
+e2e. Um único `vite.config.ts`, sem arquivo duplicado e sem comando novo: é
+o que separa "não deu pra verificar visualmente" de uma verificação de
+verdade a cada PR.
+
+## Ambiente
+
+| Item | Valor |
+| ---- | ----- |
+| Branch testada | `feat/fe-07-acompanhamento` (`cfa89d3`) |
+| Banco | PostgreSQL 16 nativo na porta 54329 (o `postgres:17-alpine` do compose não pôde ser baixado pelo proxy) |
+| Migrations | `npx prisma migrate deploy` — todas aplicadas |
+| Seed | `npm run db:seed` — `admin@kflow.local` / `senha123` |
+| Suíte automatizada | `npm test` → **116/116 passando**, batendo com o que a fe-07 documenta |
+| Navegador | Chromium headless, viewport 1440×900 |
+
+⚠️ **`npm test` trunca as tabelas** (setup dos e2e) e apaga o usuário do
+seed. Rodar `npm run db:seed` *depois* dos testes, nunca antes — perdi um
+ciclo de investigação nisso.
+
+## Dados criados durante o teste
+
+Tudo pela UI, salvo onde indicado: 3 matérias + 2 conteúdos, 3 professores
+(um deles inválido de propósito), 5 alunos com matrículas e horários (3 via
+API só para dar volume), 1 usuário com papel Professor, e 4 registros de
+aula. Os achados citam esses dados pelo nome.
+
+## Resumo dos achados
+
+| Branch | Crítico | Alto | Médio | Baixo |
+| ------ | :-----: | :--: | :---: | :---: |
+| [fe-01 Setup/Auth](./qa-fe-01-setup.md) | — | — | 4 | 2 |
+| [fe-02 Configurações](./qa-fe-02-configuracoes.md) | — | 3 | — | 1 |
+| [fe-03 Professores](./qa-fe-03-professores.md) | — | 3 | — | 1 |
+| [fe-04 Alunos](./qa-fe-04-alunos.md) | — | 2 | 2 | 2 |
+| [fe-05 Painel](./qa-fe-05-painel.md) | — | 1 | 2 | 2 |
+| [fe-06 Agenda](./qa-fe-06-agenda.md) | — | 1 | 2 | 1 |
+| [fe-07 Acompanhamento](./qa-fe-07-acompanhamento.md) | 1 | 1 | 3 | 2 |
+
+**Veredito por branch:** todas as sete entregam o que os respectivos
+`pr-fe-*.md` prometem. Os fluxos principais funcionam de ponta a ponta —
+login, cadastro, agenda, registro de aula, permissões por papel. O que os
+relatórios apontam é a borda: validação cruzada ausente, erro de escrita
+sem tratamento e estados vazios sem mensagem.
+
+## Os padrões que atravessam a cadeia
+
+Vale tratá-los uma vez, centralizadamente, em vez de sete vezes.
+
+### 1. Erro de mutação engolido (o mais grave)
+
+`useApiMutation` expõe `error` e relança a exceção. Só 4 dos 12 componentes
+que o usam consomem esse `error` ou envolvem a chamada num `try/catch`:
+
+| Trata erro | Não trata |
+| ---------- | --------- |
+| `login.page.tsx` | `professor-form-full.tsx` |
+| `resetar-senha.page.tsx` | `professor-form-self.tsx` |
+| `aluno-form.tsx` | `materias-tab.tsx` |
+| `nova-matricula-form.tsx` | `conteudos-da-materia.tsx` |
+| | `matricula-existing-card.tsx` |
+| | `novo-usuario-dialog.tsx` |
+| | `usuarios-tab.tsx` |
+| | **`registrar-aula-dialog.tsx`** |
+
+Nos 8 da direita, uma falha de escrita produz: nenhuma mensagem, nenhum
+toast, uma `ApiError` não capturada no console — e, quando o estado local já
+foi atualizado antes do `await`, **a UI mostra um dado que não existe no
+banco**. Reproduzi isso de ponta a ponta na fe-07; é o achado crítico.
+
+Uma correção só resolve os oito: tratar o erro dentro do `useApiMutation`
+(um `toast.error` por padrão, com opção de desligar) em vez de exigir que
+cada chamador se lembre.
+
+**Decisão:** corrigir. Não precisa necessariamente de `try/catch` por
+componente, mas o erro tem que chegar ao usuário — com um fallback genérico
+quando não houver mensagem específica do backend. Antes de implementar,
+verificar se já existe algum padrão de desempacotamento de erro (na
+`callApi`/`ApiError`, por exemplo); se existir, reaproveitar; se não
+existir, criar um dentro do `useApiMutation`. A régua é: nenhum componente
+deve precisar extrair/tratar o erro por conta própria — os 8 PRs que hoje
+ignoram o `error` devem ser atualizados para consumir esse ponto único.
+
+### 2. Mensagem de validação crua do Zod, em inglês
+
+Aparece em todo formulário: `Too small: expected string to have >=1
+characters`, `Too small: expected array to have >=1 items`. Num app
+inteiramente em português, é a mensagem que o usuário final lê.
+
+Some com `.min(1, 'Informe o nome')` nos schemas de `shared/dto/`, ou com um
+`errorMap` global do Zod em pt-BR — este último resolve tudo de uma vez e
+não exige tocar em schema nenhum.
+
+Relacionado: a validação é inconsistente. Nome/matérias/dias mostram erro
+inline; e-mail e capacidade dependem só do balão nativo do browser (que sai
+no idioma do browser, não no do app).
+
+**Decisão:** o schema Zod é compartilhado entre front e back (`shared/dto/`),
+então a correção deve ser um `errorMap` global em pt-BR, configurado num
+entry point comum que rode antes de qualquer uso do Zod no app — não um
+ajuste por schema. Testar manualmente depois, em mais de uma tela, para
+garantir que o entry point é carregado antes de qualquer validação e que a
+tradução realmente se propaga para todo o Zod importado.
+
+### 3. Contadores e estados vazios
+
+Três telas repetem o mesmo par: o contador do cabeçalho ignora o filtro
+ativo, e uma lista filtrada até zero não mostra mensagem nenhuma — só some.
+
+| Tela | Contador |
+| ---- | -------- |
+| `/alunos` | "5 aluno(s)" com 0 resultados na busca |
+| `/acompanhamento` | chips "3 Não iniciado" com 1 linha na busca |
+| `/agenda-geral` | ✅ recalcula certo ("1 aluno(s)") — é o modelo a seguir |
+
+### 4. Ações que o backend recusa aparecem oferecidas na UI
+
+Mais de uma tela oferece uma ação — um botão, um formulário inteiro — a um
+usuário que o backend vai recusar com 403 assim que ele tentar usá-la (ver
+`qa-fe-03-professores.md`: "Novo professor" visível pra não-admin; editar o
+cadastro de *outro* professor abre o formulário completo pra quem só pode
+editar o próprio). Cada tela hoje decide isso na unha, checando
+`usuario?.papel` manualmente onde alguém lembrou de checar.
+
+**Decisão:** montar um hook/contexto global do tipo "current user" (ao lado
+do que `useAuth` já expõe), que os componentes consultem pra saber quando
+esconder ou desabilitar uma ação — em vez de cada tela reimplementar essa
+checagem isoladamente.
+
+### 5. Dados brutos do snapshot deveriam ser um contexto global compartilhado
+
+`GET /painel` já devolve professores/alunos/matérias/matrículas brutos, e
+tanto o Painel quanto a Agenda montam seu próprio estado derivado em cima
+disso — cada um buscando de novo. A fe-04 mostra o custo de não
+compartilhar esse dado: o formulário de matrícula tem tudo que precisaria
+pra impedir combinações inválidas (professor que não leciona a matéria
+escolhida, horário fora da disponibilidade do professor — ver
+`qa-fe-04-alunos.md`, achados 1 e 2), mas cada tela só enxerga o recorte que
+ela mesma buscou.
+
+Ao investigar os dois achados da fe-04, confirmei que o **backend também
+não faz essa validação cruzada** — nem professor×matéria
+(`matriculas.service.ts`), nem horário×disponibilidade
+(`horarios.service.ts`). A minha suposição inicial de que o backend já
+cobria isso corretamente estava errada.
+
+**Decisão:** criar um contexto global (mesmo padrão do hook de "current
+user" do item 4) que carregue esse snapshot uma vez — `loading`/`data`/
+`refetch` — e deixe cada consumidor derivar e filtrar seu próprio estado a
+partir dele, sem chamada extra e sem duplicar a lógica de busca. A
+validação cruzada que falta no backend (professor leciona a matéria,
+horário dentro da janela do professor) entra **junto**, na mesma leva de
+trabalho — o contexto no front melhora a UX (impede o erro antes de
+submeter), mas não substitui a validação no servidor.
+
+### 6. Estado de filtro na URL deveria ser um padrão único, tipado
+
+`/agenda` já tem todos os dados necessários pra funcionar via o contexto
+global do item 5 — não *precisa* de querystring pra nada. Mas ela usa
+(`?professorId=`), e hoje faz isso pela metade: só `professorId` lê da URL,
+e só uma vez, no mount (`useState(searchParams.get('professorId') ?? '')`);
+os outros seis filtros da tela (Disciplina, Estágio, Connect, Zona
+Vermelha, Regular, Pré-escolar) são `useState` local puro, nunca
+sincronizados. Um reload perde todos eles, e o valor padrão usado quando
+não há `professorId` na URL é só "o primeiro item da lista bruta" — sem
+nenhum critério, o que já causou a tela abrir vazia (ver
+`qa-fe-06-agenda.md`, achado 1).
+
+**Decisão:** tratar a URL como fonte de verdade de forma consistente em
+todos os filtros de uma tela, não só nalguns — ao dar reload, cada filtro
+recupera o que estiver na URL, ou cai num padrão definido explicitamente
+para aquele filtro (nunca "o que calhar de vir primeiro"). E parsear a URL
+de forma tipada: mesmo sendo tudo string em querystring, as chaves
+esperadas de cada tela devem estar centralizadas num único lugar (um schema
+ou um objeto de chaves), não espalhadas em literais soltos pelo componente.
+Vale como padrão pra qualquer tela futura que sincronize filtro com URL,
+não só pra Agenda.
+
+## O que não é bug
+
+Registrado porque aparece no console e chama atenção:
+
+- **`net::ERR_ABORTED` em toda listagem.** É o `StrictMode` do React 19
+  montando duas vezes em dev; o cleanup do `useEffect` aborta a primeira
+  chamada. `useApiQuery` trata isso corretamente
+  (`if (signal?.aborted) return`) e não há efeito em produção.
+- **`401 GET /api/me` no boot.** É o `AuthProvider` checando a sessão antes
+  do login. Comportamento esperado.
