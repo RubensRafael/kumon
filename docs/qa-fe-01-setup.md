@@ -30,17 +30,7 @@ silêncio, e o comentário no código já antecipa isso.
 
 ## Achados
 
-### 1. Iniciais do avatar saem como "A(" — Médio
-
-"Admin (dev)" vira `A(`. O parser pega a primeira letra de cada palavra sem
-descartar não-letras, e `(dev)` contribui com o parêntese. Aparece nos dois
-avatares (topo e rodapé da sidebar), em toda tela.
-
-Qualquer nome com parêntese, hífen ou sobrenome com preposição ("Ana de
-Souza" → `AD`) cai no mesmo caso. Filtrar por `/\p{L}/u` antes de pegar as
-iniciais resolve.
-
-### 2. Dois `<main>` aninhados — Médio (a11y)
+### 1. Dois `<main>` aninhados — Médio (a11y)
 
 O `SidebarInset` do shadcn renderiza `<main data-slot="sidebar-inset">`, e a
 página de conteúdo renderiza outro `<main class="flex-1 p-6">` dentro dele.
@@ -51,7 +41,10 @@ navegador: o seletor resolve para dois elementos.
 O de dentro deve virar `<div>`, ou o `SidebarInset` deve receber
 `asChild`/`as="div"`.
 
-### 3. Copy do 404 vaza implementação — Médio
+**Decisão:** corrigir usando a prop do componente shadcn (`asChild` ou
+equivalente `as`), não substituir na marra por `<div>` no consumidor.
+
+### 2. Copy do 404 vaza implementação — Médio
 
 A tela `/rota-inexistente` mostra, para o usuário final:
 
@@ -64,7 +57,9 @@ Router) a quem só errou uma URL, e está sem acentos ("Pagina nao
 encontrada", "endereco"). Serve como comentário de código, não como
 mensagem de tela.
 
-### 4. Busca do topo é decorativa, mas parece funcional — Médio (UX)
+**Decisão:** criar uma tela de 404 simples, sem o texto técnico.
+
+### 3. Busca do topo é decorativa, mas parece funcional — Médio (UX)
 
 O `<input placeholder="Buscar aluno...">` da barra superior não tem
 `onChange` — decisão explícita e documentada no `plan-frontend.md`. O
@@ -72,21 +67,29 @@ problema não é a decisão, é que nada na tela a comunica: o campo aceita
 digitação normalmente e simplesmente não faz nada.
 
 Como agora existem duas buscas reais (`/alunos` e `/agenda-geral`), o
-usuário tem todo motivo para esperar que essa também funcione. `disabled`
-com tooltip "em breve", ou removê-lo até a fe-08, evita o suporte.
+usuário tem todo motivo para esperar que essa também funcione.
 
-### 5. Data do cabeçalho capitaliza a preposição — Baixo
+**Decisão:** remover o componente por enquanto; abrir uma issue para
+implementar a busca de verdade depois.
+
+### 4. Data do cabeçalho capitaliza a preposição — Baixo
 
 "Sábado, 05 De Setembro" — o `De` maiúsculo vem de um `capitalize` do CSS
 aplicado à string inteira. Em português só o dia e o mês levam maiúscula
-(quando levam). Capitalizar no formatador, palavra a palavra, em vez de no
-CSS.
+(quando levam).
 
-### 6. Acentuação nas mensagens de erro — Baixo
+**Decisão:** parar de depender do CSS para isso; renderizar já formatado
+com um helper nativo do JS (`Intl.DateTimeFormat`, que tem a opção certa
+para capitalizar só a palavra desejada), não capitalizar a string inteira
+via CSS.
 
-"E-mail ou senha invalidos." (falta o `á`). Mesma família do item 3 —
+### 5. Acentuação nas mensagens de erro — Baixo
+
+"E-mail ou senha invalidos." (falta o `á`). Mesma família do item 2 —
 mensagens de tela herdando a convenção sem-acento dos comentários de código.
-Vale uma varredura nas strings que chegam à UI.
+
+**Decisão:** a string vem do backend — corrigir a acentuação direto lá
+(não é um problema de formatação no front).
 
 ## Diálogo com o doc da PR
 
