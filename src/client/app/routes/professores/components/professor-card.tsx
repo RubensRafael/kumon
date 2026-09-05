@@ -1,5 +1,6 @@
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 
 import type { MateriaOutputType, ProfessorOutputType } from '@shared/dto'
 
@@ -70,9 +71,8 @@ export function ProfessorCard({
         <p className="text-sm text-muted-foreground">
           {professor.horarioInicial}–{professor.horarioFinal}
         </p>
-        {/* Sem link ate a fe-06 (Agenda) existir. */}
-        <Button variant="outline" size="sm" className="w-full" disabled>
-          Agenda
+        <Button variant="outline" size="sm" className="w-full" asChild>
+          <Link to={`/agenda?professorId=${professor.id}`}>Agenda</Link>
         </Button>
       </CardContent>
 

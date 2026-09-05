@@ -10,6 +10,7 @@ const PROFESSOR_PADRAO = {
   horarioFinal: '18:00',
   capacidadePorHorario: 4,
   materiaIds: [] as string[],
+  corAgenda: '#2563eb',
 }
 
 const SNAPSHOT: PainelDadosOutputType = {
@@ -18,8 +19,8 @@ const SNAPSHOT: PainelDadosOutputType = {
     { id: 'p2', nome: 'Professor 2', ...PROFESSOR_PADRAO },
   ],
   alunos: [
-    { id: 'a1', nome: 'Aluno 1', situacao: 'ATIVO', zonaVermelha: false },
-    { id: 'a2', nome: 'Aluno 2', situacao: 'ATIVO', zonaVermelha: false },
+    { id: 'a1', nome: 'Aluno 1', situacao: 'ATIVO', zonaVermelha: false, connect: false },
+    { id: 'a2', nome: 'Aluno 2', situacao: 'ATIVO', zonaVermelha: false, connect: false },
   ],
   materias: [
     { id: 'm1', nome: 'Materia 1', conteudos: [] },
@@ -31,6 +32,7 @@ const SNAPSHOT: PainelDadosOutputType = {
       alunoId: 'a1',
       professorId: 'p1',
       materiaId: 'm1',
+      estagio: null,
       situacao: 'ATIVA',
       tipoAtendimento: 'REGULAR',
       horarios: [{ id: 'h1', diaSemana: 'QUA', horario: '10:00' }],
@@ -40,6 +42,7 @@ const SNAPSHOT: PainelDadosOutputType = {
       alunoId: 'a2',
       professorId: 'p2',
       materiaId: 'm2',
+      estagio: null,
       situacao: 'ATIVA',
       tipoAtendimento: 'REGULAR',
       horarios: [{ id: 'h2', diaSemana: 'SEG', horario: '14:00' }],
@@ -49,6 +52,7 @@ const SNAPSHOT: PainelDadosOutputType = {
       alunoId: 'a1',
       professorId: 'p2',
       materiaId: 'm2',
+      estagio: null,
       situacao: 'ATIVA',
       tipoAtendimento: 'REGULAR',
       horarios: [{ id: 'h3', diaSemana: 'SEG', horario: '09:00' }],

@@ -30,6 +30,9 @@ export const PainelDadosOutput = z.object({
       horarioFinal: HorarioDoDia,
       capacidadePorHorario: z.number().int(),
       materiaIds: z.array(z.uuid()),
+      // Adicionado na fe-06 (frontend) -- a Agenda usa a cor de verdade
+      // escolhida no cadastro do professor, em vez de calcular um hash por id.
+      corAgenda: z.string(),
     }),
   ),
   alunos: z.array(
@@ -38,6 +41,8 @@ export const PainelDadosOutput = z.object({
       nome: z.string(),
       situacao: SituacaoAlunoEnum,
       zonaVermelha: z.boolean(),
+      // Adicionado na fe-06 -- filtro "Connect" da Agenda.
+      connect: z.boolean(),
     }),
   ),
   materias: z.array(
@@ -59,6 +64,8 @@ export const PainelDadosOutput = z.object({
       alunoId: z.uuid(),
       professorId: z.uuid(),
       materiaId: z.uuid(),
+      // Adicionado na fe-06 -- filtro "Estágio" da Agenda.
+      estagio: z.string().nullable(),
       situacao: SituacaoMatriculaEnum,
       tipoAtendimento: TipoAtendimentoEnum,
       horarios: z.array(
