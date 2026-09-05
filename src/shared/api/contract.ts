@@ -6,6 +6,8 @@ import type {
   ConteudoOutputType,
   ConteudoUpdateInputType,
   HealthResponse,
+  HistoricoAcompanhamentoOutputType,
+  HistoricoQueryType,
   HorarioCreateInputType,
   HorarioOutputType,
   HorarioUpdateInputType,
@@ -82,6 +84,7 @@ export const apiEndpoints = {
   buscarRegistro: { method: 'GET', path: '/registros/:id' },
   criarRegistro: { method: 'POST', path: '/registros' },
   atualizarRegistro: { method: 'PUT', path: '/registros/:id' },
+  obterHistoricoAluno: { method: 'GET', path: '/alunos/:alunoId/registros/historico' },
 } as const
 
 export type ApiEndpointName = keyof typeof apiEndpoints
@@ -141,6 +144,7 @@ export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   buscarRegistro: { response: RegistroDetalheOutputType }
   criarRegistro: { body: RegistroInputType; response: RegistroDetalheOutputType }
   atualizarRegistro: { body: RegistroUpdateInputType; response: RegistroDetalheOutputType }
+  obterHistoricoAluno: { query: HistoricoQueryType; response: HistoricoAcompanhamentoOutputType }
 }
 
 /** Tipo de retorno de uma rota: `ApiResponse<'listUsers'>`. */
