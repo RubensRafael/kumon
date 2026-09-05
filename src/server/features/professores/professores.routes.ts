@@ -10,7 +10,7 @@ import {
   ProfessorOutput,
   ProfessorUpdateInputAdmin,
   ProfessorUpdateInputSelf,
-} from './professores.dto'
+} from '../../../shared/dto/professores.dto'
 import * as professoresService from './professores.service'
 
 export const professoresRoutes = new Hono<AppEnv>()

@@ -1,0 +1,56 @@
+import { Plus } from 'lucide-react'
+import { useState } from 'react'
+
+import { Button } from '../../components/ui/button'
+import { useAuth } from '../../hooks/use-auth'
+import { useApiQuery } from '../../hooks/use-api'
+import { ProfessorCard } from './components/professor-card'
+import { ProfessorFormDialog } from './components/professor-form-dialog'
+
+export function ProfessoresPage() {
+  const { isAdmin } = useAuth()
+  const { data: professores, loading, refetch } = useApiQuery('listarProfessores', {})
+  const { data: materias } = useApiQuery('listarMaterias', { query: {} })
+  const [dialogAberto, setDialogAberto] = useState(false)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Professores</h1>
+          <p className="text-sm text-muted-foreground">Equipe da unidade, disponibilidade e capacidade</p>
+        </div>
+        {/* Criar professor é admin-only no backend (requireAdmin) -- não
+            oferecer o botão pra quem só receberia 403. */}
+        {isAdmin ? (
+          <Button onClick={() => setDialogAberto(true)}>
+            <Plus className="size-4" />
+            Novo professor
+          </Button>
+        ) : null}
+      </div>
+
+      {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {professores?.map((professor) => (
+          <ProfessorCard
+            key={professor.id}
+            professor={professor}
+            materias={materias ?? []}
+            onAtualizado={refetch}
+          />
+        ))}
+      </div>
+
+      {isAdmin ? (
+        <ProfessorFormDialog
+          open={dialogAberto}
+          onOpenChange={setDialogAberto}
+          materias={materias ?? []}
+          onSalvo={refetch}
+        />
+      ) : null}
+    </div>
+  )
+}
