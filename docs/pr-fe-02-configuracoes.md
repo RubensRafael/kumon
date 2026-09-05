@@ -38,8 +38,31 @@
   mesma filosofia do backend (soft-delete reversível, sem `DELETE` físico
   em nenhum dos dois); desativar por engano é só ligar de novo.
 
+## Correções de QA (PR #26)
+
+`docs/qa-fe-02-configuracoes.md` encontrou 4 achados; 2 corrigidos aqui,
+2 já resolvidos pelo padrão geral herdado da fe-01:
+
+- **Item inativo idêntico a um ativo — corrigido.** Matéria e conteúdo
+  desativados ganham um badge "Inativa"/"Inativo" (`rounded-full bg-muted`)
+  ao lado do nome, além do `text-muted-foreground` que já existia.
+- **Matéria duplicada aceita em silêncio — não corrigido, por decisão.**
+  `Materia.nome` sem `@unique` deixa criar duas matérias com o mesmo nome;
+  o QA confirmou que o backend não impede isso. Decisão: não vale a pena
+  agora — issue aberta pra quando o app ganhar multi-tenant:
+  [#28](https://github.com/RubensRafael/kumon/issues/28).
+- **Mensagem de validação crua do Zod** — já resolvido globalmente na
+  fe-01 (`zod/locales` + `z.config(ptBR())`); confirmado nesta tela
+  ("Pequeno demais: esperava que o texto tivesse >= 1 caracteres" no lugar
+  do inglês cru).
+- **Erro de escrita sem tratamento** (`materias-tab.tsx`,
+  `conteudos-da-materia.tsx`) — já resolvido globalmente na fe-01
+  (`useApiMutation` dispara `toast.error` sozinho); nenhuma das duas telas
+  precisou de mudança.
+
 ## Pontos para revisão
 
-- Mesma limitação da fe-01 pra testar visualmente num browser real (ver
-  `docs/pr-fe-01-setup.md`) — `npm run typecheck`, `npm test` (109/109) e
-  `npx vite build` passam limpos.
+- Visualmente verificado em browser real (Playwright/Chromium,
+  `LOCAL_DEV_SERVER=true`): criação de matéria, mensagem de validação
+  pt-BR, e o badge "Inativa" ao desativar. `npm run typecheck`, `npm test`
+  (109/109) e `npx vite build` passam limpos.

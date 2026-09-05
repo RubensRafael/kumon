@@ -121,7 +121,14 @@ function MateriaAccordionItem({
     <AccordionItem value={materia.id}>
       <div className="flex items-center gap-3 px-4">
         <AccordionTrigger className={materia.ativo ? 'flex-1' : 'flex-1 text-muted-foreground'}>
-          {materia.nome}
+          <span className="flex items-center gap-2">
+            {materia.nome}
+            {materia.ativo ? null : (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                Inativa
+              </span>
+            )}
+          </span>
         </AccordionTrigger>
         <Switch checked={materia.ativo} onCheckedChange={(ativo) => void aoTogglear(ativo)} />
       </div>
