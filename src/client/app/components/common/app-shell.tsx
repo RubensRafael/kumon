@@ -25,11 +25,7 @@ import {
   SidebarTrigger,
 } from '../ui/sidebar'
 import { useAuth } from '../../hooks/use-auth'
-
-function iniciaisDe(nome: string) {
-  const partes = nome.trim().split(/\s+/)
-  return ((partes[0]?.[0] ?? '') + (partes.length > 1 ? (partes[partes.length - 1]?.[0] ?? '') : '')).toUpperCase()
-}
+import { iniciaisDe } from '../../lib/format'
 
 /**
  * Shell autenticado: sidebar fixa à esquerda (paleta própria, ver
