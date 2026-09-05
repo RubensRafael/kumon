@@ -29,6 +29,7 @@ export const PainelDadosOutput = z.object({
       horarioInicial: HorarioDoDia,
       horarioFinal: HorarioDoDia,
       capacidadePorHorario: z.number().int(),
+      materiaIds: z.array(z.uuid()),
     }),
   ),
   alunos: z.array(

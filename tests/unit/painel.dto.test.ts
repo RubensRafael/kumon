@@ -9,6 +9,7 @@ const PROFESSOR_PADRAO = {
   horarioInicial: '08:00',
   horarioFinal: '18:00',
   capacidadePorHorario: 4,
+  materiaIds: [] as string[],
 }
 
 function dados(overrides: Partial<PainelDadosOutputType> = {}): PainelDadosOutputType {

@@ -27,6 +27,9 @@ interface CriarProfessorOpcoes {
   nome?: string
   horarioInicial?: string
   horarioFinal?: string
+  diasDisponiveis?: ('DOM' | 'SEG' | 'TER' | 'QUA' | 'QUI' | 'SEX' | 'SAB')[]
+  /** Vincula o professor a materia(s) via `ProfessorMateria` -- necessario pra chamar `POST /matriculas` de verdade (o service valida professor x materia). */
+  materiaIds?: string[]
 }
 
 /**
@@ -38,11 +41,14 @@ export async function criarProfessor(opcoes: CriarProfessorOpcoes = {}) {
   return prisma.professor.create({
     data: {
       nome: opcoes.nome ?? 'Professor de Teste',
-      diasDisponiveis: ['SEG', 'QUA', 'SEX'],
+      diasDisponiveis: opcoes.diasDisponiveis ?? ['SEG', 'QUA', 'SEX'],
       horarioInicial: opcoes.horarioInicial ?? '08:00',
       horarioFinal: opcoes.horarioFinal ?? '18:00',
       capacidadePorHorario: 4,
       corAgenda: '#4f46e5',
+      materias: opcoes.materiaIds
+        ? { create: opcoes.materiaIds.map((materiaId) => ({ materiaId })) }
+        : undefined,
     },
   })
 }
