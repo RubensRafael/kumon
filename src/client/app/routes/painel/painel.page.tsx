@@ -3,13 +3,19 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 
 
 import { calcularAgregacoesPainel } from '@shared/dto'
 
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '../../components/ui/chart'
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '../../components/ui/chart'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
-import { useApiQuery } from '../../hooks/use-api-query'
+import { useApiQuery } from '../../hooks/use-api'
 import { MetricCard } from './components/metric-card'
 
 const DIA_LABEL: Record<string, string> = {
-  DOM: 'Dom',
   SEG: 'Seg',
   TER: 'Ter',
   QUA: 'Qua',
@@ -56,7 +62,7 @@ export function PainelPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard titulo="Alunos" valor={agregado.totalAlunosAtivos} legenda="matriculados ativos" />
-        <MetricCard titulo="Matrículas Ativas" valor={agregado.totalMatriculasAtivas} legenda="disciplinas ativas" />
+        <MetricCard titulo="Matrículas Ativas" valor={agregado.totalMatriculasAtivas} legenda="matrículas em curso" />
         <MetricCard titulo="Professores" valor={agregado.totalProfessores} legenda="ativos" />
         <MetricCard titulo="Ocupação" valor={`${agregado.ocupacaoPercentual}%`} legenda="da capacidade semanal" />
       </div>
@@ -77,6 +83,7 @@ export function PainelPage() {
                     <Cell key={item.name} fill={CORES_DONUT[i % CORES_DONUT.length]} />
                   ))}
                 </Pie>
+                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
               </PieChart>
             </ChartContainer>
           </CardContent>
@@ -93,7 +100,7 @@ export function PainelPage() {
               <BarChart data={dadosProfessor}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="professor" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="total" fill="var(--color-total)" radius={4} />
               </BarChart>
@@ -112,7 +119,7 @@ export function PainelPage() {
               <BarChart data={dadosDia}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="dia" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="total" fill="var(--color-total)" radius={4} />
               </BarChart>

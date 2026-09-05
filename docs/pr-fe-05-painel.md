@@ -27,10 +27,35 @@
   já tomada antes de começar a implementação (ver `plan-frontend.md`,
   "Decisões desta rodada"), não uma omissão desta PR especificamente.
 
+## Correções de QA (PR #26)
+
+`docs/qa-fe-05-painel.md` confirmou que os números batem (ocupação
+conferida à mão contra o banco) e encontrou 5 achados de leitura, todos
+corrigidos:
+
+- **Donut sem legenda nem rótulo — corrigido.** `<ChartLegend
+  content={<ChartLegendContent nameKey="name" />} />` dentro do
+  `<PieChart>`, mesmo wrapper que os outros dois gráficos já usam.
+- **Alerta com português quebrado — corrigido.** "Fernanda Dias esta
+  marcado como zona vermelha." virou "Fernanda Dias está na zona
+  vermelha." — formulação neutra, sem depender de concordância de gênero.
+- **Subtítulo "disciplinas ativas" não batia com a métrica — corrigido.**
+  "Matrículas Ativas" agora diz "matrículas em curso".
+- **Coluna de domingo sem uso no gráfico "Aulas por dia da semana" —
+  corrigida.** `DIAS_BANCO` (`painel.dto.ts`) não inclui mais `'DOM'` — o
+  cadastro de professor (fe-03) só oferece Seg–Sáb, então a coluna nunca
+  teria valor. `aulasPorDiaSemana.length` passa de 7 pra 6 (teste unitário
+  atualizado).
+- **Eixo Y com ticks fracionários — corrigido.** `allowDecimals={false}`
+  no `<YAxis>` dos dois gráficos de barra.
+
 ## Pontos para revisão
 
-- Mesma ressalva de verificação visual das PRs anteriores. `npm run
-  typecheck`, `npm test` (109/109) e `npx vite build` passam limpos (o
-  bundle cresce de ~720KB pra ~1.09MB com a entrada do `recharts` — ainda
+- Visualmente verificado em browser real (Playwright/Chromium,
+  `LOCAL_DEV_SERVER=true`), com 2 professores/2 matérias/2 alunos (um em
+  zona vermelha): legenda do donut, mensagem do alerta, subtítulo do card,
+  eixo Seg–Sáb e ticks inteiros — todos conforme o esperado. `npm run
+  typecheck`, `npm test` (114/114) e `npx vite build` passam limpos (o
+  bundle cresce de ~720KB pra ~1.10MB com a entrada do `recharts` — ainda
   sem code-splitting, mesmo aviso de chunk grande que já aparecia antes,
   agora maior).
