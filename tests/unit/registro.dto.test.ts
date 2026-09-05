@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { isCompleto, isFalta } from '../../src/shared/dto/registro.dto'
+import {
+  VIRTUAL_REGISTRO_ID,
+  contarNotasPreenchidas,
+  isCompleto,
+  isFalta,
+  statusRegistro,
+} from '../../src/shared/dto/registro.dto'
 
 function registro(overrides: Partial<Parameters<typeof isCompleto>[0]> = {}) {
   return {
@@ -70,5 +76,52 @@ describe('isCompleto', () => {
         }),
       ),
     ).toBe(true)
+  })
+})
+
+describe('contarNotasPreenchidas', () => {
+  it('0 sem nenhuma nota', () => {
+    expect(contarNotasPreenchidas(registro())).toBe(0)
+  })
+
+  it('conta só as 6 notas, ignorando chegada', () => {
+    expect(
+      contarNotasPreenchidas(registro({ chegada: 'PRESENTE', boletim: 'PEGOU', foco: 'BOM' })),
+    ).toBe(2)
+  })
+
+  it('6 com todas preenchidas', () => {
+    expect(
+      contarNotasPreenchidas(
+        registro({
+          boletim: 'PEGOU',
+          atividadeCasa: 'FEZ',
+          foco: 'BOM',
+          autonomia: 'BOA',
+          comportamento: 'ADEQUADO',
+          desempenho: 'BOM',
+        }),
+      ),
+    ).toBe(6)
+  })
+})
+
+describe('statusRegistro', () => {
+  it('NAO_INICIADO quando o id e o sentinela virtual', () => {
+    expect(statusRegistro({ id: VIRTUAL_REGISTRO_ID, ...registro() })).toBe('NAO_INICIADO')
+  })
+
+  it('PENDENTE quando existe linha (id real) mas nenhuma nota, mesmo com chegada marcada', () => {
+    expect(statusRegistro({ id: 'r1', ...registro({ chegada: 'PRESENTE' }) })).toBe('PENDENTE')
+  })
+
+  it('EM_ANDAMENTO com pelo menos 1 mas nao todas as notas', () => {
+    expect(statusRegistro({ id: 'r1', ...registro({ chegada: 'PRESENTE', boletim: 'PEGOU' }) })).toBe(
+      'EM_ANDAMENTO',
+    )
+  })
+
+  it('CONCLUIDO quando isCompleto (todas as notas, ou FALTOU)', () => {
+    expect(statusRegistro({ id: 'r1', ...registro({ chegada: 'FALTOU' }) })).toBe('CONCLUIDO')
   })
 })

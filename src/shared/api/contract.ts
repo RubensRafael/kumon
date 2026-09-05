@@ -18,10 +18,15 @@ import type {
   MatriculaCreateInputType,
   MatriculaOutputType,
   MatriculaUpdateInputType,
+  ListarRegistrosQueryType,
   PainelDadosOutputType,
   ProfessorCreateInputType,
   ProfessorOutputType,
   ProfessorUpdateInputAdminType,
+  RegistroDetalheOutputType,
+  RegistroInputType,
+  RegistroResumoOutputType,
+  RegistroUpdateInputType,
   ResetarSenhaInputType,
   SolicitarResetInputType,
   UsuarioCreateInputType,
@@ -73,6 +78,10 @@ export const apiEndpoints = {
   listarHorariosDaMatricula: { method: 'GET', path: '/matriculas/:matriculaId/horarios' },
   criarHorario: { method: 'POST', path: '/matriculas/:matriculaId/horarios' },
   atualizarHorario: { method: 'PUT', path: '/horarios/:id' },
+  listarRegistrosDoDia: { method: 'GET', path: '/registros' },
+  buscarRegistro: { method: 'GET', path: '/registros/:id' },
+  criarRegistro: { method: 'POST', path: '/registros' },
+  atualizarRegistro: { method: 'PUT', path: '/registros/:id' },
 } as const
 
 export type ApiEndpointName = keyof typeof apiEndpoints
@@ -128,6 +137,10 @@ export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   listarHorariosDaMatricula: { response: HorarioOutputType[] }
   criarHorario: { body: HorarioCreateInputType; response: HorarioOutputType }
   atualizarHorario: { body: HorarioUpdateInputType; response: HorarioOutputType }
+  listarRegistrosDoDia: { query: ListarRegistrosQueryType; response: RegistroResumoOutputType[] }
+  buscarRegistro: { response: RegistroDetalheOutputType }
+  criarRegistro: { body: RegistroInputType; response: RegistroDetalheOutputType }
+  atualizarRegistro: { body: RegistroUpdateInputType; response: RegistroDetalheOutputType }
 }
 
 /** Tipo de retorno de uma rota: `ApiResponse<'listUsers'>`. */

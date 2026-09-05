@@ -1,7 +1,8 @@
-import { Calendar, LayoutDashboard, GraduationCap, LayoutGrid, Settings, Users } from 'lucide-react'
+import { Calendar, ClipboardList, LayoutDashboard, GraduationCap, LayoutGrid, Settings, Users } from 'lucide-react'
 import type { ComponentType, ReactElement } from 'react'
 import { Navigate } from 'react-router'
 
+import { AcompanhamentoPage } from '../app/routes/acompanhamento/acompanhamento.page'
 import { AgendaGeralPage } from '../app/routes/agenda-geral/agenda-geral.page'
 import { AgendaPage } from '../app/routes/agenda/agenda.page'
 import { AlunosPage } from '../app/routes/alunos/alunos.page'
@@ -35,6 +36,7 @@ export const appRoutes: AppRoute[] = [
   { path: '/agenda', element: <AgendaPage />, label: 'Agenda', icon: Calendar },
   { path: '/professores', element: <ProfessoresPage />, label: 'Professores', icon: GraduationCap },
   { path: '/alunos', element: <AlunosPage />, label: 'Alunos', icon: Users },
+  { path: '/acompanhamento', element: <AcompanhamentoPage />, label: 'Acompanhamento', icon: ClipboardList },
   { path: '/configuracoes', element: <ConfiguracoesPage />, label: 'Configurações', icon: Settings, adminOnly: true },
   { path: '*', element: <NotFoundPage /> },
 ]

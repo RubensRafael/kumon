@@ -8,7 +8,7 @@ import type {
   RegistroInputType,
   RegistroResumoOutputType,
   RegistroUpdateInputType,
-} from './registros.dto'
+} from '../../../shared/dto/registros.dto'
 
 const INCLUDE_DETALHE = {
   horario: true,
