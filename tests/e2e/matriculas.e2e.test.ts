@@ -69,8 +69,8 @@ describe('matriculas', () => {
     it('cria matricula sem herdar horarios de nenhuma outra', async () => {
       const cookie = await cookieAdmin()
       const aluno = await criarAluno({ nome: 'Aluno' })
-      const professor = await criarProfessor()
       const materia = await criarMateria({ nome: 'Materia' })
+      const professor = await criarProfessor({ materiaIds: [materia.id] })
 
       const response = await app.request(
         `/api/alunos/${aluno.id}/matriculas`,
@@ -93,8 +93,8 @@ describe('matriculas', () => {
     it('rejeita segunda matricula ativa do mesmo aluno na mesma materia -> 400', async () => {
       const cookie = await cookieAdmin()
       const aluno = await criarAluno({ nome: 'Aluno' })
-      const professor = await criarProfessor()
       const materia = await criarMateria({ nome: 'Materia' })
+      const professor = await criarProfessor({ materiaIds: [materia.id] })
       await criarMatricula({ alunoId: aluno.id, professorId: professor.id, materiaId: materia.id })
 
       const response = await app.request(
@@ -112,9 +112,9 @@ describe('matriculas', () => {
     it('permite nova matricula ativa depois que a antiga foi encerrada (fluxo de troca)', async () => {
       const cookie = await cookieAdmin()
       const aluno = await criarAluno({ nome: 'Aluno' })
-      const professorAntigo = await criarProfessor()
-      const professorNovo = await criarProfessor()
       const materia = await criarMateria({ nome: 'Materia' })
+      const professorAntigo = await criarProfessor({ materiaIds: [materia.id] })
+      const professorNovo = await criarProfessor({ materiaIds: [materia.id] })
       const antiga = await criarMatricula({ alunoId: aluno.id, professorId: professorAntigo.id, materiaId: materia.id })
 
       const encerrar = await app.request(
@@ -152,6 +152,31 @@ describe('matriculas', () => {
         testEnv,
       )
       expect(response.status).toBe(400)
+    })
+
+    it('rejeita professor que nao leciona a materia da matricula -> 400', async () => {
+      const cookie = await cookieAdmin()
+      const aluno = await criarAluno({ nome: 'Aluno' })
+      const materiaQueLeciona = await criarMateria({ nome: 'Materia que leciona' })
+      const materiaQueNaoLeciona = await criarMateria({ nome: 'Materia que nao leciona' })
+      const professor = await criarProfessor({ materiaIds: [materiaQueLeciona.id] })
+
+      const response = await app.request(
+        `/api/alunos/${aluno.id}/matriculas`,
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, ...authHeader(cookie) },
+          body: JSON.stringify({
+            professorId: professor.id,
+            materiaId: materiaQueNaoLeciona.id,
+            tipoAtendimento: 'REGULAR',
+          }),
+        },
+        testEnv,
+      )
+      expect(response.status).toBe(400)
+      const body = (await response.json()) as { message: string }
+      expect(body.message).toContain('nao leciona')
     })
 
     it('professor autenticado nao pode criar matricula -> 403', async () => {

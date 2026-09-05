@@ -2,8 +2,7 @@ import { useState } from 'react'
 
 import type { MateriaOutputType, MatriculaOutputType, ProfessorOutputType } from '@shared/dto'
 
-import { useApiMutation } from '../../../hooks/use-api-mutation'
-import { useApiQuery } from '../../../hooks/use-api-query'
+import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
 import { Badge } from '../../ui/badge'
 import { Card, CardContent, CardHeader } from '../../ui/card'
 import { Label } from '../../ui/label'

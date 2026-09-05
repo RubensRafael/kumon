@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import type { MateriaOutputType, ProfessorOutputType } from '@shared/dto'
 
-import { useApiMutation } from '../../../hooks/use-api-mutation'
+import { useApiMutation } from '../../../hooks/use-api'
 import { Button } from '../../ui/button'
 import { DIAS_SEMANA } from '../dias-semana'
 import { MatriculaDraftCard, type MatriculaDraft } from './matricula-draft-card'

@@ -2,6 +2,7 @@ import { HTTPException } from 'hono/http-exception'
 
 import type { MatriculaHorario, PrismaClient } from '../../db/generated/client'
 import type { HorarioCreateInputType, HorarioOutputType, HorarioUpdateInputType } from '../../../shared/dto/horarios.dto'
+import { horarioDentroDaJanela } from '../../lib/horario'
 
 // Nenhuma query de horario usa include/select -- a linha sempre vem
 // completa, entao o model MatriculaHorario exportado pelo client ja e o
@@ -67,9 +68,33 @@ export async function criarHorario(
   matriculaId: string,
   input: HorarioCreateInputType,
 ): Promise<HorarioOutputType> {
-  const matricula = await prisma.matricula.findUnique({ where: { id: matriculaId }, select: { id: true } })
+  const matricula = await prisma.matricula.findUnique({
+    where: { id: matriculaId },
+    select: {
+      id: true,
+      professor: { select: { diasDisponiveis: true, horarioInicial: true, horarioFinal: true } },
+    },
+  })
   if (!matricula) {
     throw new HTTPException(404, { message: 'Matricula nao encontrada.' })
+  }
+
+  const professorAtendeNesseDia = matricula.professor.diasDisponiveis.includes(input.diaSemana)
+  if (!professorAtendeNesseDia) {
+    throw new HTTPException(400, {
+      message: 'O professor desta matricula nao atende neste dia da semana.',
+    })
+  }
+  if (
+    !horarioDentroDaJanela(
+      input.horario,
+      matricula.professor.horarioInicial,
+      matricula.professor.horarioFinal,
+    )
+  ) {
+    throw new HTTPException(400, {
+      message: 'O horario esta fora da janela de atendimento do professor desta matricula.',
+    })
   }
 
   const existente = await prisma.matriculaHorario.findFirst({

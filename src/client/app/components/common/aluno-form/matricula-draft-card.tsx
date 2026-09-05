@@ -35,6 +35,20 @@ export function MatriculaDraftCard({
   onRemover: () => void
 }) {
   const materiaNome = materias.find((m) => m.id === draft.materiaId)?.nome ?? 'Nova matrícula'
+  // So oferecer professor que leciona a materia escolhida -- sem isso, o
+  // form deixa criar uma matricula de Matematica com um professor que so
+  // leciona Portugues (o backend recusa, mas so depois do submit).
+  const professoresDaMateria = draft.materiaId
+    ? professores.filter((professor) => professor.materiaIds.includes(draft.materiaId))
+    : professores
+  const professorSelecionado = professores.find((professor) => professor.id === draft.professorId)
+
+  function aoTrocarMateria(materiaId: string) {
+    const aindaLeciona = professores
+      .find((professor) => professor.id === draft.professorId)
+      ?.materiaIds.includes(materiaId)
+    onChange({ ...draft, materiaId, professorId: aindaLeciona ? draft.professorId : '' })
+  }
 
   return (
     <Card>
@@ -48,7 +62,7 @@ export function MatriculaDraftCard({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Disciplina</Label>
-            <Select value={draft.materiaId} onValueChange={(materiaId) => onChange({ ...draft, materiaId })}>
+            <Select value={draft.materiaId} onValueChange={aoTrocarMateria}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -68,10 +82,10 @@ export function MatriculaDraftCard({
               onValueChange={(professorId) => onChange({ ...draft, professorId })}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione" />
+                <SelectValue placeholder={draft.materiaId ? 'Selecione' : 'Escolha a disciplina primeiro'} />
               </SelectTrigger>
               <SelectContent>
-                {professores.map((professor) => (
+                {professoresDaMateria.map((professor) => (
                   <SelectItem key={professor.id} value={professor.id}>
                     {professor.nome}
                   </SelectItem>
@@ -109,6 +123,7 @@ export function MatriculaDraftCard({
           <Label>Programação semanal</Label>
           <ProgramacaoSemanalGrid
             valores={draft.programacao}
+            professor={professorSelecionado}
             onChange={(dia, valor) =>
               onChange({ ...draft, programacao: { ...draft.programacao, [dia]: valor } })
             }

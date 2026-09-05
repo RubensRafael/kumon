@@ -13,8 +13,7 @@ import {
 } from '@shared/dto'
 
 import { paraInputDate } from '../../../lib/format-date'
-import { useApiMutation } from '../../../hooks/use-api-mutation'
-import { useApiQuery } from '../../../hooks/use-api-query'
+import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
 import { Button } from '../../ui/button'
 import { DialogFooter } from '../../ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../ui/form'

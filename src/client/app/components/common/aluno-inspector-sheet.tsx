@@ -1,6 +1,6 @@
 import type { MateriaOutputType, ProfessorOutputType } from '@shared/dto'
 
-import { useApiQuery } from '../../hooks/use-api-query'
+import { useApiQuery } from '../../hooks/use-api'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet'
 import { AlunoForm } from './aluno-form/aluno-form'
 
