@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 py-1.5">
+          <div className="flex items-center gap-2 px-6 py-7">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-primary">
               <BookOpen className="size-4" />
             </span>
@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         className="absolute inset-y-1 left-0 w-1 rounded-r bg-orange-600"
                       />
                     ) : null}
-                    <SidebarMenuButton asChild isActive={ativo}>
+                    <SidebarMenuButton asChild isActive={ativo} className="h-auto rounded-xl px-3 py-2.5">
                       <NavLink to={item.path}>
                         {Icon ? <Icon className="size-4" /> : null}
                         <span>{item.label}</span>
