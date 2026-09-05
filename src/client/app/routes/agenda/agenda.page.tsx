@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Toggle } from '../../components/ui/toggle'
 import { useApiQuery } from '../../hooks/use-api-query'
+import { comFiltroAtualizado, lerFiltrosDaUrl } from './agenda-filtros'
 
 function segundaDaSemanaDe(data: Date): Date {
   const d = new Date(data)
@@ -26,22 +27,27 @@ function formatarDataCurta(data: Date): string {
 }
 
 export function AgendaPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: painel, loading } = useApiQuery('obterPainel', {})
   const { data: professores } = useApiQuery('listarProfessores', {})
   const { data: materias } = useApiQuery('listarMaterias', { query: {} })
 
-  const [professorId, setProfessorId] = useState(searchParams.get('professorId') ?? '')
   const [semanaInicio, setSemanaInicio] = useState(() => segundaDaSemanaDe(new Date()))
-  const [materiaId, setMateriaId] = useState<string>('')
-  const [estagio, setEstagio] = useState<string>('')
-  const [connect, setConnect] = useState(false)
-  const [zonaVermelha, setZonaVermelha] = useState(false)
-  const [regular, setRegular] = useState(false)
-  const [preEscolar, setPreEscolar] = useState(false)
   const [alunoSelecionado, setAlunoSelecionado] = useState<string | null>(null)
 
-  const professorAtualId = professorId || painel?.professores[0]?.id || ''
+  const filtros = lerFiltrosDaUrl(searchParams)
+  const { materiaId, estagio, connect, zonaVermelha, regular, preEscolar } = filtros
+
+  function atualizarFiltro(chave: Parameters<typeof comFiltroAtualizado>[1], valor: string | boolean) {
+    setSearchParams(comFiltroAtualizado(searchParams, chave, valor), { replace: true })
+  }
+
+  // Padrao quando a URL nao especifica professor: o primeiro em ordem
+  // alfabetica (mesmo criterio que a Agenda Geral ja usa) -- nunca "o que
+  // calhar de vir primeiro" na resposta bruta da API, que ja causou a tela
+  // abrir vazia num professor com horario invalido.
+  const professoresOrdenados = [...(painel?.professores ?? [])].sort((a, b) => a.nome.localeCompare(b.nome))
+  const professorAtualId = filtros.professorId || professoresOrdenados[0]?.id || ''
 
   const slotsDoProfessor = useMemo(() => {
     if (!painel || !professorAtualId) return []
@@ -86,7 +92,7 @@ export function AgendaPage() {
       key: dia.valor,
       header: (
         <div>
-          <p className="font-semibold">{dia.label === 'Sáb' ? 'Sábado' : dia.label}</p>
+          <p className="font-semibold">{dia.label}</p>
           <p className="text-xs text-muted-foreground">{formatarDataCurta(data)}</p>
         </div>
       ),
@@ -105,12 +111,15 @@ export function AgendaPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={professorAtualId} onValueChange={setProfessorId}>
+        <Select
+          value={professorAtualId}
+          onValueChange={(v) => atualizarFiltro('professorId', v)}
+        >
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {painel.professores.map((p) => (
+            {professoresOrdenados.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.nome}
               </SelectItem>
@@ -136,7 +145,10 @@ export function AgendaPage() {
           <ChevronRight className="size-4" />
         </Button>
 
-        <Select value={materiaId || 'todas'} onValueChange={(v) => setMateriaId(v === 'todas' ? '' : v)}>
+        <Select
+          value={materiaId || 'todas'}
+          onValueChange={(v) => atualizarFiltro('materiaId', v === 'todas' ? '' : v)}
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Disciplina" />
           </SelectTrigger>
@@ -150,7 +162,10 @@ export function AgendaPage() {
           </SelectContent>
         </Select>
 
-        <Select value={estagio || 'todos'} onValueChange={(v) => setEstagio(v === 'todos' ? '' : v)}>
+        <Select
+          value={estagio || 'todos'}
+          onValueChange={(v) => atualizarFiltro('estagio', v === 'todos' ? '' : v)}
+        >
           <SelectTrigger className="w-32">
             <SelectValue placeholder="Estágio" />
           </SelectTrigger>
@@ -164,26 +179,40 @@ export function AgendaPage() {
           </SelectContent>
         </Select>
 
-        <Toggle pressed={connect} onPressedChange={setConnect} variant="outline">
+        <Toggle pressed={connect} onPressedChange={(v) => atualizarFiltro('connect', v)} variant="outline">
           Connect
         </Toggle>
-        <Toggle pressed={zonaVermelha} onPressedChange={setZonaVermelha} variant="outline">
+        <Toggle
+          pressed={zonaVermelha}
+          onPressedChange={(v) => atualizarFiltro('zonaVermelha', v)}
+          variant="outline"
+        >
           Zona Vermelha
         </Toggle>
-        <Toggle pressed={regular} onPressedChange={setRegular} variant="outline">
+        <Toggle pressed={regular} onPressedChange={(v) => atualizarFiltro('regular', v)} variant="outline">
           Regular
         </Toggle>
-        <Toggle pressed={preEscolar} onPressedChange={setPreEscolar} variant="outline">
+        <Toggle
+          pressed={preEscolar}
+          onPressedChange={(v) => atualizarFiltro('preEscolar', v)}
+          variant="outline"
+        >
           Pré-escolar
         </Toggle>
       </div>
 
-      <ScheduleGrid
-        colunas={colunas}
-        horarios={horarios}
-        slotsDaCelula={slotsDaCelula}
-        onSlotClick={(slot) => setAlunoSelecionado(slot.alunoId)}
-      />
+      {horarios.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Este professor não tem janela de atendimento configurada.
+        </p>
+      ) : (
+        <ScheduleGrid
+          colunas={colunas}
+          horarios={horarios}
+          slotsDaCelula={slotsDaCelula}
+          onSlotClick={(slot) => setAlunoSelecionado(slot.alunoId)}
+        />
+      )}
 
       <AlunoInspectorSheet
         open={Boolean(alunoSelecionado)}
