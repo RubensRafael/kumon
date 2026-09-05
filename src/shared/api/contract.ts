@@ -73,6 +73,7 @@ export const apiEndpoints = {
   listarHorariosDaMatricula: { method: 'GET', path: '/matriculas/:matriculaId/horarios' },
   criarHorario: { method: 'POST', path: '/matriculas/:matriculaId/horarios' },
   atualizarHorario: { method: 'PUT', path: '/horarios/:id' },
+  obterPainel: { method: 'GET', path: '/painel' },
 } as const
 
 export type ApiEndpointName = keyof typeof apiEndpoints
@@ -128,6 +129,7 @@ export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   listarHorariosDaMatricula: { response: HorarioOutputType[] }
   criarHorario: { body: HorarioCreateInputType; response: HorarioOutputType }
   atualizarHorario: { body: HorarioUpdateInputType; response: HorarioOutputType }
+  obterPainel: { response: PainelDadosOutputType }
 }
 
 /** Tipo de retorno de uma rota: `ApiResponse<'listUsers'>`. */

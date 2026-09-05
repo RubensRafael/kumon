@@ -123,6 +123,7 @@ export interface PainelAgregacoes {
   totalProfessores: number
   ocupacaoPercentual: number
   matriculasPorMateria: { materiaId: string; materiaNome: string; total: number }[]
+  matriculasPorProfessor: { professorId: string; professorNome: string; total: number }[]
   aulasPorDiaSemana: { diaSemana: string; total: number }[]
   alertas: { tipo: string; alunoId: string; mensagem: string }[]
 }
@@ -179,6 +180,17 @@ export function calcularAgregacoesPainel(
     total,
   }))
 
+  const nomeDoProfessor = new Map(dados.professores.map((professor) => [professor.id, professor.nome]))
+  const porProfessor = new Map<string, number>()
+  for (const matricula of matriculasAtivas) {
+    porProfessor.set(matricula.professorId, (porProfessor.get(matricula.professorId) ?? 0) + 1)
+  }
+  const matriculasPorProfessor = [...porProfessor.entries()].map(([professorId, total]) => ({
+    professorId,
+    professorNome: nomeDoProfessor.get(professorId) ?? '',
+    total,
+  }))
+
   const porDia = new Map<string, number>()
   for (const horario of horariosEscopados) {
     porDia.set(horario.diaSemana, (porDia.get(horario.diaSemana) ?? 0) + 1)
@@ -200,6 +212,7 @@ export function calcularAgregacoesPainel(
     totalProfessores: dados.professores.length,
     ocupacaoPercentual,
     matriculasPorMateria,
+    matriculasPorProfessor,
     aulasPorDiaSemana,
     alertas,
   }
