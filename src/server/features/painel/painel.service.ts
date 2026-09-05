@@ -21,10 +21,11 @@ export async function obterDadosPainel(prisma: PrismaClient): Promise<PainelDado
         horarioFinal: true,
         capacidadePorHorario: true,
         materias: { select: { materiaId: true } },
+        corAgenda: true,
       },
     }),
     prisma.aluno.findMany({
-      select: { id: true, nome: true, situacao: true, zonaVermelha: true },
+      select: { id: true, nome: true, situacao: true, zonaVermelha: true, connect: true },
     }),
     prisma.materia.findMany({
       select: {

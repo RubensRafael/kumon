@@ -1,5 +1,6 @@
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router'
 
 import type { MateriaOutputType, ProfessorOutputType } from '@shared/dto'
 
@@ -75,9 +76,8 @@ export function ProfessorCard({
       </p>
 
       <div className="mt-4 flex gap-2">
-        {/* Sem link ate a fe-06 (Agenda) existir. */}
-        <Button variant="outline" size="sm" className="flex-1 rounded-xl" disabled>
-          Agenda
+        <Button variant="outline" size="sm" className="flex-1 rounded-xl" asChild>
+          <Link to={`/agenda?professorId=${professor.id}`}>Agenda</Link>
         </Button>
         {/* Editar o cadastro de outro professor sem ser admin é uma escrita
             que o backend (`restrictProfessorSelf`) sempre recusa -- não
