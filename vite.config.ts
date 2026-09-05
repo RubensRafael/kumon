@@ -20,6 +20,30 @@ const resolvePath = (relative: string) => fileURLToPath(new URL(relative, import
 const API_PREFIX = '/api'
 
 /**
+ * `npm run dev` normalmente sobe um workerd de verdade (Miniflare) via
+ * `cloudflareAdapter`, onde `navigator.userAgent === 'Cloudflare-Workers'`
+ * forca `isCloudflareWorkers()` (`src/server/db/client.ts`) a escolher o
+ * adapter do Neon — inalcancavel sem uma conta Neon, mesmo com
+ * `BACKEND_DATABASE_URL` apontando pro Postgres local.
+ *
+ * Com `LOCAL_DEV_SERVER=true` no `.env`, o dev server roda em Node puro (sem
+ * adapter): `isCloudflareWorkers()` retorna false naturalmente, o Prisma usa
+ * `PrismaPg` contra o Postgres local, e `c.env` precisa vir de algum lugar —
+ * daqui, das mesmas variaveis do `.env` (sem workerd, nao ha bindings do
+ * `wrangler.jsonc`/`.dev.vars` para preencher `c.env` sozinho).
+ *
+ * Le com `loadEnv`, nao `process.env` puro, pra reaproveitar o `.env` que
+ * cada um ja mantem localmente — sem arquivo de config duplicado nem comando
+ * novo. Precisa acontecer aqui, na montagem dos `plugins` (Node normal, antes
+ * do Worker existir): dentro do workerd, sockets TCP crus sao bloqueados pelo
+ * proprio runtime, entao uma env lida so dentro do `isCloudflareWorkers()`
+ * trocaria o driver do Prisma sem trocar o runtime, e a chamada quebraria do
+ * mesmo jeito, com outro erro.
+ */
+const localEnv = loadEnv('development', process.cwd(), '')
+const useLocalDevServer = localEnv.LOCAL_DEV_SERVER === 'true'
+
+/**
  * Em dev o Vite e o unico servidor: ele entrega o `index.html`, os modulos do
  * React e o HMR, e delega ao Hono somente as requisicoes de `/api/*`.
  *
@@ -71,8 +95,11 @@ export default defineConfig({
     devServer({
       entry: './src/server.tsx',
       // Roda o Worker com os bindings declarados no wrangler.jsonc e as
-      // variaveis do `.dev.vars` disponiveis em `c.env`.
-      adapter: cloudflareAdapter,
+      // variaveis do `.dev.vars` disponiveis em `c.env` — exceto com
+      // `LOCAL_DEV_SERVER=true`, onde roda em Node puro e `c.env` vem do
+      // `.env` (ver comentario de `useLocalDevServer` acima).
+      adapter: useLocalDevServer ? undefined : cloudflareAdapter,
+      env: useLocalDevServer ? localEnv : undefined,
       exclude: HONO_EXCLUDE,
       // O Hono so responde JSON aqui; nao ha HTML para receber o script de HMR.
       injectClientScript: false,

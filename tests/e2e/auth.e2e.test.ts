@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { LoginOutputType, UsuarioOutputType } from '../../src/server/features/auth/auth.dto'
+import type { LoginOutputType, UsuarioOutputType } from '../../src/shared/dto/auth.dto'
 import { criarProfessor, criarUsuarioAdmin, criarUsuarioProfessor } from '../helpers/factories'
 import { app, prisma, resetDb, testEnv } from '../helpers/setup'
 

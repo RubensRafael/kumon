@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { PapelEnum } from '../../../shared/dto/enums'
+import { PapelEnum } from './enums'
 
 export const LoginInput = z.object({
   email: z.email(),

@@ -1,4 +1,12 @@
-import type { HealthResponse } from '../dto'
+import type {
+  HealthResponse,
+  LoginInputType,
+  LoginOutputType,
+  PainelDadosOutputType,
+  ResetarSenhaInputType,
+  SolicitarResetInputType,
+  UsuarioOutputType,
+} from '../dto'
 
 /**
  * Contrato da API — a fronteira entre o Worker e a SPA.
@@ -15,6 +23,12 @@ import type { HealthResponse } from '../dto'
  */
 export const apiEndpoints = {
   health: { method: 'GET', path: '/health' },
+  login: { method: 'POST', path: '/auth/login' },
+  logout: { method: 'POST', path: '/auth/logout' },
+  me: { method: 'GET', path: '/me' },
+  solicitarReset: { method: 'POST', path: '/auth/solicitar-reset' },
+  resetarSenha: { method: 'POST', path: '/auth/resetar-senha' },
+  obterPainel: { method: 'GET', path: '/painel' },
 } as const
 
 export type ApiEndpointName = keyof typeof apiEndpoints
@@ -27,6 +41,12 @@ interface EndpointShape {
 
 export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   health: { response: HealthResponse }
+  login: { body: LoginInputType; response: LoginOutputType }
+  logout: { response: void }
+  me: { response: UsuarioOutputType }
+  solicitarReset: { body: SolicitarResetInputType; response: void }
+  resetarSenha: { body: ResetarSenhaInputType; response: void }
+  obterPainel: { response: PainelDadosOutputType }
 }
 
 /** Tipo de retorno de uma rota: `ApiResponse<'listUsers'>`. */

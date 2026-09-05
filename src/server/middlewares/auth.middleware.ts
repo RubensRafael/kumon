@@ -1,4 +1,4 @@
-import { getCookie } from 'hono/cookie'
+import { deleteCookie, getCookie } from 'hono/cookie'
 import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 import { verify } from 'hono/jwt'
@@ -32,6 +32,13 @@ const jwtPayloadSchema = z.object({
  * continuaria validando por até 7 dias (a validade dele). `professorId`
  * continua vindo do token: não existe endpoint que altere esse vínculo após
  * a criação, então não há valor em rebuscá-lo aqui.
+ *
+ * Todo 401 daqui (token presente, mas inválido/expirado/de usuário
+ * desativado) também limpa o cookie -- assim o browser para de reenviar um
+ * token morto em toda request seguinte. Não se aplica ao caso de token
+ * ausente (nada a limpar), nem aos 403 de autorização de
+ * `require-admin.middleware.ts`/`restrict-professor-self.middleware.ts`, que
+ * são sessão válida sem permissão, não sessão morta.
  */
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   const token = getCookie(c, TOKEN_COOKIE_NAME)
@@ -44,11 +51,13 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   try {
     payload = await verify(token, c.get('env').BACKEND_JWT_SECRET, 'HS256')
   } catch {
+    deleteCookie(c, TOKEN_COOKIE_NAME, { path: '/' })
     throw new HTTPException(401, { message: 'Token invalido ou expirado.' })
   }
 
   const parsed = jwtPayloadSchema.safeParse(payload)
   if (!parsed.success) {
+    deleteCookie(c, TOKEN_COOKIE_NAME, { path: '/' })
     throw new HTTPException(401, { message: 'Token invalido ou expirado.' })
   }
 
@@ -58,6 +67,7 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   })
 
   if (!usuario || !usuario.ativo) {
+    deleteCookie(c, TOKEN_COOKIE_NAME, { path: '/' })
     throw new HTTPException(401, { message: 'Token invalido ou expirado.' })
   }
 

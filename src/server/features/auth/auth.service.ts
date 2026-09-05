@@ -12,7 +12,7 @@ import type {
   UsuarioCreateInputType,
   UsuarioOutputType,
   UsuarioUpdateInputType,
-} from './auth.dto'
+} from '../../../shared/dto/auth.dto'
 
 /** Validade do JWT de sessao — tambem o `maxAge` do cookie que o carrega. */
 export const SETE_DIAS_EM_SEGUNDOS = 7 * 24 * 60 * 60
@@ -84,7 +84,7 @@ async function gerarJwt(
  * descobrir quais e-mails tem conta (mesma preocupacao do
  * `POST /auth/solicitar-reset`, que sempre responde 204).
  */
-const CREDENCIAIS_INVALIDAS = 'E-mail ou senha invalidos.'
+const CREDENCIAIS_INVALIDAS = 'E-mail ou senha inválidos.'
 
 export async function autenticar(
   prisma: PrismaClient,
