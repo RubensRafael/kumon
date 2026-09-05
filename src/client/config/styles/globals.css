@@ -121,4 +121,17 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+
+  /* O Preflight do Tailwind v4 removeu a cor de borda padrao (v3 usava
+     gray-200) -- uma classe `border`/`border-b`/etc sem cor explicita
+     (ex.: `card.tsx`, `dialog.tsx`, header do app-shell) agora renderiza em
+     `currentColor`, quase preto. Restaura o padrao pro token do projeto (ver
+     guia oficial de upgrade do v4, secao "Border color"). */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border, currentColor);
+  }
 }
