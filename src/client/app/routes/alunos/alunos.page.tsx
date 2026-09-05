@@ -30,7 +30,11 @@ export function AlunosPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Alunos</h1>
           <p className="text-sm text-muted-foreground">
-            {alunos ? `${alunos.length} aluno(s)` : 'Carregando...'}
+            {alunos
+              ? busca.trim()
+                ? `${alunosFiltrados.length} de ${alunos.length} aluno(s)`
+                : `${alunos.length} aluno(s)`
+              : 'Carregando...'}
           </p>
         </div>
         <Button onClick={() => setDialogAberto(true)}>
@@ -47,6 +51,12 @@ export function AlunosPage() {
       />
 
       {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+
+      {alunos && alunosFiltrados.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {busca.trim() ? `Nenhum aluno encontrado para "${busca.trim()}".` : 'Nenhum aluno cadastrado ainda.'}
+        </p>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {alunosFiltrados.map((aluno) => (

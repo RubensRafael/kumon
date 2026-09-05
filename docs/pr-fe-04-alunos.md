@@ -71,10 +71,68 @@
   `react-hook-form` 7.87 já suportam pra esse caso exato (schema com
   transformação/coerção/default), em vez de duplicar o schema à mão.
 
+## Correções de QA (PR #26)
+
+`docs/qa-fe-04-alunos.md` encontrou 6 achados. Os dois "Alto" eram o mesmo
+problema de integridade de dados, na origem — a matrícula é o único lugar
+onde aluno × matéria × professor × horário se cruzam, e nada impedia uma
+combinação inválida:
+
+- **Picker de professor não filtra pela disciplina — corrigido.**
+  `MatriculaDraftCard` agora filtra `professores` por
+  `professor.materiaIds.includes(draft.materiaId)` — sem chamada extra, o
+  dado já vinha na prop (`ProfessorOutputType.materiaIds`, que já existia
+  desde a fe-03). Trocar a disciplina limpa o professor selecionado se ele
+  não lecionar a nova.
+- **Programação semanal ignorava a disponibilidade do professor —
+  corrigido.** `ProgramacaoSemanalGrid` ganhou uma prop `professor`
+  opcional: linhas de dias fora de `diasDisponiveis` ficam desabilitadas
+  (com "professor não atende" ao lado), e o input de horário ganha
+  `min`/`max` da janela dele.
+- **Backend: as duas validações cruzadas que faltavam, confirmadas e
+  corrigidas.** `matriculas.service.ts` agora rejeita (400) um
+  `professorId` que não lecione o `materiaId` da matrícula;
+  `horarios.service.ts` agora rejeita (400) um horário fora do dia ou da
+  janela de atendimento do professor da matrícula (`server/lib/horario.ts`,
+  reaproveitando `janelaDeAtendimentoValida` e o novo
+  `horarioDentroDaJanela` da fe-03). 5 novos testes e2e; 3 testes
+  existentes precisaram vincular o professor de teste a uma matéria
+  (`criarProfessor({ materiaIds: [...] })`, opção nova na factory) ou trocar
+  um dia/horário fora da janela padrão do professor de teste.
+- **`estagio` gravava `''` em vez de `null` — corrigido.** Trocado
+  `input.estagio ?? null` por `input.estagio || null` em
+  `matriculas.service.ts` — o form manda string vazia (não omite a chave),
+  e só o segundo pega esse caso.
+- **Contador ignorava a busca / sem estado vazio — corrigido.** Cabeçalho
+  de `/alunos` mostra "N de M aluno(s)" quando a busca está ativa, e a
+  lista ganhou "Nenhum aluno encontrado para «busca»."/"Nenhum aluno
+  cadastrado ainda.".
+- **`matricula-existing-card.tsx` não tratava erro de mutação** — já
+  resolvido globalmente na fe-01 (`useApiMutation`); nada a mudar aqui.
+
+**Divergência da decisão original do QA, documentada:** o achado sugeria
+resolver isso via o "contexto global do snapshot" (o mesmo
+`usePainelSnapshot` desta cadeia). Não segui esse caminho aqui: `/alunos`
+já busca `listarProfessores`/`listarMaterias` diretamente, e
+`ProfessorOutputType` já inclui `materiaIds` — os dados para a checagem já
+estavam disponíveis, sem chamada extra, então trocar por um contexto
+global só trocaria uma fonte de dados perfeitamente adequada por outra,
+sem ganho. Pior: o snapshot do Painel busca **todas** as matérias (sem
+filtrar `ativo`), enquanto `listarMaterias` (usado aqui) já exclui
+inativas por padrão — migrar exigiria filtrar isso de novo no client. O
+contexto criado na fe-01 continua de pé para quem realmente tem o
+problema de fetch duplicado (Painel e Agenda, a partir da fe-05/fe-06).
+
 ## Pontos para revisão
 
-- Mesma ressalva de verificação visual das PRs anteriores. `npm run
-  typecheck`, `npm test` (109/109) e `npx vite build` passam limpos.
+- Visualmente verificado em browser real (Playwright/Chromium,
+  `LOCAL_DEV_SERVER=true`): com "Bruno Lima" (só leciona Português,
+  Ter/Qui 13h–19h) e "Ana Souza" (só Matemática, Seg/Qua/Sex 08h–18h) —
+  escolher "Matemática" no picker de disciplina mostra só "Ana Souza"; ao
+  escolher "Português" + "Bruno Lima", a grade desabilita Seg/Qua/Sex/Sáb
+  com "professor não atende", e o input de horário de Ter/Qui vem com
+  `min="13:00" max="19:00"`. `npm run typecheck`, `npm test` (114/114) e
+  `npx vite build` passam limpos.
 - `AlunoInspectorSheet` não é usado por nenhuma rota ainda — só existe
   pronto pra fe-06. Vale conferir se a interface que ele expõe
   (`alunoId`/`open`/`onOpenChange`/`professores`/`materias`/`onAtualizado`)
