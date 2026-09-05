@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { MatriculaOutputType } from '../../src/server/features/matriculas/matriculas.dto'
+import type { MatriculaOutputType } from '../../src/shared/dto/matriculas.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,

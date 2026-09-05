@@ -5,7 +5,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware'
 import { requireAdmin } from '../../middlewares/require-admin.middleware'
 import { scopeToProfessor } from '../../middlewares/scope-to-professor.middleware'
 import type { AppEnv } from '../../types'
-import { HorarioCreateInput, HorarioOutput, HorarioUpdateInput } from './horarios.dto'
+import { HorarioCreateInput, HorarioOutput, HorarioUpdateInput } from '../../../shared/dto/horarios.dto'
 import * as horariosService from './horarios.service'
 
 /** Montada em `/matriculas` — convive com `matriculasRoutes` (PR 06), padroes de rota nao colidem. */

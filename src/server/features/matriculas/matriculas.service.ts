@@ -1,7 +1,7 @@
 import { HTTPException } from 'hono/http-exception'
 
 import type { Matricula, PrismaClient } from '../../db/generated/client'
-import type { MatriculaCreateInputType, MatriculaOutputType, MatriculaUpdateInputType } from './matriculas.dto'
+import type { MatriculaCreateInputType, MatriculaOutputType, MatriculaUpdateInputType } from '../../../shared/dto/matriculas.dto'
 
 // Nenhuma query de matricula usa include/select -- a linha sempre vem
 // completa, entao o model Matricula exportado pelo client ja e o shape

@@ -5,7 +5,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware'
 import { requireAdmin } from '../../middlewares/require-admin.middleware'
 import { scopeToProfessor } from '../../middlewares/scope-to-professor.middleware'
 import type { AppEnv } from '../../types'
-import { MatriculaCreateInput, MatriculaOutput, MatriculaUpdateInput } from './matriculas.dto'
+import { MatriculaCreateInput, MatriculaOutput, MatriculaUpdateInput } from '../../../shared/dto/matriculas.dto'
 import * as matriculasService from './matriculas.service'
 
 /** Montada em `/alunos` — convive com `alunosRoutes` (patterns nao colidem: `/:id` vs `/:alunoId/matriculas`). */

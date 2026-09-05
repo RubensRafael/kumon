@@ -1,0 +1,120 @@
+import { Trash2 } from 'lucide-react'
+
+import type { MateriaOutputType, ProfessorOutputType, TipoAtendimento } from '@shared/dto'
+
+import { Button } from '../../ui/button'
+import { Card, CardContent, CardHeader } from '../../ui/card'
+import { Input } from '../../ui/input'
+import { Label } from '../../ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
+import { TIPO_ATENDIMENTO_LABEL } from './enum-labels'
+import { ProgramacaoSemanalGrid, type ProgramacaoSemanal } from './programacao-semanal-grid'
+
+export interface MatriculaDraft {
+  key: string
+  professorId: string
+  materiaId: string
+  estagio: string
+  tipoAtendimento: TipoAtendimento
+  observacoes: string
+  programacao: ProgramacaoSemanal
+}
+
+/** Matrícula ainda não persistida — some do POST /alunos até o form inteiro ser salvo. */
+export function MatriculaDraftCard({
+  draft,
+  professores,
+  materias,
+  onChange,
+  onRemover,
+}: {
+  draft: MatriculaDraft
+  professores: ProfessorOutputType[]
+  materias: MateriaOutputType[]
+  onChange: (draft: MatriculaDraft) => void
+  onRemover: () => void
+}) {
+  const materiaNome = materias.find((m) => m.id === draft.materiaId)?.nome ?? 'Nova matrícula'
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <span className="font-medium">{materiaNome}</span>
+        <Button type="button" variant="ghost" size="icon-sm" onClick={onRemover}>
+          <Trash2 className="size-4" />
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Disciplina</Label>
+            <Select value={draft.materiaId} onValueChange={(materiaId) => onChange({ ...draft, materiaId })}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {materias.map((materia) => (
+                  <SelectItem key={materia.id} value={materia.id}>
+                    {materia.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Professor</Label>
+            <Select
+              value={draft.professorId}
+              onValueChange={(professorId) => onChange({ ...draft, professorId })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {professores.map((professor) => (
+                  <SelectItem key={professor.id} value={professor.id}>
+                    {professor.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Estágio</Label>
+            <Input value={draft.estagio} onChange={(e) => onChange({ ...draft, estagio: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Tipo de atendimento</Label>
+            <Select
+              value={draft.tipoAtendimento}
+              onValueChange={(tipoAtendimento) =>
+                onChange({ ...draft, tipoAtendimento: tipoAtendimento as TipoAtendimento })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="REGULAR">{TIPO_ATENDIMENTO_LABEL.REGULAR}</SelectItem>
+                <SelectItem value="PRE_ESCOLAR">{TIPO_ATENDIMENTO_LABEL.PRE_ESCOLAR}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Programação semanal</Label>
+          <ProgramacaoSemanalGrid
+            valores={draft.programacao}
+            onChange={(dia, valor) =>
+              onChange({ ...draft, programacao: { ...draft.programacao, [dia]: valor } })
+            }
+          />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
