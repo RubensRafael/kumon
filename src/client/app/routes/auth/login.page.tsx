@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Lock, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router'
@@ -6,7 +7,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { LoginInput, type LoginInputType } from '@shared/dto'
 
 import { Button } from '../../components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent } from '../../components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form'
 import { Input } from '../../components/ui/input'
 import { ApiError } from '../../hooks/use-api'
@@ -38,10 +39,6 @@ export function LoginPage() {
   return (
     <AuthLayout>
       <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Entrar no KFlow</CardTitle>
-          <CardDescription>Use o email e a senha da sua conta.</CardDescription>
-        </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-4">
@@ -52,7 +49,16 @@ export function LoginPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" autoComplete="email" {...field} />
+                      <div className="relative">
+                        <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          type="email"
+                          autoComplete="email"
+                          placeholder="voce@exemplo.com"
+                          className="pl-9"
+                          {...field}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -63,24 +69,27 @@ export function LoginPage() {
                 name="senha"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Senha</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Senha</FormLabel>
+                      <Link to="/esqueci-senha" className="text-sm text-primary hover:underline">
+                        Esqueci minha senha
+                      </Link>
+                    </div>
                     <FormControl>
-                      <Input type="password" autoComplete="current-password" {...field} />
+                      <div className="relative">
+                        <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input type="password" autoComplete="current-password" className="pl-9" {...field} />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               {erro ? <p className="text-sm text-destructive">{erro}</p> : null}
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Entrando...' : 'Entrar'}
               </Button>
-              <Link to="/esqueci-senha" className="text-sm text-muted-foreground hover:text-foreground">
-                Esqueci minha senha
-              </Link>
-            </CardFooter>
+            </CardContent>
           </form>
         </Form>
       </Card>
