@@ -10,9 +10,14 @@ import type {
   MateriaOutputType,
   MateriaUpdateInputType,
   PainelDadosOutputType,
+  ProfessorCreateInputType,
+  ProfessorOutputType,
+  ProfessorUpdateInputAdminType,
   ResetarSenhaInputType,
   SolicitarResetInputType,
+  UsuarioCreateInputType,
   UsuarioOutputType,
+  UsuarioUpdateInputType,
 } from '../dto'
 
 /**
@@ -42,6 +47,13 @@ export const apiEndpoints = {
   listarConteudosDaMateria: { method: 'GET', path: '/materias/:id/conteudos' },
   criarConteudo: { method: 'POST', path: '/conteudos' },
   atualizarConteudo: { method: 'PUT', path: '/conteudos/:id' },
+  listarProfessores: { method: 'GET', path: '/professores' },
+  buscarProfessor: { method: 'GET', path: '/professores/:id' },
+  criarProfessor: { method: 'POST', path: '/professores' },
+  atualizarProfessor: { method: 'PUT', path: '/professores/:id' },
+  listarUsuarios: { method: 'GET', path: '/usuarios' },
+  criarUsuario: { method: 'POST', path: '/usuarios' },
+  atualizarUsuario: { method: 'PUT', path: '/usuarios/:id' },
 } as const
 
 export type ApiEndpointName = keyof typeof apiEndpoints
@@ -80,6 +92,13 @@ export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   listarConteudosDaMateria: { response: ConteudoOutputType[] }
   criarConteudo: { body: ConteudoCreateInputType; response: ConteudoOutputType }
   atualizarConteudo: { body: ConteudoUpdateInputType; response: ConteudoOutputType }
+  listarProfessores: { response: ProfessorOutputType[] }
+  buscarProfessor: { response: ProfessorOutputType }
+  criarProfessor: { body: ProfessorCreateInputType; response: ProfessorOutputType }
+  atualizarProfessor: { body: ProfessorUpdateInputAdminType; response: ProfessorOutputType }
+  listarUsuarios: { response: UsuarioOutputType[] }
+  criarUsuario: { body: UsuarioCreateInputType; response: UsuarioOutputType }
+  atualizarUsuario: { body: UsuarioUpdateInputType; response: UsuarioOutputType }
 }
 
 /** Tipo de retorno de uma rota: `ApiResponse<'listUsers'>`. */
