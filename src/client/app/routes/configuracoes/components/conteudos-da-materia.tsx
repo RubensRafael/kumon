@@ -8,8 +8,7 @@ import { Button } from '../../../components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../../../components/ui/form'
 import { Input } from '../../../components/ui/input'
 import { Switch } from '../../../components/ui/switch'
-import { useApiMutation } from '../../../hooks/use-api-mutation'
-import { useApiQuery } from '../../../hooks/use-api-query'
+import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
 
 export function ConteudosDaMateria({ materiaId }: { materiaId: string }) {
   const { data: conteudos, loading, refetch } = useApiQuery('listarConteudosDaMateria', {
@@ -33,8 +32,15 @@ export function ConteudosDaMateria({ materiaId }: { materiaId: string }) {
       <ul className="space-y-2">
         {conteudos?.map((conteudo) => (
           <li key={conteudo.id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
-            <span className={conteudo.ativo ? undefined : 'text-muted-foreground line-through'}>
-              {conteudo.nome}
+            <span className="flex items-center gap-2">
+              <span className={conteudo.ativo ? undefined : 'text-muted-foreground line-through'}>
+                {conteudo.nome}
+              </span>
+              {conteudo.ativo ? null : (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  Inativo
+                </span>
+              )}
             </span>
             <Switch checked={conteudo.ativo} onCheckedChange={(ativo) => void aoTogglear(conteudo.id, ativo)} />
           </li>
