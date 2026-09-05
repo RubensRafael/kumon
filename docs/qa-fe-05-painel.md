@@ -56,6 +56,9 @@ de uma cor só — mas mesmo com várias matérias, sem legenda o usuário teria
 fatias coloridas anônimas. Um `<ChartLegend />` do wrapper do shadcn, ou
 `<ChartTooltip />`, fecha isso com poucas linhas.
 
+**Decisão:** adicionar `<ChartLegend />` (ou `<ChartTooltip />`) ao donut,
+mesmo padrão que o wrapper do shadcn já resolve nos outros gráficos.
+
 ### 2. Alerta com português quebrado — Médio
 
 A mensagem exibida:
@@ -71,6 +74,9 @@ neutra resolve os dois:
 É a única string do app que o usuário lê com o nome de uma pessoa dentro —
 vale caprichar.
 
+**Decisão:** trocar pela formulação neutra sugerida — "Fernanda Dias está
+na zona vermelha." — sem depender de concordância de gênero.
+
 ### 3. Subtítulo do card não descreve a métrica — Médio
 
 ```
@@ -84,6 +90,9 @@ seriam 2 se contássemos só as com matrícula). Quem bate o olho lê o
 subtítulo e conclui a coisa errada. "matrículas em curso" ou "vínculos
 ativos".
 
+**Decisão:** trocar o subtítulo para "matrículas em curso" (ou "vínculos
+ativos"), coerente com o número exibido.
+
 ### 4. "Aulas por dia da semana" reserva uma coluna para domingo — Baixo
 
 O eixo mostra `Dom · Seg · Ter · Qua · Qui · Sex · Sáb`, mas "Dom" nunca
@@ -91,11 +100,17 @@ poderá ter valor: o toggle de dias disponíveis do cadastro de professor
 oferece só Seg–Sáb (decisão documentada na fe-03 — nenhuma unidade Kumon
 abre aos domingos). É 1/7 da largura do gráfico permanentemente vazia.
 
+**Decisão:** remover a coluna de domingo do eixo — o gráfico passa a
+mostrar só Seg–Sáb, coerente com o que o cadastro de professor permite.
+
 ### 5. Eixo Y com ticks fracionários numa contagem — Baixo
 
 Os dois gráficos de barra mostram `0 · 0.75 · 1.5 · 2.25 · 3`. O dado é
 "número de aulas" — um inteiro; meia aula não existe. `allowDecimals={false}`
 no `<YAxis>` do recharts resolve.
+
+**Decisão:** aplicar `allowDecimals={false}` no `<YAxis>` dos dois
+gráficos de barra.
 
 ## Diálogo com o doc da PR
 
