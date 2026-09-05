@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { MateriaOutputType, ProfessorOutputType } from '@shared/dto'
 
 import { Button } from '../../../components/ui/button'
-import { Card, CardContent, CardHeader } from '../../../components/ui/card'
+import { Card } from '../../../components/ui/card'
 import { useAuth } from '../../../hooks/use-auth'
 import { ProfessorFormDialog } from './professor-form-dialog'
 
@@ -33,48 +33,52 @@ export function ProfessorCard({
     .filter((nome): nome is string => Boolean(nome))
     .join(' · ')
   const podeEditar = podeEditarProfessor(professor.id)
+  const diasTexto = professor.diasDisponiveis.map((dia) => DIAS_ABREVIADOS[dia] ?? dia).join(', ')
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-2">
-        <div>
-          <p className="font-semibold">{professor.nome}</p>
-          <p className="text-sm text-muted-foreground">{nomesMaterias || 'Sem matérias'}</p>
+    <Card className="gap-0 rounded-2xl p-5 transition-shadow hover:shadow-md">
+      <div className="flex items-center gap-4">
+        <span
+          className="flex size-12 shrink-0 items-center justify-center rounded-full font-semibold text-white"
+          style={{ backgroundColor: professor.corAgenda }}
+        >
+          {professor.nome.charAt(0).toUpperCase()}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-medium">{professor.nome}</p>
+          <p className="truncate text-sm text-muted-foreground">{nomesMaterias || 'Sem matérias'}</p>
         </div>
+      </div>
+
+      <dl className="mt-5 grid grid-cols-2 gap-2 text-center">
+        <div>
+          <dt className="text-[11px] text-muted-foreground uppercase">Cap./horário</dt>
+          <dd className="font-semibold">{professor.capacidadePorHorario}</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] text-muted-foreground uppercase">Dias</dt>
+          <dd className="font-semibold">{professor.diasDisponiveis.length}</dd>
+        </div>
+      </dl>
+
+      <p className="mt-3 text-xs text-muted-foreground">
+        {diasTexto} · {professor.horarioInicial}–{professor.horarioFinal}
+      </p>
+
+      <div className="mt-4 flex gap-2">
+        {/* Sem link ate a fe-06 (Agenda) existir. */}
+        <Button variant="outline" size="sm" className="flex-1 rounded-xl" disabled>
+          Agenda
+        </Button>
         {/* Editar o cadastro de outro professor sem ser admin é uma escrita
             que o backend (`restrictProfessorSelf`) sempre recusa -- não
             oferecer o botão em vez de abrir um formulário que nunca salva. */}
         {podeEditar ? (
-          <Button variant="ghost" size="icon-sm" onClick={() => setEditando(true)}>
+          <Button variant="outline" size="icon-sm" className="rounded-xl" onClick={() => setEditando(true)}>
             <Pencil className="size-4" />
           </Button>
         ) : null}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <p className="text-xs tracking-wide text-muted-foreground uppercase">Cap./horário</p>
-            <p className="font-medium">{professor.capacidadePorHorario}</p>
-          </div>
-          <div>
-            <p className="text-xs tracking-wide text-muted-foreground uppercase">Dias</p>
-            <p className="flex flex-wrap gap-1 font-medium">
-              {professor.diasDisponiveis.map((dia) => (
-                <span key={dia} className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                  {DIAS_ABREVIADOS[dia] ?? dia}
-                </span>
-              ))}
-            </p>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {professor.horarioInicial}–{professor.horarioFinal}
-        </p>
-        {/* Sem link ate a fe-06 (Agenda) existir. */}
-        <Button variant="outline" size="sm" className="w-full" disabled>
-          Agenda
-        </Button>
-      </CardContent>
+      </div>
 
       {podeEditar ? (
         <ProfessorFormDialog
