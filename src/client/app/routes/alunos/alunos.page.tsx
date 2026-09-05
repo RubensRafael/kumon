@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
+import { Skeleton } from '../../components/ui/skeleton'
 import { useApiQuery } from '../../hooks/use-api'
 import { AlunoCard } from './components/aluno-card'
 import { AlunoFormDialog } from './components/aluno-form-dialog'
@@ -29,13 +30,15 @@ export function AlunosPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Alunos</h1>
-          <p className="text-sm text-muted-foreground">
-            {alunos
-              ? busca.trim()
+          {alunos ? (
+            <p className="text-sm text-muted-foreground">
+              {busca.trim()
                 ? `${alunosFiltrados.length} de ${alunos.length} aluno(s)`
-                : `${alunos.length} aluno(s)`
-              : 'Carregando...'}
-          </p>
+                : `${alunos.length} aluno(s)`}
+            </p>
+          ) : (
+            <Skeleton className="h-4 w-24" />
+          )}
         </div>
         <Button onClick={() => setDialogAberto(true)}>
           <Plus className="size-4" />
@@ -50,7 +53,13 @@ export function AlunosPage() {
         className="max-w-sm"
       />
 
-      {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-xl" />
+          ))}
+        </div>
+      ) : null}
 
       {alunos && alunosFiltrados.length === 0 ? (
         <p className="text-sm text-muted-foreground">
