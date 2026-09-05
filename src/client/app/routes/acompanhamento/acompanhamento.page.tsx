@@ -6,7 +6,7 @@ import { statusRegistro, type RegistroResumoOutputType, type StatusRegistro } fr
 import { STATUS_REGISTRO_LABEL } from '../../components/common/registro-form/enum-labels'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { useApiQuery } from '../../hooks/use-api-query'
+import { useApiQuery } from '../../hooks/use-api'
 import { RegistrarAulaDialog } from './components/registrar-aula-dialog'
 import { RegistroRow } from './components/registro-row'
 
@@ -41,11 +41,17 @@ export function AcompanhamentoPage() {
       EM_ANDAMENTO: 0,
       CONCLUIDO: 0,
     }
-    for (const registro of registros ?? []) {
+    // Reflete a busca ativa -- os chips descrevem o que esta na lista
+    // abaixo, nao o dia inteiro (mesmo padrao que /agenda-geral ja usa).
+    for (const registro of registrosFiltrados) {
       base[statusRegistro(registro)] += 1
     }
     return base
-  }, [registros])
+  }, [registrosFiltrados])
+
+  // So a escrita fica bloqueada numa data futura -- navegar pra ver a
+  // programacao de uma semana que ainda vai acontecer continua liberado.
+  const bloqueadoFuturo = data > paraISO(new Date())
 
   function mudarDia(deltaDias: number) {
     const atual = new Date(`${data}T00:00:00`)
@@ -87,6 +93,12 @@ export function AcompanhamentoPage() {
 
       {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
 
+      {!loading && registrosFiltrados.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {busca.trim() ? `Nenhum aluno encontrado para "${busca.trim()}".` : 'Nenhuma aula neste dia.'}
+        </p>
+      ) : null}
+
       <div className="space-y-2">
         {registrosFiltrados
           .slice()
@@ -95,6 +107,7 @@ export function AcompanhamentoPage() {
             <RegistroRow
               key={registro.horarioId}
               registro={registro}
+              bloqueadoFuturo={bloqueadoFuturo}
               onAbrir={() => setLinhaAtiva(registro)}
             />
           ))}
@@ -105,6 +118,7 @@ export function AcompanhamentoPage() {
         open={Boolean(linhaAtiva)}
         onOpenChange={(open) => !open && setLinhaAtiva(null)}
         resumo={linhaAtiva}
+        bloqueadoFuturo={bloqueadoFuturo}
         onSalvo={refetch}
       />
     </div>
