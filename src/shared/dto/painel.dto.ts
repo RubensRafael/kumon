@@ -73,7 +73,10 @@ export const PainelDadosOutput = z.object({
 })
 export type PainelDadosOutputType = z.infer<typeof PainelDadosOutput>
 
-const DIAS_BANCO = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
+// Sem 'DOM': o cadastro de professor (fe-03) so oferece Seg-Sab no toggle
+// de dias disponiveis -- nenhuma unidade Kumon abre aos domingos, entao
+// essa coluna nunca teria valor no grafico "Aulas por dia da semana".
+const DIAS_BANCO = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
 
 /** Mesmo grid de 30min que `HorarioDoDia` forca em todo `MatriculaHorario.horario`. */
 const DURACAO_SLOT_MIN = 30
@@ -203,7 +206,9 @@ export function calcularAgregacoesPainel(
     .map((aluno) => ({
       tipo: 'zona_vermelha',
       alunoId: aluno.id,
-      mensagem: `${aluno.nome} esta marcado como zona vermelha.`,
+      // Formulacao neutra de proposito -- "esta marcado" nao concorda com
+      // o genero do nome, e o sistema nao tem como saber isso.
+      mensagem: `${aluno.nome} está na zona vermelha.`,
     }))
 
   return {
