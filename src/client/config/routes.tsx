@@ -1,8 +1,10 @@
+import { Settings } from 'lucide-react'
 import type { ComponentType, ReactElement } from 'react'
 
 import { EsqueciSenhaPage } from '../app/routes/auth/esqueci-senha.page'
 import { LoginPage } from '../app/routes/auth/login.page'
 import { ResetarSenhaPage } from '../app/routes/auth/resetar-senha.page'
+import { ConfiguracoesPage } from '../app/routes/configuracoes/configuracoes.page'
 import { InicioPage } from '../app/routes/inicio.page'
 import { NotFoundPage } from '../app/routes/not-found.page'
 
@@ -12,15 +14,18 @@ export interface AppRoute {
   /** Quando presente, a rota aparece no menu da sidebar. */
   label?: string
   icon?: ComponentType<{ className?: string }>
+  /** Some do menu pra quem não é admin, e mostra "acesso restrito" na própria rota. */
+  adminOnly?: boolean
 }
 
 /**
  * Rotas autenticadas (dentro do `AppShell` + `RequireAuth`). Cada PR de
- * feature acrescenta a sua aqui — nesta PR (setup) só existe a landing
- * temporária, substituída de vez pelo Painel na fe-05.
+ * feature acrescenta a sua aqui — a landing temporária em `/` sai de vez na
+ * fe-05, quando o Painel de verdade existir.
  */
 export const appRoutes: AppRoute[] = [
   { path: '/', element: <InicioPage /> },
+  { path: '/configuracoes', element: <ConfiguracoesPage />, label: 'Configurações', icon: Settings, adminOnly: true },
   { path: '*', element: <NotFoundPage /> },
 ]
 

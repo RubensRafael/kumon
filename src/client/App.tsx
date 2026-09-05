@@ -1,7 +1,7 @@
 import { Route, Routes } from 'react-router'
 
 import { AppShell } from './app/components/common/app-shell'
-import { RequireAuth, RequireGuest } from './app/components/common/require-auth'
+import { RequireAdmin, RequireAuth, RequireGuest } from './app/components/common/require-auth'
 import { Toaster } from './app/components/ui/sonner'
 import { AuthProvider } from './app/hooks/use-auth'
 import { PainelSnapshotProvider } from './app/hooks/use-painel-snapshot'
@@ -30,7 +30,9 @@ export default function App() {
             element={
               <RequireAuth>
                 <PainelSnapshotProvider>
-                  <AppShell>{route.element}</AppShell>
+                  <AppShell>
+                    {route.adminOnly ? <RequireAdmin>{route.element}</RequireAdmin> : route.element}
+                  </AppShell>
                 </PainelSnapshotProvider>
               </RequireAuth>
             }

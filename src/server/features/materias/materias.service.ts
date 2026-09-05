@@ -8,7 +8,7 @@ import type {
   MateriaCreateInputType,
   MateriaOutputType,
   MateriaUpdateInputType,
-} from './materias.dto'
+} from '../../../shared/dto/materias.dto'
 
 function paraMateriaOutput(materia: { id: string; nome: string; ativo: boolean }): MateriaOutputType {
   return { id: materia.id, nome: materia.nome, ativo: materia.ativo }
