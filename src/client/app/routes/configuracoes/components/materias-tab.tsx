@@ -17,6 +17,7 @@ import {
 } from '../../../components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../components/ui/form'
 import { Input } from '../../../components/ui/input'
+import { Skeleton } from '../../../components/ui/skeleton'
 import { Switch } from '../../../components/ui/switch'
 import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
 import { ConteudosDaMateria } from './conteudos-da-materia'
@@ -29,13 +30,21 @@ export function MateriasTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {materias ? `${materias.length} matéria(s)` : 'Carregando...'}
-        </p>
+        {materias ? (
+          <p className="text-sm text-muted-foreground">{materias.length} matéria(s)</p>
+        ) : (
+          <Skeleton className="h-4 w-24" />
+        )}
         <NovaMateriaDialog onCriada={refetch} />
       </div>
 
-      {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 rounded-lg" />
+          ))}
+        </div>
+      ) : null}
 
       {materias && materias.length > 0 ? (
         <Accordion type="multiple" className="rounded-lg border">

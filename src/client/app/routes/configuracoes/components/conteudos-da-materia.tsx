@@ -7,6 +7,7 @@ import { ConteudoCreateInput, type ConteudoCreateInputType } from '@shared/dto'
 import { Button } from '../../../components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../../../components/ui/form'
 import { Input } from '../../../components/ui/input'
+import { Skeleton } from '../../../components/ui/skeleton'
 import { Switch } from '../../../components/ui/switch'
 import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
 
@@ -23,7 +24,13 @@ export function ConteudosDaMateria({ materiaId }: { materiaId: string }) {
 
   return (
     <div className="space-y-3">
-      {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 rounded-md" />
+          ))}
+        </div>
+      ) : null}
 
       {conteudos && conteudos.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum conteúdo cadastrado ainda.</p>
