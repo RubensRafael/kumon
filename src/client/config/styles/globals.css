@@ -113,4 +113,12 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  /* O Preflight do Tailwind v4 passou a usar `cursor: default` em botoes
+     (era `cursor: pointer` no v3, ver guia de upgrade oficial) -- restaura o
+     comportamento antigo pra tudo que age como botao. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
