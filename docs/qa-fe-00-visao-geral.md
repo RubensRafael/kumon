@@ -82,7 +82,7 @@ aula. Os achados citam esses dados pelo nome.
 | ------ | :-----: | :--: | :---: | :---: |
 | [fe-01 Setup/Auth](./qa-fe-01-setup.md) | — | — | 4 | 2 |
 | [fe-02 Configurações](./qa-fe-02-configuracoes.md) | — | 3 | — | 1 |
-| [fe-03 Professores](./qa-fe-03-professores.md) | — | 3 | 2 | 2 |
+| [fe-03 Professores](./qa-fe-03-professores.md) | — | 3 | — | 1 |
 | [fe-04 Alunos](./qa-fe-04-alunos.md) | — | 2 | 3 | 2 |
 | [fe-05 Painel](./qa-fe-05-painel.md) | — | 1 | 2 | 2 |
 | [fe-06 Agenda](./qa-fe-06-agenda.md) | — | 1 | 3 | 1 |
@@ -94,7 +94,7 @@ login, cadastro, agenda, registro de aula, permissões por papel. O que os
 relatórios apontam é a borda: validação cruzada ausente, erro de escrita
 sem tratamento e estados vazios sem mensagem.
 
-## Os três padrões que atravessam a cadeia
+## Os padrões que atravessam a cadeia
 
 Vale tratá-los uma vez, centralizadamente, em vez de sete vezes.
 
@@ -163,6 +163,20 @@ ativo, e uma lista filtrada até zero não mostra mensagem nenhuma — só some.
 | `/alunos` | "5 aluno(s)" com 0 resultados na busca |
 | `/acompanhamento` | chips "3 Não iniciado" com 1 linha na busca |
 | `/agenda-geral` | ✅ recalcula certo ("1 aluno(s)") — é o modelo a seguir |
+
+### 4. Ações que o backend recusa aparecem oferecidas na UI
+
+Mais de uma tela oferece uma ação — um botão, um formulário inteiro — a um
+usuário que o backend vai recusar com 403 assim que ele tentar usá-la (ver
+`qa-fe-03-professores.md`: "Novo professor" visível pra não-admin; editar o
+cadastro de *outro* professor abre o formulário completo pra quem só pode
+editar o próprio). Cada tela hoje decide isso na unha, checando
+`usuario?.papel` manualmente onde alguém lembrou de checar.
+
+**Decisão:** montar um hook/contexto global do tipo "current user" (ao lado
+do que `useAuth` já expõe), que os componentes consultem pra saber quando
+esconder ou desabilitar uma ação — em vez de cada tela reimplementar essa
+checagem isoladamente.
 
 ## O que não é bug
 

@@ -52,6 +52,12 @@ Correção: `.refine((v) => v.horarioFinal > v.horarioInicial, { message:
 'O horário final deve ser depois do inicial', path: ['horarioFinal'] })` no
 schema — pega backend e formulário de uma vez.
 
+**Decisão:** validar só no backend, sem lógica especial no front — o erro
+aparece na UI como qualquer outro erro vindo da API. Criar um helper que
+receba as duas strings de horário (o Zod já garante o formato), transforme
+em número e compare qual é maior; o endpoint usa esse helper para rejeitar
+`horarioFinal <= horarioInicial`.
+
 ### 2. Falha de escrita não produz nenhum feedback — Alto
 
 Logado como professora (não-admin), abri "Novo professor", preenchi e cliquei
@@ -69,6 +75,9 @@ vai clicar de novo.
 `useApiMutation` — nunca lê o `error` — e o `onSubmit` não tem `try/catch`.
 `professor-form-self.tsx` tem o mesmo problema. Ver o
 [padrão consolidado](./qa-fe-00-visao-geral.md#1-erro-de-mutação-engolido-o-mais-grave).
+
+**Decisão:** confirmado — mesma correção já decidida no padrão geral (ver
+`qa-fe-00-visao-geral.md`, item 1). Nada específico a fazer aqui além disso.
 
 ### 3. A UI oferece ao professor ações que o backend recusa — Alto
 
@@ -104,50 +113,21 @@ inteiro que nunca vai salvar. É exatamente o "erro que a UI deveria
 prevenir" que o `plan.md` descreve, e que a própria fe-04 aplicou bem nos
 campos read-only da matrícula.
 
-### 4. Validação inconsistente entre campos — Médio
+**Decisão:** a correção é de arquitetura, não pontual — ver o novo padrão
+geral anotado em
+[`qa-fe-00-visao-geral.md`](./qa-fe-00-visao-geral.md#4-ações-que-o-backend-recusa-aparecem-oferecidas-na-ui):
+um hook/contexto global do tipo "current user" (ao lado do que `useAuth` já
+expõe), que os componentes consultem pra saber quando esconder ou
+desabilitar um botão, em vez de cada tela checar `usuario?.papel` na unha.
 
-Três comportamentos diferentes no mesmo formulário:
-
-| Campo | Como o erro aparece |
-| ----- | ------------------- |
-| Nome, Matérias, Dias | Mensagem inline (em inglês, do Zod) |
-| Email | Só o balão nativo do browser: *"Please include an '@' in the email address"* |
-| Capacidade (`min={1}`) | Só o balão nativo, e nada mais acontece |
-
-No caso da capacidade o efeito é ruim: coloquei `0`, cliquei em Salvar, e o
-dialog ficou aberto **sem nenhuma mensagem visível** — o balão nativo é
-fácil de perder, e o formulário parece travado. Padronizar tudo em
-`FormMessage` (removendo `type="email"`/`min` como única defesa, ou
-adicionando `noValidate` no form e deixando o Zod responder) deixa o
-comportamento previsível.
-
-### 5. Botão de editar sem nome acessível — Médio (a11y)
-
-O botão do lápis é `<Button variant="ghost" size="icon-sm">` com só o
-`<Pencil />` dentro — sem `aria-label`, sem texto `sr-only`. Varri o grid e
-encontrei **3 botões sem nome acessível** (um por card). Um leitor de tela
-anuncia apenas "botão".
-
-Mesmo padrão em `aluno-card.tsx` (fe-04). Um `<span className="sr-only">Editar
-professor</span>` em cada resolve os dois.
-
-### 6. Card mostra a contagem de dias, não os dias — Baixo
+### 4. Card mostra a contagem de dias, não os dias — Baixo
 
 O card exibe "DIAS: 5". Saber *quais* dias (Seg·Ter·Qua·Qui·Sex) é a
 informação útil para quem está montando a grade, e o dado já está em
 `professor.diasDisponiveis`. Os chips caberiam no lugar do número.
 
-### 7. Usuário novo nasce sem senha utilizável e a UI não avisa — Baixo
-
-Todo usuário criado por `POST /usuarios` recebe `SENHA_PLACEHOLDER` e não
-consegue logar até passar pelo reset — comportamento correto e bem
-documentado em `src/server/lib/senha.ts`. Mas o dialog fecha sem dizer nada
-disso.
-
-O admin acabou de criar um acesso e não tem como saber que precisa avisar a
-pessoa a usar "Esqueci minha senha". Um toast — *"Usuário criado. Ele
-precisa definir a senha em 'Esqueci minha senha' antes do primeiro
-acesso."* — fecha a lacuna.
+**Decisão:** de acordo com a sugestão — trocar o número pelos chips dos
+dias.
 
 ## Diálogo com o doc da PR
 
