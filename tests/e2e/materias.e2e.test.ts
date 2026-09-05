@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type {
   ConteudoOutputType,
   MateriaOutputType,
-} from '../../src/server/features/materias/materias.dto'
+} from '../../src/shared/dto/materias.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import { criarMateria, criarUsuarioAdmin, criarUsuarioProfessor } from '../helpers/factories'
 import { app, prisma, resetDb, testEnv } from '../helpers/setup'
