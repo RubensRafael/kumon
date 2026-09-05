@@ -12,6 +12,7 @@ import {
   type ChartConfig,
 } from '../../components/ui/chart'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { Skeleton } from '../../components/ui/skeleton'
 import { useApiQuery } from '../../hooks/use-api'
 import { MetricCard } from './components/metric-card'
 
@@ -31,7 +32,24 @@ export function PainelPage() {
   const agregado = useMemo(() => (data ? calcularAgregacoesPainel(data) : null), [data])
 
   if (loading || !agregado) {
-    return <p className="text-sm text-muted-foreground">Carregando...</p>
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Painel da Unidade</h1>
+          <p className="text-sm text-muted-foreground">Visão geral e indicadores em tempo real</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-72 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   const dadosDonut = agregado.matriculasPorMateria.map((item) => ({
