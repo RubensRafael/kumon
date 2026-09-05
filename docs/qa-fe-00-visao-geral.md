@@ -59,25 +59,34 @@ pelo próprio runtime (é por isso que o adapter do Neon é obrigatório ali);
 uma env lida só nesse ponto trocaria o driver do Prisma sem trocar o
 runtime, e a chamada quebraria do mesmo jeito, só que com outro erro. O
 ponto certo é o `vite.config.ts`, na montagem dos `plugins`, que roda em
-Node normal antes do Worker existir:
+Node normal antes do Worker existir — e lendo do **`.env`** (via `loadEnv`,
+não de `process.env` puro), pra não precisar de nenhum comando novo nem de
+prefixar a env na mão a cada vez: é só uma linha a mais no `.env` que cada
+um já mantém localmente (mesmo lugar de `BACKEND_DATABASE_URL`), e o
+`npm run dev` de sempre passa a respeitar:
 
 ```ts
+// topo do vite.config.ts, antes do defineConfig
+const localEnv = loadEnv('development', process.cwd(), '')
+const useLocalDevServer = localEnv.LOCAL_DEV_SERVER === 'true'
+
+// dentro de plugins: [...]
 devServer({
   entry: './src/server.tsx',
-  adapter: process.env.LOCAL_DEV_SERVER === 'true' ? undefined : cloudflareAdapter,
-  env: process.env.LOCAL_DEV_SERVER === 'true' ? loadEnv('development', process.cwd(), '') : undefined,
+  adapter: useLocalDevServer ? undefined : cloudflareAdapter,
+  env: useLocalDevServer ? localEnv : undefined,
   exclude: HONO_EXCLUDE,
   injectClientScript: false,
 })
 ```
 
-`LOCAL_DEV_SERVER` — string `"true"`/`"false"`, default `"false"` (mantém o
-comportamento atual, com o `cloudflareAdapter`). Com `"true"`, o dev server
-roda em Node puro, sem workerd, e o Prisma usa `PrismaPg` contra o Postgres
-local — mesmo caminho dos testes e2e. Um único `vite.config.ts`, sem
-arquivo duplicado; um script tipo `"dev:local": "LOCAL_DEV_SERVER=true vite"`
-no `package.json` é o que separa "não deu pra verificar visualmente" de uma
-verificação de verdade a cada PR.
+`LOCAL_DEV_SERVER` — string `"true"`/`"false"` no `.env`, default `"false"`
+(mantém o comportamento atual, com o `cloudflareAdapter`, igual produção).
+Com `"true"`, o mesmo `npm run dev` roda em Node puro, sem workerd, e o
+Prisma usa `PrismaPg` contra o Postgres local — mesmo caminho dos testes
+e2e. Um único `vite.config.ts`, sem arquivo duplicado e sem comando novo: é
+o que separa "não deu pra verificar visualmente" de uma verificação de
+verdade a cada PR.
 
 ## Ambiente
 
