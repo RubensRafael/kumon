@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import type { PeriodoHistorico } from '@shared/dto'
 
-import { useApiQuery } from '../../../hooks/use-api-query'
+import { useApiQuery } from '../../../hooks/use-api'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../../components/ui/sheet'
 import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs'
 
