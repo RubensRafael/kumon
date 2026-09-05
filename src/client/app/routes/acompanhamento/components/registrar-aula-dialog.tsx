@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import {
   VIRTUAL_REGISTRO_ID,
   contarNotasPreenchidas,
-  isCompleto,
   isFalta,
   type AtividadeCasa,
   type Autonomia,
@@ -35,24 +34,28 @@ import {
 } from '../../../components/common/registro-form/enum-labels'
 
 /**
+ * Só é aberto a partir de linhas Não iniciado/Pendente/Em andamento — uma
+ * linha Concluído abre `HistoricoSheet` em vez disto (ver
+ * `acompanhamento.page.tsx`/`registro-row.tsx`). Não existe modo
+ * read-only aqui: não há hoje nenhum caminho na UI de volta pra editar as
+ * notas específicas de um registro já concluído — só a agregação da
+ * fe-08 (ver "Pontos para revisão" em `docs/pr-fe-08-historico.md`).
+ *
  * Sem autosave por campo — decisão do QA manual da PR #26
  * (docs/qa-fe-07-acompanhamento.md, achado crítico): o design anterior
- * disparava um PUT a cada clique, sem tratar falha — uma queda de rede no
- * meio do preenchimento avançava a barra de progresso local sem nunca
+ * disparava um `PUT` a cada clique, sem tratar falha — uma queda de rede
+ * no meio do preenchimento avançava a barra de progresso local sem nunca
  * gravar o dado, em silêncio. Fluxo atual, só duas escritas:
  *
  * 1. Chegada — único campo visível até escolher. Cria o registro na hora
- *    (POST), só na primeira vez (`registroId` ainda nulo). FALTOU fecha o
- *    dialog assim que o POST resolve; PRESENTE/ATRASADO revela o resto.
- *    Reabrir um registro que já tem `chegada` (pendente/em andamento) não
- *    dispara POST de novo — só atualiza estado local, junto do resto.
+ *    (`POST`), só na primeira vez (`registroId` ainda nulo). FALTOU fecha
+ *    o dialog assim que o `POST` resolve; PRESENTE/ATRASADO revela o
+ *    resto. Reabrir um registro que já tem `chegada` (pendente/em
+ *    andamento) não dispara `POST` de novo — só atualiza estado local,
+ *    junto do resto.
  * 2. Os demais campos ficam em estado local (nenhuma chamada de rede por
- *    campo) até o clique em "Enviar", que dispara um único PUT com tudo
+ *    campo) até o clique em "Enviar", que dispara um único `PUT` com tudo
  *    preenchido até ali e só fecha o dialog se a chamada tiver sucesso.
- *
- * Reabrir um registro já `isCompleto` (calculado a partir do `resumo` no
- * momento em que o dialog abre) continua inteiramente somente-leitura —
- * isso não mudou, só o caminho de escrita de um registro incompleto.
  */
 export function RegistrarAulaDialog({
   open,
@@ -81,19 +84,6 @@ export function RegistrarAulaDialog({
   const [conteudoIds, setConteudoIds] = useState<string[]>([])
   const [anotacao, setAnotacao] = useState('')
   const [mostrarObservacao, setMostrarObservacao] = useState(false)
-  const [eraCompletoAoAbrir] = useState(() =>
-    resumo
-      ? isCompleto({
-          chegada: resumo.chegada,
-          boletim: resumo.boletim,
-          atividadeCasa: resumo.atividadeCasa,
-          foco: resumo.foco,
-          autonomia: resumo.autonomia,
-          comportamento: resumo.comportamento,
-          desempenho: resumo.desempenho,
-        })
-      : false,
-  )
 
   const { data: detalhe } = useApiQuery(
     'buscarRegistro',
@@ -119,7 +109,6 @@ export function RegistrarAulaDialog({
   const { mutate: criar, loading: criando } = useApiMutation('criarRegistro')
   const { mutate: atualizar, loading: enviando } = useApiMutation('atualizarRegistro')
 
-  const readOnly = eraCompletoAoAbrir
   const notasPreenchidas = contarNotasPreenchidas({
     chegada,
     boletim,
@@ -133,7 +122,7 @@ export function RegistrarAulaDialog({
   const revelarNotas = chegada === 'PRESENTE' || chegada === 'ATRASADO'
 
   async function aoMudarChegada(novo: Chegada) {
-    if (readOnly || !resumo || bloqueadoFuturo) return
+    if (!resumo || bloqueadoFuturo) return
 
     if (!registroId) {
       // Primeira escrita deste registro (Fase 1) -- cria a linha na hora.
@@ -195,7 +184,7 @@ export function RegistrarAulaDialog({
               variant="outline"
               value={chegada ?? ''}
               onValueChange={(v) => v && void aoMudarChegada(v as Chegada)}
-              disabled={readOnly || criando || bloqueadoFuturo}
+              disabled={criando || bloqueadoFuturo}
               className="justify-start"
             >
               <ToggleGroupItem value="PRESENTE">{CHEGADA_LABEL.PRESENTE}</ToggleGroupItem>
@@ -216,7 +205,6 @@ export function RegistrarAulaDialog({
                   variant="outline"
                   value={boletim ?? ''}
                   onValueChange={(v) => v && setBoletim(v as Boletim)}
-                  disabled={readOnly}
                   className="justify-start"
                 >
                   <ToggleGroupItem value="PEGOU">{BOLETIM_LABEL.PEGOU}</ToggleGroupItem>
@@ -232,7 +220,6 @@ export function RegistrarAulaDialog({
                   variant="outline"
                   value={atividadeCasa ?? ''}
                   onValueChange={(v) => v && setAtividadeCasa(v as AtividadeCasa)}
-                  disabled={readOnly}
                   className="flex-wrap justify-start"
                 >
                   <ToggleGroupItem value="FEZ">{ATIVIDADE_CASA_LABEL.FEZ}</ToggleGroupItem>
@@ -253,7 +240,6 @@ export function RegistrarAulaDialog({
                     variant="outline"
                     value={foco ?? ''}
                     onValueChange={(v) => v && setFoco(v as Foco)}
-                    disabled={readOnly}
                     className="justify-start"
                   >
                     {(Object.keys(FOCO_LABEL) as Foco[]).map((v) => (
@@ -270,7 +256,6 @@ export function RegistrarAulaDialog({
                     variant="outline"
                     value={autonomia ?? ''}
                     onValueChange={(v) => v && setAutonomia(v as Autonomia)}
-                    disabled={readOnly}
                     className="justify-start"
                   >
                     {(Object.keys(AUTONOMIA_LABEL) as Autonomia[]).map((v) => (
@@ -287,7 +272,6 @@ export function RegistrarAulaDialog({
                     variant="outline"
                     value={comportamento ?? ''}
                     onValueChange={(v) => v && setComportamento(v as Comportamento)}
-                    disabled={readOnly}
                     className="flex-wrap justify-start"
                   >
                     {(Object.keys(COMPORTAMENTO_LABEL) as Comportamento[]).map((v) => (
@@ -306,7 +290,6 @@ export function RegistrarAulaDialog({
                   variant="outline"
                   value={desempenho ?? ''}
                   onValueChange={(v) => v && setDesempenho(v as Desempenho)}
-                  disabled={readOnly}
                   className="flex-wrap justify-start"
                 >
                   {(Object.keys(DESEMPENHO_LABEL) as Desempenho[]).map((v) => (
@@ -324,7 +307,6 @@ export function RegistrarAulaDialog({
                   variant="outline"
                   value={conteudoIds}
                   onValueChange={setConteudoIds}
-                  disabled={readOnly}
                   className="flex-wrap justify-start"
                 >
                   {conteudosDaMateria
@@ -340,17 +322,13 @@ export function RegistrarAulaDialog({
               {mostrarObservacao || anotacao ? (
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Observação</p>
-                  <Textarea
-                    value={anotacao}
-                    disabled={readOnly}
-                    onChange={(e) => setAnotacao(e.target.value)}
-                  />
+                  <Textarea value={anotacao} onChange={(e) => setAnotacao(e.target.value)} />
                 </div>
-              ) : !readOnly ? (
+              ) : (
                 <Button type="button" variant="link" className="px-0" onClick={() => setMostrarObservacao(true)}>
                   + Adicionar observação
                 </Button>
-              ) : null}
+              )}
             </>
           ) : null}
         </div>
@@ -363,12 +341,8 @@ export function RegistrarAulaDialog({
           ) : (
             <span />
           )}
-          <Button
-            type="button"
-            onClick={() => (readOnly ? onOpenChange(false) : void aoEnviar())}
-            disabled={!readOnly && (!registroId || enviando)}
-          >
-            {readOnly ? 'Fechar' : enviando ? 'Enviando...' : 'Enviar'}
+          <Button type="button" onClick={() => void aoEnviar()} disabled={!registroId || enviando}>
+            {enviando ? 'Enviando...' : 'Enviar'}
           </Button>
         </div>
       </DialogContent>

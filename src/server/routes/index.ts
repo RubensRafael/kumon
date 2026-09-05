@@ -9,6 +9,7 @@ import { horariosRoutes, matriculaHorariosRoutes } from '../features/horarios/ho
 import { alunoMatriculasRoutes, matriculasRoutes } from '../features/matriculas/matriculas.routes'
 import { painelRoutes } from '../features/painel/painel.routes'
 import { professoresRoutes } from '../features/professores/professores.routes'
+import { alunoHistoricoRoutes } from '../features/registros/historico.routes'
 import { registrosRoutes } from '../features/registros/registros.routes'
 import { envMiddleware } from '../middlewares/env.middleware'
 import type { AppEnv } from '../types'
@@ -35,6 +36,7 @@ apiRoutes.route('/materias', materiasRoutes)
 apiRoutes.route('/conteudos', conteudosRoutes)
 apiRoutes.route('/alunos', alunosRoutes)
 apiRoutes.route('/alunos', alunoMatriculasRoutes)
+apiRoutes.route('/alunos', alunoHistoricoRoutes)
 apiRoutes.route('/matriculas', matriculasRoutes)
 apiRoutes.route('/matriculas', matriculaHorariosRoutes)
 apiRoutes.route('/horarios', horariosRoutes)

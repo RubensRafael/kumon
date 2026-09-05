@@ -6,12 +6,14 @@ import { Button } from '../../../components/ui/button'
 export function RegistroRow({
   registro,
   bloqueadoFuturo,
-  onAbrir,
+  onRegistrarAula,
+  onVerHistorico,
 }: {
   registro: RegistroResumoOutputType
   /** `true` bloqueia só a escrita ("Registrar aula") -- "Ver acompanhamento" (leitura) continua sempre liberado. */
   bloqueadoFuturo: boolean
-  onAbrir: () => void
+  onRegistrarAula: () => void
+  onVerHistorico: () => void
 }) {
   const status = statusRegistro(registro)
   const concluido = status === 'CONCLUIDO'
@@ -28,7 +30,7 @@ export function RegistroRow({
       <Button
         variant={concluido ? 'outline' : 'default'}
         size="sm"
-        onClick={onAbrir}
+        onClick={concluido ? onVerHistorico : onRegistrarAula}
         disabled={!concluido && bloqueadoFuturo}
       >
         {concluido ? 'Ver acompanhamento' : 'Registrar aula'}
