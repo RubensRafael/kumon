@@ -91,27 +91,70 @@ Seção "PR fe-01" do `plan-frontend.md`, completa:
 - **`tsx` adicionado como devDependency** só pra rodar o seed
   (`npm run db:seed`).
 
+## Correções de QA (PR #26)
+
+QA manual em browser real da cadeia fe-01→fe-07 (`docs/qa-fe-01-setup.md`,
+PR [#26](https://github.com/RubensRafael/kumon/pull/26)) encontrou 6
+achados nesta branch, todos corrigidos:
+
+- **`npm run dev` sem Postgres local acessível — fechado.** Causa raiz
+  confirmada exatamente como a ressalva abaixo já previa. Correção: env
+  `LOCAL_DEV_SERVER` (`.env`, default `"false"`) lida via `loadEnv` no topo
+  do `vite.config.ts`; com `"true"`, o `devServer()` do Hono sobe sem
+  `cloudflareAdapter` (Node puro) e com `env: loadEnv(...)` substituindo os
+  bindings do workerd — `isCloudflareWorkers()` passa a retornar `false`
+  naturalmente, o Prisma usa `PrismaPg`, e `GET /api/health` responde
+  `connected: true` contra o Postgres do `docker-compose.yml`. Verificado
+  em browser de verdade (Playwright/Chromium) com esta flag ligada: login,
+  sessão, sidebar e as duas telas abaixo.
+- **Dois `<main>` aninhados — corrigido.** `SidebarInset` (`ui/sidebar.tsx`)
+  ganhou suporte a `asChild` (mesmo padrão `Slot.Root` já usado por
+  `SidebarMenuButton` etc.); `AppShell` passa a usar
+  `<SidebarInset asChild><div>...</div></SidebarInset>`, com um único
+  `<main>` (o do conteúdo da página) no documento.
+- **Copy do 404 vazava implementação — corrigido.** `NotFoundPage` não
+  menciona mais Worker/index.html/React Router; mensagem final: "Página não
+  encontrada" / "O endereço acessado não existe ou foi movido.".
+- **Busca decorativa do topo — removida.** O `<Input>` sem `onChange` saiu
+  do `AppShell`; issue aberta pra a busca de verdade:
+  [#27](https://github.com/RubensRafael/kumon/issues/27).
+- **Data do cabeçalho capitalizando errado — corrigido.** Trocado o
+  `capitalize` do CSS (maiusculizava toda palavra, inclusive "De") por
+  sentence-case aplicado só à primeira letra da string já formatada por
+  `Intl.DateTimeFormat('pt-BR', ...)` — "Sábado, 05 de setembro".
+- **"E-mail ou senha invalidos." sem acento — corrigido** em
+  `auth.service.ts` (`CREDENCIAIS_INVALIDAS`).
+
+A mesma rodada também trouxe, cedo na pilha por decisão do QA (item que
+`fe-03`/`fe-04` já precisam consumir adiante — ver
+`docs/prompt-implementacao-qa.md`):
+
+- **`useApiMutation` passou a disparar `toast.error` automaticamente** em
+  qualquer falha de mutação (mensagem do backend, ou um fallback genérico),
+  com um `{ silent: true }` opcional pra quem já mostra o erro inline.
+  Nenhum dos 12 componentes que usam o hook precisa mais lembrar de tratar
+  `error`/`try-catch` sozinho.
+- **Mensagens de validação do Zod em pt-BR**, globalmente: `zod/locales`
+  já traz `ptBR` pronto — `z.config(ptBR())` roda como import de efeito
+  colateral (`shared/zod-locale.ts`) no topo de `client/main.tsx` e
+  `server/app.ts` (este último também cobre os testes e2e, que importam
+  `createApp` direto).
+- **`useAuth()` ganhou `isAdmin`/`podeEditarProfessor(professorId)`** —
+  telas consultam isso em vez de checar `usuario?.papel` na unha pra
+  esconder/desabilitar ações que o backend recusaria.
+- **Novo `PainelSnapshotProvider`/`usePainelSnapshot()`**
+  (`app/hooks/use-painel-snapshot.tsx`), montado dentro de `RequireAuth` em
+  `App.tsx`: busca `GET /painel` uma única vez por sessão de navegação e
+  expõe `{ dados, loading, error, refetch }` pra qualquer tela cruzar
+  professor/aluno/matéria/matrícula sem duplicar a busca. Precisou
+  registrar `obterPainel` em `shared/api/contract.ts` já nesta PR (o
+  endpoint em si já existe no backend desde a PR 10) — antes do previsto
+  originalmente (fe-05), porque é exatamente o dado que falta pras
+  validações cruzadas da fe-04 (ver `docs/qa-fe-04-alunos.md`).
+
 ## Pontos para revisão
 
-- **Não consegui verificar o login visualmente num browser real.** `npm
-  run dev` nesta sessão roda o Hono dentro de um `workerd` de verdade (via
-  o adapter `@hono/vite-dev-server/cloudflare`, que usa Miniflare) — e
-  `navigator.userAgent` ali já é `"Cloudflare-Workers"`, o mesmo sinal que
-  `isCloudflareWorkers()` (`src/server/db/client.ts`) usa pra escolher o
-  Driver Adapter do Neon em vez do `pg`. Resultado: mesmo com
-  `BACKEND_DATABASE_URL` apontando pro Postgres local (`.env` já vem assim
-  por padrão), a API tenta falar com o Neon e cai com
-  `TypeError: fetch failed`. Confirmei que isso **não é causado por esta
-  PR** — `GET /api/health` (endpoint que não toquei, existe desde a PR 1)
-  falha exatamente da mesma forma no `npm run dev` desta sessão. A suíte
-  `npm test` (Vitest, Node puro, adapter `pg`) continua passando 109/109,
-  incluindo o e2e de auth — então a lógica de login/logout no backend está
-  coberta. O que fica sem verificação visual é só a tela React em si
-  (formulário, redirecionamento, sidebar renderizando). `npm run typecheck`
-  e `npx vite build` passam limpos.
 - **Sidebar sem nenhum item de navegação ainda.** `navItems` está vazio
   nesta PR (só a landing temporária em `/`, sem `label`) — cada PR
   seguinte acrescenta o seu. Visualmente a sidebar aparece só com
   logo/avatar/sair até a fe-02.
-- **Busca "Buscar aluno..."** no topo é só visual (input não-controlado,
-  sem `onChange`) — decisão explícita, ver `plan-frontend.md`.

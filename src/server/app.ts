@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 
+import '../shared/zod-locale'
+
 import { onError } from './middlewares/error.middleware'
 import { spaFallback } from './middlewares/spa.middleware'
 import { apiRoutes } from './routes'

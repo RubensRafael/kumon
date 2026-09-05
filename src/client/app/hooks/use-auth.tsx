@@ -7,6 +7,16 @@ interface AuthContextValue {
   usuario: UsuarioOutputType | null
   /** `true` só durante a checagem inicial (`GET /me` no boot) — nunca mais depois disso. */
   carregando: boolean
+  /** Atalho para `usuario?.papel === 'ADMIN'` — para telas esconderem/desabilitarem ações admin-only. */
+  isAdmin: boolean
+  /**
+   * `true` quando o usuário atual pode editar o cadastro do professor com
+   * este id: um admin (qualquer um) ou o próprio professor (só o seu).
+   * Existe para nenhuma tela precisar checar `usuario?.papel`/`professorId`
+   * na unha — o backend (`requireAdmin`/`restrictProfessorSelf`) já aplica a
+   * mesma regra do lado da API.
+   */
+  podeEditarProfessor: (professorId: string) => boolean
   login: (email: string, senha: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -57,8 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null)
   }, [])
 
+  const isAdmin = usuario?.papel === 'ADMIN'
+
+  const podeEditarProfessor = useCallback(
+    (professorId: string) => isAdmin || usuario?.professorId === professorId,
+    [isAdmin, usuario],
+  )
+
   return (
-    <AuthContext.Provider value={{ usuario, carregando, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ usuario, carregando, isAdmin, podeEditarProfessor, login, logout }}>
+      {children}
+    </AuthContext.Provider>
   )
 }
 

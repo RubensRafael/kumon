@@ -2,6 +2,7 @@ import type {
   HealthResponse,
   LoginInputType,
   LoginOutputType,
+  PainelDadosOutputType,
   ResetarSenhaInputType,
   SolicitarResetInputType,
   UsuarioOutputType,
@@ -27,6 +28,7 @@ export const apiEndpoints = {
   me: { method: 'GET', path: '/me' },
   solicitarReset: { method: 'POST', path: '/auth/solicitar-reset' },
   resetarSenha: { method: 'POST', path: '/auth/resetar-senha' },
+  obterPainel: { method: 'GET', path: '/painel' },
 } as const
 
 export type ApiEndpointName = keyof typeof apiEndpoints
@@ -44,6 +46,7 @@ export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   me: { response: UsuarioOutputType }
   solicitarReset: { body: SolicitarResetInputType; response: void }
   resetarSenha: { body: ResetarSenhaInputType; response: void }
+  obterPainel: { response: PainelDadosOutputType }
 }
 
 /** Tipo de retorno de uma rota: `ApiResponse<'listUsers'>`. */

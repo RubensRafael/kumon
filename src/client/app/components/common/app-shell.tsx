@@ -11,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
-import { Input } from '../ui/input'
 import {
   Sidebar,
   SidebarContent,
@@ -34,8 +33,7 @@ function iniciaisDe(nome: string) {
 
 /**
  * Shell autenticado: sidebar fixa à esquerda (paleta própria, ver
- * `globals.css`) + barra superior com data + busca (só visual, ver
- * plan-frontend.md) + avatar/menu do usuário.
+ * `globals.css`) + barra superior com data + avatar/menu do usuário.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const { usuario, logout } = useAuth()
@@ -47,11 +45,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate('/login', { replace: true })
   }
 
-  const hoje = new Intl.DateTimeFormat('pt-BR', {
+  // `Intl.DateTimeFormat('pt-BR', ...)` devolve tudo minusculo ("sábado, 05 de
+  // setembro") -- em português só a primeira letra da frase leva maiúscula
+  // ("Sábado, 05 de setembro"), nunca cada palavra (o que um `capitalize` do
+  // CSS aplicaria, maiusculizando também o "De").
+  const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
   }).format(new Date())
+  const hoje = dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1)
 
   return (
     <SidebarProvider>
@@ -117,22 +120,27 @@ export function AppShell({ children }: { children: ReactNode }) {
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset>
-        <header className="flex items-center justify-between gap-4 border-b px-6 py-4">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger className="-ml-1" />
-            <span className="text-sm text-muted-foreground capitalize">{hoje}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Input placeholder="Buscar aluno..." className="hidden w-64 sm:block" />
-            <Avatar className="size-8">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {usuario ? iniciaisDe(usuario.nome) : ''}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        </header>
-        <main className="flex-1 p-6">{children}</main>
+      {/* `asChild`: o `<main>` que o SidebarInset renderiza por padrao viraria um
+          segundo landmark <main> na pagina, junto com o da linha de baixo --
+          so um por documento e permitido. Com `asChild` o SidebarInset empresta
+          seu estilo pro `<div>` abaixo, e o unico `<main>` fica com o conteudo. */}
+      <SidebarInset asChild>
+        <div>
+          <header className="flex items-center justify-between gap-4 border-b px-6 py-4">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger className="-ml-1" />
+              <span className="text-sm text-muted-foreground">{hoje}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Avatar className="size-8">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {usuario ? iniciaisDe(usuario.nome) : ''}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </header>
+          <main className="flex-1 p-6">{children}</main>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )

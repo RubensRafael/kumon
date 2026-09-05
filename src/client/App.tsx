@@ -4,6 +4,7 @@ import { AppShell } from './app/components/common/app-shell'
 import { RequireAuth, RequireGuest } from './app/components/common/require-auth'
 import { Toaster } from './app/components/ui/sonner'
 import { AuthProvider } from './app/hooks/use-auth'
+import { PainelSnapshotProvider } from './app/hooks/use-painel-snapshot'
 import { appRoutes, authRoutes } from './config/routes'
 
 /**
@@ -28,7 +29,9 @@ export default function App() {
             path={route.path}
             element={
               <RequireAuth>
-                <AppShell>{route.element}</AppShell>
+                <PainelSnapshotProvider>
+                  <AppShell>{route.element}</AppShell>
+                </PainelSnapshotProvider>
               </RequireAuth>
             }
           />
