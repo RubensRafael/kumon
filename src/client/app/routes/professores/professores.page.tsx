@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '../../components/ui/button'
+import { Skeleton } from '../../components/ui/skeleton'
 import { useAuth } from '../../hooks/use-auth'
 import { useApiQuery } from '../../hooks/use-api'
 import { ProfessorCard } from './components/professor-card'
@@ -30,7 +31,13 @@ export function ProfessoresPage() {
         ) : null}
       </div>
 
-      {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-xl" />
+          ))}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {professores?.map((professor) => (
