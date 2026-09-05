@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { RegistroDetalheOutputType, RegistroResumoOutputType } from '../../src/server/features/registros/registros.dto'
+import type { RegistroDetalheOutputType, RegistroResumoOutputType } from '../../src/shared/dto/registros.dto'
 import { VIRTUAL_REGISTRO_ID } from '../../src/shared/dto/registro.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import {

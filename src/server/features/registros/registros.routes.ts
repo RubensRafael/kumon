@@ -10,7 +10,7 @@ import {
   RegistroInput,
   RegistroResumoOutput,
   RegistroUpdateInput,
-} from './registros.dto'
+} from '../../../shared/dto/registros.dto'
 import * as registrosService from './registros.service'
 
 /**

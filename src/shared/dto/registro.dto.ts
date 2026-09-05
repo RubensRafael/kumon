@@ -50,3 +50,33 @@ export function isCompleto(registro: RegistroComNotas): boolean {
     registro.desempenho !== null
   )
 }
+
+const CAMPOS_NOTA = [
+  'boletim',
+  'atividadeCasa',
+  'foco',
+  'autonomia',
+  'comportamento',
+  'desempenho',
+] as const satisfies readonly (keyof RegistroComNotas)[]
+
+/** Quantas das 6 notas já foram preenchidas (0–6) — alimenta a barra de progresso do form. */
+export function contarNotasPreenchidas(registro: RegistroComNotas): number {
+  return CAMPOS_NOTA.filter((campo) => registro[campo] !== null).length
+}
+
+export type StatusRegistro = 'NAO_INICIADO' | 'PENDENTE' | 'EM_ANDAMENTO' | 'CONCLUIDO'
+
+/**
+ * Os 4 estados da lista diária de acompanhamento — todos derivados do
+ * preenchimento dos campos, sem nenhum estado próprio no backend:
+ * "Não iniciado" é a linha virtual (nem `POST /registros` rodou ainda);
+ * "Pendente" é `chegada` já marcada mas nenhuma nota; "Em andamento" é
+ * pelo menos uma nota, mas não todas; "Concluído" é `isCompleto`.
+ */
+export function statusRegistro(registro: { id: string } & RegistroComNotas): StatusRegistro {
+  if (registro.id === VIRTUAL_REGISTRO_ID) return 'NAO_INICIADO'
+  if (isCompleto(registro)) return 'CONCLUIDO'
+  if (contarNotasPreenchidas(registro) === 0) return 'PENDENTE'
+  return 'EM_ANDAMENTO'
+}
