@@ -1,6 +1,8 @@
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
+import { calcularAgregacoesPainel } from '@shared/dto'
+
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
 import { useAuth } from '../../hooks/use-auth'
@@ -12,6 +14,7 @@ export function ProfessoresPage() {
   const { isAdmin } = useAuth()
   const { data: professores, loading, refetch } = useApiQuery('listarProfessores', {})
   const { data: materias } = useApiQuery('listarMaterias', { query: {} })
+  const { data: painel } = useApiQuery('obterPainel', {})
   const [dialogAberto, setDialogAberto] = useState(false)
 
   return (
@@ -45,6 +48,7 @@ export function ProfessoresPage() {
             key={professor.id}
             professor={professor}
             materias={materias ?? []}
+            alunosAtivos={painel ? calcularAgregacoesPainel(painel, professor.id).totalAlunosAtivos : undefined}
             onAtualizado={refetch}
           />
         ))}
