@@ -59,6 +59,7 @@ export const PainelDadosOutput = z.object({
       alunoId: z.uuid(),
       professorId: z.uuid(),
       materiaId: z.uuid(),
+      estagio: z.string().nullable(),
       situacao: SituacaoMatriculaEnum,
       tipoAtendimento: TipoAtendimentoEnum,
       horarios: z.array(

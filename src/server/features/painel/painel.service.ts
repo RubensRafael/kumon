@@ -39,6 +39,7 @@ export async function obterDadosPainel(prisma: PrismaClient): Promise<PainelDado
         alunoId: true,
         professorId: true,
         materiaId: true,
+        estagio: true,
         situacao: true,
         tipoAtendimento: true,
         horarios: {
