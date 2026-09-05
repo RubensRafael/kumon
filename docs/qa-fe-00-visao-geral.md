@@ -83,7 +83,7 @@ aula. Os achados citam esses dados pelo nome.
 | [fe-01 Setup/Auth](./qa-fe-01-setup.md) | — | — | 4 | 2 |
 | [fe-02 Configurações](./qa-fe-02-configuracoes.md) | — | 3 | — | 1 |
 | [fe-03 Professores](./qa-fe-03-professores.md) | — | 3 | — | 1 |
-| [fe-04 Alunos](./qa-fe-04-alunos.md) | — | 2 | 3 | 2 |
+| [fe-04 Alunos](./qa-fe-04-alunos.md) | — | 2 | 2 | 2 |
 | [fe-05 Painel](./qa-fe-05-painel.md) | — | 1 | 2 | 2 |
 | [fe-06 Agenda](./qa-fe-06-agenda.md) | — | 1 | 3 | 1 |
 | [fe-07 Acompanhamento](./qa-fe-07-acompanhamento.md) | 1 | 1 | 3 | 2 |
@@ -177,6 +177,32 @@ editar o próprio). Cada tela hoje decide isso na unha, checando
 do que `useAuth` já expõe), que os componentes consultem pra saber quando
 esconder ou desabilitar uma ação — em vez de cada tela reimplementar essa
 checagem isoladamente.
+
+### 5. Dados brutos do snapshot deveriam ser um contexto global compartilhado
+
+`GET /painel` já devolve professores/alunos/matérias/matrículas brutos, e
+tanto o Painel quanto a Agenda montam seu próprio estado derivado em cima
+disso — cada um buscando de novo. A fe-04 mostra o custo de não
+compartilhar esse dado: o formulário de matrícula tem tudo que precisaria
+pra impedir combinações inválidas (professor que não leciona a matéria
+escolhida, horário fora da disponibilidade do professor — ver
+`qa-fe-04-alunos.md`, achados 1 e 2), mas cada tela só enxerga o recorte que
+ela mesma buscou.
+
+Ao investigar os dois achados da fe-04, confirmei que o **backend também
+não faz essa validação cruzada** — nem professor×matéria
+(`matriculas.service.ts`), nem horário×disponibilidade
+(`horarios.service.ts`). A minha suposição inicial de que o backend já
+cobria isso corretamente estava errada.
+
+**Decisão:** criar um contexto global (mesmo padrão do hook de "current
+user" do item 4) que carregue esse snapshot uma vez — `loading`/`data`/
+`refetch` — e deixe cada consumidor derivar e filtrar seu próprio estado a
+partir dele, sem chamada extra e sem duplicar a lógica de busca. A
+validação cruzada que falta no backend (professor leciona a matéria,
+horário dentro da janela do professor) entra **junto**, na mesma leva de
+trabalho — o contexto no front melhora a UX (impede o erro antes de
+submeter), mas não substitui a validação no servidor.
 
 ## O que não é bug
 

@@ -55,6 +55,24 @@ o próprio card de professor usa para montar a linha de matérias. Filtrar a
 lista por `professores.filter(p => p.materiaIds.includes(materiaId))` é
 barato e elimina a combinação inválida na origem.
 
+**Correção ao meu próprio relato:** verifiquei o backend a pedido — ele
+**não** valida que `professorId` leciona `materiaId`.
+`criarMatricula` (`matriculas.service.ts`) confere só se o professor e a
+matéria existem e se a matéria está ativa; não cruza `materiaIds` do
+professor contra `input.materiaId` em nenhum momento. Ou seja, hoje esse
+dado inválido pode entrar tanto pela UI quanto por qualquer chamada direta
+à API.
+
+**Decisão:** o front ganha um contexto global com os dados brutos do
+snapshot (professores/alunos/matérias/matrículas — o mesmo que `/painel` e
+a Agenda já consomem), com `loading`/`data`/`refetch`, e cada tela deriva
+seu próprio estado filtrado a partir dele — aqui, o picker de professor
+filtra por `materiaIds` localmente, sem chamada extra. Ver o padrão
+registrado em
+[`qa-fe-00-visao-geral.md`](./qa-fe-00-visao-geral.md#5-dados-brutos-do-snapshot-deveriam-ser-um-contexto-global-compartilhado).
+A validação cruzada no backend (professor leciona a matéria) entra
+**junto** com esse trabalho, na mesma leva — não é pra ficar só no front.
+
 ### 2. A programação semanal ignora a disponibilidade do professor — Alto
 
 Na mesma matrícula, Bruno Lima trabalha **TER e QUI, das 13:00 às 19:00**.
@@ -82,12 +100,24 @@ acontece em lugar nenhum — e é justamente o tipo de "erro que a UI deveria
 prevenir" que o `plan.md` cita e que esta PR aplicou tão bem nos campos
 read-only da matrícula existente.
 
+**Decisão:** mesmo contexto global do item 1 — com `diasDisponiveis`,
+`horarioInicial`/`horarioFinal` do professor já disponíveis localmente, a
+tela desabilita as linhas dos dias que ele não atende e limita os inputs de
+horário à janela dele. A validação equivalente no backend entra junto, na
+mesma leva de trabalho — não confirmado ainda que exista hoje (ver
+`horarios.service.ts`: `criarHorario` só confere duplicidade de
+dia+horário ativo, nada contra a disponibilidade do professor).
+
 ### 3. O contador ignora o filtro de busca — Médio
 
 Com "zzzzz" na busca, o cabeçalho continua dizendo **"5 aluno(s)"** e o grid
 fica vazio. `alunos.length` é usado no cabeçalho enquanto o grid renderiza
 `alunosFiltrados`. Deveria usar `alunosFiltrados.length` (ou mostrar
 "3 de 5") quando houver busca ativa.
+
+**Decisão:** já coberto pelo padrão geral (ver
+[`qa-fe-00-visao-geral.md`](./qa-fe-00-visao-geral.md#3-contadores-e-estados-vazios)).
+Nada específico a fazer aqui além disso.
 
 ### 4. Nenhuma mensagem quando a busca não retorna nada — Médio
 
@@ -99,13 +129,10 @@ fallback. Um "Nenhum aluno encontrado para «zzzzz»." resolve.
 `/acompanhamento` repete; a `/agenda-geral` acerta os dois e serve de
 modelo. Ver a [visão geral](./qa-fe-00-visao-geral.md#3-contadores-e-estados-vazios).
 
-### 5. Botão de editar sem nome acessível — Médio (a11y)
+**Decisão:** já coberto pelo padrão geral. Nada específico a fazer aqui
+além disso.
 
-`aluno-card.tsx` repete o padrão de `professor-card.tsx`: botão só com o
-ícone `<Pencil />`, sem `aria-label` nem `sr-only`. Ver
-[`qa-fe-03-professores.md`](./qa-fe-03-professores.md#5-botão-de-editar-sem-nome-acessível--médio-a11y).
-
-### 6. `estagio` grava string vazia em vez de `null` — Baixo
+### 5. `estagio` grava string vazia em vez de `null` — Baixo
 
 Criando a matrícula pela UI sem preencher Estágio, o banco recebe `''`; pela
 API sem o campo, recebe `NULL`. `MatriculaOutput` declara
@@ -114,12 +141,20 @@ API sem o campo, recebe `NULL`. `MatriculaOutput` declara
 string vazia vira uma opção fantasma quando houver volume. Normalizar `''`
 para `undefined` antes do envio.
 
-### 7. `matricula-existing-card.tsx` não trata erro de mutação — Baixo
+**Decisão:** corrigir no backend — um ternário no service (`estagio ||
+null`, ou equivalente) antes de gravar, pra normalizar string vazia em
+`null` no ponto único de entrada, em vez de depender do front nunca mandar
+`''`.
+
+### 6. `matricula-existing-card.tsx` não trata erro de mutação — Baixo
 
 Diferente dos outros dois componentes do `aluno-form/`, este não lê o
 `error` do `useApiMutation`. Como ele salva na hora (a situação e as
 observações da matrícula existente), uma falha aí passa despercebida. Ver o
 [padrão consolidado](./qa-fe-00-visao-geral.md#1-erro-de-mutação-engolido-o-mais-grave).
+
+**Decisão:** já coberto pelo padrão geral. Nada específico a fazer aqui
+além disso.
 
 ## Diálogo com o doc da PR
 
