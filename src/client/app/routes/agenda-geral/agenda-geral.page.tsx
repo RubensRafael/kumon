@@ -10,6 +10,7 @@ import { ScheduleGrid, type ScheduleGridColumn } from '../../components/common/s
 import { WeekdayTabs } from '../../components/common/weekday-tabs'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
+import { Skeleton } from '../../components/ui/skeleton'
 import { useAuth } from '../../hooks/use-auth'
 import { useApiQuery } from '../../hooks/use-api'
 
@@ -37,7 +38,16 @@ export function AgendaGeralPage() {
   }, [painel, dia, busca])
 
   if (loading || !painel) {
-    return <p className="text-sm text-muted-foreground">Carregando...</p>
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Agenda Geral</h1>
+          <p className="text-sm text-muted-foreground">Grade semanal por professor</p>
+        </div>
+        <Skeleton className="h-9 w-full max-w-md rounded-md" />
+        <Skeleton className="h-96 rounded-lg" />
+      </div>
+    )
   }
 
   const professoresOrdenados = [...painel.professores].sort((a, b) => a.nome.localeCompare(b.nome))

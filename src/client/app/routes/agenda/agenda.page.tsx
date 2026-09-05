@@ -10,6 +10,7 @@ import { gerarSlotsHorario } from '../../components/common/gerar-slots-horario'
 import { ScheduleGrid, type ScheduleGridColumn } from '../../components/common/schedule-grid'
 import { Button } from '../../components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Skeleton } from '../../components/ui/skeleton'
 import { Toggle } from '../../components/ui/toggle'
 import { useApiQuery } from '../../hooks/use-api'
 import { comFiltroAtualizado, lerFiltrosDaUrl } from './agenda-filtros'
@@ -70,7 +71,16 @@ export function AgendaPage() {
   )
 
   if (loading || !painel) {
-    return <p className="text-sm text-muted-foreground">Carregando...</p>
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Agenda</h1>
+          <p className="text-sm text-muted-foreground">Visão semanal por professor</p>
+        </div>
+        <Skeleton className="h-9 w-full max-w-3xl rounded-md" />
+        <Skeleton className="h-96 rounded-lg" />
+      </div>
+    )
   }
 
   const professor = painel.professores.find((p) => p.id === professorAtualId)
