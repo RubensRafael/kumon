@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { DiaSemanaEnum, HorarioDoDia } from './enums'
+import { DiaSemanaEnum, HorarioDoDia, TipoAtendimentoEnum } from './enums'
 import type { PainelDadosOutputType } from './painel.dto'
 
 export const AgendaSlotOutput = z.object({
@@ -10,9 +10,14 @@ export const AgendaSlotOutput = z.object({
   matriculaId: z.uuid(),
   alunoId: z.uuid(),
   alunoNome: z.string(),
+  alunoConnect: z.boolean(),
+  alunoZonaVermelha: z.boolean(),
   professorId: z.uuid(),
   professorNome: z.string(),
+  professorCorAgenda: z.string(),
   materiaId: z.uuid(),
+  estagio: z.string().nullable(),
+  tipoAtendimento: TipoAtendimentoEnum,
 })
 export type AgendaSlotOutputType = z.infer<typeof AgendaSlotOutput>
 
@@ -29,8 +34,8 @@ export function derivarAgendaSlots(
   dados: PainelDadosOutputType,
   filtro: { professorId?: string; alunoId?: string } = {},
 ): AgendaSlotOutputType[] {
-  const nomeDoAluno = new Map(dados.alunos.map((aluno) => [aluno.id, aluno.nome]))
-  const nomeDoProfessor = new Map(dados.professores.map((professor) => [professor.id, professor.nome]))
+  const alunoPorId = new Map(dados.alunos.map((aluno) => [aluno.id, aluno]))
+  const professorPorId = new Map(dados.professores.map((professor) => [professor.id, professor]))
 
   const matriculas = dados.matriculas.filter(
     (matricula) =>
@@ -39,19 +44,27 @@ export function derivarAgendaSlots(
   )
 
   return matriculas
-    .flatMap((matricula) =>
-      matricula.horarios.map((horario) => ({
+    .flatMap((matricula) => {
+      const aluno = alunoPorId.get(matricula.alunoId)
+      const professor = professorPorId.get(matricula.professorId)
+
+      return matricula.horarios.map((horario) => ({
         horarioId: horario.id,
         diaSemana: horario.diaSemana,
         horario: horario.horario,
         matriculaId: matricula.id,
         alunoId: matricula.alunoId,
-        alunoNome: nomeDoAluno.get(matricula.alunoId) ?? '',
+        alunoNome: aluno?.nome ?? '',
+        alunoConnect: aluno?.connect ?? false,
+        alunoZonaVermelha: aluno?.zonaVermelha ?? false,
         professorId: matricula.professorId,
-        professorNome: nomeDoProfessor.get(matricula.professorId) ?? '',
+        professorNome: professor?.nome ?? '',
+        professorCorAgenda: professor?.corAgenda ?? '#64748b',
         materiaId: matricula.materiaId,
-      })),
-    )
+        estagio: matricula.estagio,
+        tipoAtendimento: matricula.tipoAtendimento,
+      }))
+    })
     .sort(
       (a, b) =>
         ORDEM_DIAS.indexOf(a.diaSemana) - ORDEM_DIAS.indexOf(b.diaSemana) || a.horario.localeCompare(b.horario),
