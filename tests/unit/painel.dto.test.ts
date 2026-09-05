@@ -62,7 +62,7 @@ describe('calcularAgregacoesPainel', () => {
     expect(agregado.totalMatriculasAtivas).toBe(2)
     expect(agregado.totalProfessores).toBe(2)
     expect(agregado.matriculasPorMateria).toEqual([{ materiaId: 'm1', materiaNome: 'Materia', total: 2 }])
-    expect(agregado.aulasPorDiaSemana.length).toBe(7)
+    expect(agregado.aulasPorDiaSemana.length).toBe(6)
     expect(agregado.aulasPorDiaSemana.find((dia) => dia.diaSemana === 'SEG')?.total).toBe(1)
   })
 

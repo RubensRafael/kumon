@@ -73,7 +73,10 @@ export const PainelDadosOutput = z.object({
 })
 export type PainelDadosOutputType = z.infer<typeof PainelDadosOutput>
 
-const DIAS_BANCO = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
+// Sem 'DOM': o cadastro de professor (fe-03) so oferece Seg-Sab no toggle
+// de dias disponiveis -- nenhuma unidade Kumon abre aos domingos, entao
+// essa coluna nunca teria valor no grafico "Aulas por dia da semana".
+const DIAS_BANCO = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
 
 /** Mesmo grid de 30min que `HorarioDoDia` forca em todo `MatriculaHorario.horario`. */
 const DURACAO_SLOT_MIN = 30
@@ -123,6 +126,7 @@ export interface PainelAgregacoes {
   totalProfessores: number
   ocupacaoPercentual: number
   matriculasPorMateria: { materiaId: string; materiaNome: string; total: number }[]
+  matriculasPorProfessor: { professorId: string; professorNome: string; total: number }[]
   aulasPorDiaSemana: { diaSemana: string; total: number }[]
   alertas: { tipo: string; alunoId: string; mensagem: string }[]
 }
@@ -179,6 +183,17 @@ export function calcularAgregacoesPainel(
     total,
   }))
 
+  const nomeDoProfessor = new Map(dados.professores.map((professor) => [professor.id, professor.nome]))
+  const porProfessor = new Map<string, number>()
+  for (const matricula of matriculasAtivas) {
+    porProfessor.set(matricula.professorId, (porProfessor.get(matricula.professorId) ?? 0) + 1)
+  }
+  const matriculasPorProfessor = [...porProfessor.entries()].map(([professorId, total]) => ({
+    professorId,
+    professorNome: nomeDoProfessor.get(professorId) ?? '',
+    total,
+  }))
+
   const porDia = new Map<string, number>()
   for (const horario of horariosEscopados) {
     porDia.set(horario.diaSemana, (porDia.get(horario.diaSemana) ?? 0) + 1)
@@ -191,7 +206,9 @@ export function calcularAgregacoesPainel(
     .map((aluno) => ({
       tipo: 'zona_vermelha',
       alunoId: aluno.id,
-      mensagem: `${aluno.nome} esta marcado como zona vermelha.`,
+      // Formulacao neutra de proposito -- "esta marcado" nao concorda com
+      // o genero do nome, e o sistema nao tem como saber isso.
+      mensagem: `${aluno.nome} está na zona vermelha.`,
     }))
 
   return {
@@ -200,6 +217,7 @@ export function calcularAgregacoesPainel(
     totalProfessores: dados.professores.length,
     ocupacaoPercentual,
     matriculasPorMateria,
+    matriculasPorProfessor,
     aulasPorDiaSemana,
     alertas,
   }
