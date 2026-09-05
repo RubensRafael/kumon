@@ -5,7 +5,17 @@ import type { MateriaOutputType, ProfessorOutputType } from '@shared/dto'
 
 import { Button } from '../../../components/ui/button'
 import { Card, CardContent, CardHeader } from '../../../components/ui/card'
+import { useAuth } from '../../../hooks/use-auth'
 import { ProfessorFormDialog } from './professor-form-dialog'
+
+const DIAS_ABREVIADOS: Record<string, string> = {
+  SEG: 'Seg',
+  TER: 'Ter',
+  QUA: 'Qua',
+  QUI: 'Qui',
+  SEX: 'Sex',
+  SAB: 'Sáb',
+}
 
 export function ProfessorCard({
   professor,
@@ -16,11 +26,13 @@ export function ProfessorCard({
   materias: MateriaOutputType[]
   onAtualizado: () => void
 }) {
+  const { podeEditarProfessor } = useAuth()
   const [editando, setEditando] = useState(false)
   const nomesMaterias = professor.materiaIds
     .map((id) => materias.find((materia) => materia.id === id)?.nome)
     .filter((nome): nome is string => Boolean(nome))
     .join(' · ')
+  const podeEditar = podeEditarProfessor(professor.id)
 
   return (
     <Card>
@@ -29,9 +41,14 @@ export function ProfessorCard({
           <p className="font-semibold">{professor.nome}</p>
           <p className="text-sm text-muted-foreground">{nomesMaterias || 'Sem matérias'}</p>
         </div>
-        <Button variant="ghost" size="icon-sm" onClick={() => setEditando(true)}>
-          <Pencil className="size-4" />
-        </Button>
+        {/* Editar o cadastro de outro professor sem ser admin é uma escrita
+            que o backend (`restrictProfessorSelf`) sempre recusa -- não
+            oferecer o botão em vez de abrir um formulário que nunca salva. */}
+        {podeEditar ? (
+          <Button variant="ghost" size="icon-sm" onClick={() => setEditando(true)}>
+            <Pencil className="size-4" />
+          </Button>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-2 text-sm">
@@ -41,7 +58,13 @@ export function ProfessorCard({
           </div>
           <div>
             <p className="text-xs tracking-wide text-muted-foreground uppercase">Dias</p>
-            <p className="font-medium">{professor.diasDisponiveis.length}</p>
+            <p className="flex flex-wrap gap-1 font-medium">
+              {professor.diasDisponiveis.map((dia) => (
+                <span key={dia} className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                  {DIAS_ABREVIADOS[dia] ?? dia}
+                </span>
+              ))}
+            </p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -53,13 +76,15 @@ export function ProfessorCard({
         </Button>
       </CardContent>
 
-      <ProfessorFormDialog
-        open={editando}
-        onOpenChange={setEditando}
-        professor={professor}
-        materias={materias}
-        onSalvo={onAtualizado}
-      />
+      {podeEditar ? (
+        <ProfessorFormDialog
+          open={editando}
+          onOpenChange={setEditando}
+          professor={professor}
+          materias={materias}
+          onSalvo={onAtualizado}
+        />
+      ) : null}
     </Card>
   )
 }

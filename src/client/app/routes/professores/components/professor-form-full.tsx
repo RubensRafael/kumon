@@ -8,7 +8,7 @@ import { DialogFooter } from '../../../components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../components/ui/form'
 import { Input } from '../../../components/ui/input'
 import { ToggleGroup, ToggleGroupItem } from '../../../components/ui/toggle-group'
-import { useApiMutation } from '../../../hooks/use-api-mutation'
+import { useApiMutation } from '../../../hooks/use-api'
 
 /** Sem "Dom" de propósito — nenhuma unidade Kumon funciona aos domingos (ver docs/pr-fe-03-professores.md). */
 const DIAS_DISPONIVEIS = [

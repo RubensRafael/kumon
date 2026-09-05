@@ -2,11 +2,13 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '../../components/ui/button'
-import { useApiQuery } from '../../hooks/use-api-query'
+import { useAuth } from '../../hooks/use-auth'
+import { useApiQuery } from '../../hooks/use-api'
 import { ProfessorCard } from './components/professor-card'
 import { ProfessorFormDialog } from './components/professor-form-dialog'
 
 export function ProfessoresPage() {
+  const { isAdmin } = useAuth()
   const { data: professores, loading, refetch } = useApiQuery('listarProfessores', {})
   const { data: materias } = useApiQuery('listarMaterias', { query: {} })
   const [dialogAberto, setDialogAberto] = useState(false)
@@ -18,10 +20,14 @@ export function ProfessoresPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Professores</h1>
           <p className="text-sm text-muted-foreground">Equipe da unidade, disponibilidade e capacidade</p>
         </div>
-        <Button onClick={() => setDialogAberto(true)}>
-          <Plus className="size-4" />
-          Novo professor
-        </Button>
+        {/* Criar professor é admin-only no backend (requireAdmin) -- não
+            oferecer o botão pra quem só receberia 403. */}
+        {isAdmin ? (
+          <Button onClick={() => setDialogAberto(true)}>
+            <Plus className="size-4" />
+            Novo professor
+          </Button>
+        ) : null}
       </div>
 
       {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
@@ -37,12 +43,14 @@ export function ProfessoresPage() {
         ))}
       </div>
 
-      <ProfessorFormDialog
-        open={dialogAberto}
-        onOpenChange={setDialogAberto}
-        materias={materias ?? []}
-        onSalvo={refetch}
-      />
+      {isAdmin ? (
+        <ProfessorFormDialog
+          open={dialogAberto}
+          onOpenChange={setDialogAberto}
+          materias={materias ?? []}
+          onSalvo={refetch}
+        />
+      ) : null}
     </div>
   )
 }

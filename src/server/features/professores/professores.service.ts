@@ -2,6 +2,7 @@ import { HTTPException } from 'hono/http-exception'
 
 import type { Prisma, PrismaClient } from '../../db/generated/client'
 import type { ProfessorCreateInputType, ProfessorOutputType } from '../../../shared/dto/professores.dto'
+import { janelaDeAtendimentoValida } from '../../lib/horario'
 
 const INCLUDE_MATERIAS = { materias: { select: { materiaId: true } } } as const
 
@@ -77,6 +78,12 @@ export async function criarProfessor(
 ): Promise<ProfessorOutputType> {
   await validarMateriaIds(prisma, input.materiaIds)
 
+  if (!janelaDeAtendimentoValida(input.horarioInicial, input.horarioFinal)) {
+    throw new HTTPException(400, {
+      message: 'O horario final deve ser depois do horario inicial.',
+    })
+  }
+
   const professor = await prisma.professor.create({
     data: {
       nome: input.nome,
@@ -115,6 +122,16 @@ export async function atualizarProfessor(
 
   if (input.materiaIds !== undefined) {
     await validarMateriaIds(prisma, input.materiaIds)
+  }
+
+  if (input.horarioInicial !== undefined || input.horarioFinal !== undefined) {
+    const horarioInicialEfetivo = input.horarioInicial ?? existente.horarioInicial
+    const horarioFinalEfetivo = input.horarioFinal ?? existente.horarioFinal
+    if (!janelaDeAtendimentoValida(horarioInicialEfetivo, horarioFinalEfetivo)) {
+      throw new HTTPException(400, {
+        message: 'O horario final deve ser depois do horario inicial.',
+      })
+    }
   }
 
   const professor = await prisma.$transaction(async (tx) => {
