@@ -1,7 +1,7 @@
 import { HTTPException } from 'hono/http-exception'
 
 import type { MatriculaHorario, PrismaClient } from '../../db/generated/client'
-import type { HorarioCreateInputType, HorarioOutputType, HorarioUpdateInputType } from './horarios.dto'
+import type { HorarioCreateInputType, HorarioOutputType, HorarioUpdateInputType } from '../../../shared/dto/horarios.dto'
 
 // Nenhuma query de horario usa include/select -- a linha sempre vem
 // completa, entao o model MatriculaHorario exportado pelo client ja e o

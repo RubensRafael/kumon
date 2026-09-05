@@ -1,14 +1,23 @@
 import type {
+  AlunoCreateInputType,
+  AlunoOutputType,
+  AlunoUpdateInputType,
   ConteudoCreateInputType,
   ConteudoOutputType,
   ConteudoUpdateInputType,
   HealthResponse,
+  HorarioCreateInputType,
+  HorarioOutputType,
+  HorarioUpdateInputType,
   ListarMateriasQueryType,
   LoginInputType,
   LoginOutputType,
   MateriaCreateInputType,
   MateriaOutputType,
   MateriaUpdateInputType,
+  MatriculaCreateInputType,
+  MatriculaOutputType,
+  MatriculaUpdateInputType,
   PainelDadosOutputType,
   ProfessorCreateInputType,
   ProfessorOutputType,
@@ -54,6 +63,16 @@ export const apiEndpoints = {
   listarUsuarios: { method: 'GET', path: '/usuarios' },
   criarUsuario: { method: 'POST', path: '/usuarios' },
   atualizarUsuario: { method: 'PUT', path: '/usuarios/:id' },
+  listarAlunos: { method: 'GET', path: '/alunos' },
+  buscarAluno: { method: 'GET', path: '/alunos/:id' },
+  criarAluno: { method: 'POST', path: '/alunos' },
+  atualizarAluno: { method: 'PUT', path: '/alunos/:id' },
+  listarMatriculasDoAluno: { method: 'GET', path: '/alunos/:alunoId/matriculas' },
+  criarMatricula: { method: 'POST', path: '/alunos/:alunoId/matriculas' },
+  atualizarMatricula: { method: 'PUT', path: '/matriculas/:id' },
+  listarHorariosDaMatricula: { method: 'GET', path: '/matriculas/:matriculaId/horarios' },
+  criarHorario: { method: 'POST', path: '/matriculas/:matriculaId/horarios' },
+  atualizarHorario: { method: 'PUT', path: '/horarios/:id' },
 } as const
 
 export type ApiEndpointName = keyof typeof apiEndpoints
@@ -99,6 +118,16 @@ export interface ApiContract extends Record<ApiEndpointName, EndpointShape> {
   listarUsuarios: { response: UsuarioOutputType[] }
   criarUsuario: { body: UsuarioCreateInputType; response: UsuarioOutputType }
   atualizarUsuario: { body: UsuarioUpdateInputType; response: UsuarioOutputType }
+  listarAlunos: { response: AlunoOutputType[] }
+  buscarAluno: { response: AlunoOutputType }
+  criarAluno: { body: AlunoCreateInputType; response: AlunoOutputType }
+  atualizarAluno: { body: AlunoUpdateInputType; response: AlunoOutputType }
+  listarMatriculasDoAluno: { response: MatriculaOutputType[] }
+  criarMatricula: { body: MatriculaCreateInputType; response: MatriculaOutputType }
+  atualizarMatricula: { body: MatriculaUpdateInputType; response: MatriculaOutputType }
+  listarHorariosDaMatricula: { response: HorarioOutputType[] }
+  criarHorario: { body: HorarioCreateInputType; response: HorarioOutputType }
+  atualizarHorario: { body: HorarioUpdateInputType; response: HorarioOutputType }
 }
 
 /** Tipo de retorno de uma rota: `ApiResponse<'listUsers'>`. */

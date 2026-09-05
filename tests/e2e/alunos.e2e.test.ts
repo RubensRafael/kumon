@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { AlunoOutputType } from '../../src/server/features/alunos/alunos.dto'
+import type { AlunoOutputType } from '../../src/shared/dto/alunos.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,

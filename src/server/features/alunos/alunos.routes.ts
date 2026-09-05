@@ -5,7 +5,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware'
 import { requireAdmin } from '../../middlewares/require-admin.middleware'
 import { scopeToProfessor } from '../../middlewares/scope-to-professor.middleware'
 import type { AppEnv } from '../../types'
-import { AlunoCreateInput, AlunoOutput, AlunoUpdateInput } from './alunos.dto'
+import { AlunoCreateInput, AlunoOutput, AlunoUpdateInput } from '../../../shared/dto/alunos.dto'
 import * as alunosService from './alunos.service'
 
 export const alunosRoutes = new Hono<AppEnv>()

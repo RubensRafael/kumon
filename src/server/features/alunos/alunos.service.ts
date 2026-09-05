@@ -1,7 +1,7 @@
 import { HTTPException } from 'hono/http-exception'
 
 import type { Aluno, PrismaClient } from '../../db/generated/client'
-import type { AlunoCreateInputType, AlunoOutputType, AlunoUpdateInputType } from './alunos.dto'
+import type { AlunoCreateInputType, AlunoOutputType, AlunoUpdateInputType } from '../../../shared/dto/alunos.dto'
 
 // Nenhuma query de aluno usa `include`/`select` -- a linha sempre vem
 // completa, entao o model `Aluno` exportado pelo client ja e o shape certo,

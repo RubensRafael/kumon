@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { HorarioOutputType } from '../../src/server/features/horarios/horarios.dto'
+import type { HorarioOutputType } from '../../src/shared/dto/horarios.dto'
 import { authHeader, obterCookie } from '../helpers/auth'
 import {
   criarAluno,
