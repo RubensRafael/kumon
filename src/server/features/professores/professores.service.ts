@@ -1,7 +1,7 @@
 import { HTTPException } from 'hono/http-exception'
 
 import type { Prisma, PrismaClient } from '../../db/generated/client'
-import type { ProfessorCreateInputType, ProfessorOutputType } from './professores.dto'
+import type { ProfessorCreateInputType, ProfessorOutputType } from '../../../shared/dto/professores.dto'
 
 const INCLUDE_MATERIAS = { materias: { select: { materiaId: true } } } as const
 
