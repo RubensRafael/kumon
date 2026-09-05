@@ -85,7 +85,7 @@ aula. Os achados citam esses dados pelo nome.
 | [fe-03 Professores](./qa-fe-03-professores.md) | — | 3 | — | 1 |
 | [fe-04 Alunos](./qa-fe-04-alunos.md) | — | 2 | 2 | 2 |
 | [fe-05 Painel](./qa-fe-05-painel.md) | — | 1 | 2 | 2 |
-| [fe-06 Agenda](./qa-fe-06-agenda.md) | — | 1 | 3 | 1 |
+| [fe-06 Agenda](./qa-fe-06-agenda.md) | — | 1 | 2 | 1 |
 | [fe-07 Acompanhamento](./qa-fe-07-acompanhamento.md) | 1 | 1 | 3 | 2 |
 
 **Veredito por branch:** todas as sete entregam o que os respectivos
@@ -203,6 +203,29 @@ validação cruzada que falta no backend (professor leciona a matéria,
 horário dentro da janela do professor) entra **junto**, na mesma leva de
 trabalho — o contexto no front melhora a UX (impede o erro antes de
 submeter), mas não substitui a validação no servidor.
+
+### 6. Estado de filtro na URL deveria ser um padrão único, tipado
+
+`/agenda` já tem todos os dados necessários pra funcionar via o contexto
+global do item 5 — não *precisa* de querystring pra nada. Mas ela usa
+(`?professorId=`), e hoje faz isso pela metade: só `professorId` lê da URL,
+e só uma vez, no mount (`useState(searchParams.get('professorId') ?? '')`);
+os outros seis filtros da tela (Disciplina, Estágio, Connect, Zona
+Vermelha, Regular, Pré-escolar) são `useState` local puro, nunca
+sincronizados. Um reload perde todos eles, e o valor padrão usado quando
+não há `professorId` na URL é só "o primeiro item da lista bruta" — sem
+nenhum critério, o que já causou a tela abrir vazia (ver
+`qa-fe-06-agenda.md`, achado 1).
+
+**Decisão:** tratar a URL como fonte de verdade de forma consistente em
+todos os filtros de uma tela, não só nalguns — ao dar reload, cada filtro
+recupera o que estiver na URL, ou cai num padrão definido explicitamente
+para aquele filtro (nunca "o que calhar de vir primeiro"). E parsear a URL
+de forma tipada: mesmo sendo tudo string em querystring, as chaves
+esperadas de cada tela devem estar centralizadas num único lugar (um schema
+ou um objeto de chaves), não espalhadas em literais soltos pelo componente.
+Vale como padrão pra qualquer tela futura que sincronize filtro com URL,
+não só pra Agenda.
 
 ## O que não é bug
 

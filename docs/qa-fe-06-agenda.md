@@ -67,6 +67,30 @@ São dois problemas somados, e vale corrigir os dois:
 Vale também revisar qual professor é o padrão quando não vem querystring:
 o primeiro da lista ordenada seria mais previsível do que o que saiu aqui.
 
+**Decisão:** a Agenda já tem todos os dados brutos disponíveis (via o
+contexto global do
+[padrão 5 do md geral](./qa-fe-00-visao-geral.md#5-dados-brutos-do-snapshot-deveriam-ser-um-contexto-global-compartilhado)),
+então ela não *precisa* depender de filtro na URL pra funcionar — mas como
+ela usa querystring, o certo é suportar o estado sem filtro com um valor
+padrão bem definido (não "o que calhar de vir primeiro na lista bruta",
+que hoje é a causa raiz de ter caído no professor inválido:
+`professorAtualId = professorId || painel?.professores[0]?.id || ''`, sem
+nenhum critério de ordenação).
+
+Isso é um caso específico de um problema mais geral do state management da
+tela: hoje só `professorId` lê da URL, e só uma vez, no mount
+(`useState(searchParams.get('professorId') ?? '')`) — os outros seis
+filtros (Disciplina, Estágio, Connect, Zona Vermelha, Regular, Pré-escolar)
+são `useState` local puro, nunca sincronizados com a URL. Um reload perde
+todos eles. A decisão é tratar a URL como fonte de verdade de forma
+consistente em **todos** os filtros — ao dar reload, cada filtro recupera o
+que estiver na URL, ou cai num padrão definido para aquele filtro — e
+parsear a URL de forma tipada: mesmo sendo tudo string em querystring, as
+chaves esperadas devem estar centralizadas num único lugar (um schema ou um
+objeto de chaves), não espalhadas em literais soltos pelo componente. Essa
+decisão é geral o bastante pra valer além desta tela — anotada também em
+[`qa-fe-00-visao-geral.md`](./qa-fe-00-visao-geral.md#6-estado-de-filtro-na-url-deveria-ser-um-padrão-único-tipado).
+
 ### 2. Cabeçalho mistura abreviação e nome por extenso — Médio
 
 As colunas da agenda individual saem assim:
@@ -78,6 +102,9 @@ Seg 31/08 · Ter 01/09 · Qua 02/09 · Qui 03/09 · Sex 04/09 · Sábado 05/09
 Cinco abreviados e o sábado por extenso. Além de inconsistente, a coluna do
 sábado fica mais larga que as outras. A agenda geral usa "Sáb" corretamente
 nas abas — é só alinhar o formatador.
+
+**Decisão:** só o rewording — trocar "Sábado" por "Sáb", igual às abas da
+agenda geral.
 
 ### 3. Agenda mostra aluno fora da disponibilidade do professor, sem marcação — Médio
 
@@ -94,32 +121,20 @@ Corrigido na origem, isso deixa de acontecer para dados novos. Para os
 dados que já existem, um destaque na célula ("fora da disponibilidade") faria
 a Agenda virar a rede de segurança em vez de esconder o problema.
 
-### 4. Escopo por papel é inconsistente entre telas — Médio
+**Decisão:** só o link pro fix de origem (mesma raiz do achado 2 da fe-04 —
+contexto global + validação cruzada no backend). Uma vez corrigido lá, dado
+inválido novo não entra mais; sem ação extra na Agenda por enquanto.
 
-Logada como professora Ana:
-
-| Tela | Vê "Carlos Aluno" (aluno do Bruno)? |
-| ---- | ----------------------------------- |
-| `/alunos` | ❌ Não — 4 de 5 alunos |
-| `/agenda-geral` | ✅ Sim, na grade |
-
-Não é bug de implementação: `GET /painel` é deliberadamente sem escopo, e o
-`pr-10-painel.md` documenta a razão ("leitura pura, qualquer usuário
-autenticado vê a unidade inteira"). A questão é que a decisão foi tomada
-para o Painel, e a Agenda passou a consumir o mesmo endpoint na fe-06 —
-herdando o escopo aberto sem que isso fosse decidido de novo.
-
-O resultado é uma contradição visível: a mesma professora, no mesmo app, tem
-um aluno escondido numa tela e exposto na outra. Vale uma decisão explícita
-— ou a Agenda filtra pelo `professorId` da sessão, ou a lista de alunos
-deixa de esconder. As duas são defensáveis; a mistura não.
-
-### 5. "Novo aluno" aparece para quem recebe 403 — Baixo
+### 4. "Novo aluno" aparece para quem recebe 403 — Baixo
 
 O botão está no cabeçalho da Agenda Geral e é exibido para o professor, que
 recebe **403** ao tentar (`POST /alunos` é admin-only). Mesmo padrão do
 "Novo professor" da fe-03 — e, como lá, o erro não gera nenhum feedback.
 Condicionar a `papel === 'ADMIN'`.
+
+**Decisão:** já coberto pelo padrão geral (ver
+[`qa-fe-00-visao-geral.md`](./qa-fe-00-visao-geral.md#4-ações-que-o-backend-recusa-aparecem-oferecidas-na-ui)).
+Nada específico a fazer aqui além disso.
 
 ## Diálogo com o doc da PR
 
@@ -136,7 +151,7 @@ Condicionar a `papel === 'ADMIN'`.
   confirmado: com os dois ligados a lista volta a mostrar todos os alunos,
   como o doc previa.
 - **"Botão Novo aluno da Agenda Geral só navega pra /alunos"** — confirmado.
-  Ver item 5 quanto à visibilidade por papel.
+  Ver item 4 quanto à visibilidade por papel.
 - **"`AlunoInspectorSheet` passa a ser usado de verdade"** — funciona. A
   pergunta que a fe-04 deixou em aberto ("a interface que ele expõe já é o
   suficiente pro que a Agenda vai precisar?") pode ser fechada com **sim**:
