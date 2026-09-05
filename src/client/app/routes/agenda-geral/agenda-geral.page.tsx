@@ -10,12 +10,14 @@ import { ScheduleGrid, type ScheduleGridColumn } from '../../components/common/s
 import { WeekdayTabs } from '../../components/common/weekday-tabs'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { useApiQuery } from '../../hooks/use-api-query'
+import { useAuth } from '../../hooks/use-auth'
+import { useApiQuery } from '../../hooks/use-api'
 
 type DiaSemana6 = (typeof DIAS_SEMANA)[number]['valor']
 
 export function AgendaGeralPage() {
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const { data: painel, loading } = useApiQuery('obterPainel', {})
   const { data: professores } = useApiQuery('listarProfessores', {})
   const { data: materias } = useApiQuery('listarMaterias', { query: {} })
@@ -82,7 +84,8 @@ export function AgendaGeralPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Agenda Geral</h1>
           <p className="text-sm text-muted-foreground">Grade semanal por professor</p>
         </div>
-        <Button onClick={() => navigate('/alunos')}>Novo aluno</Button>
+        {/* POST /alunos e admin-only -- nao oferecer o botao pra quem so receberia 403. */}
+        {isAdmin ? <Button onClick={() => navigate('/alunos')}>Novo aluno</Button> : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
