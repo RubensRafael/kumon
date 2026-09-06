@@ -1,10 +1,11 @@
 import { Info } from 'lucide-react'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 
-import type { AgendaSlotOutputType, OcupacaoCelula } from '@shared/dto'
+import type { AgendaSlotOutputType, MateriaOutputType, OcupacaoCelula } from '@shared/dto'
 
 import { TIPO_ATENDIMENTO_LABEL } from './aluno-form/enum-labels'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card'
 
 export interface ScheduleGridColumn {
   key: string
@@ -67,47 +68,83 @@ function ListaOcupacaoCelula({ ocupacao }: { ocupacao: OcupacaoCelula }) {
   )
 }
 
+/** Resumo da matrícula exibido no popup de hover da pill -- não abre em clique, só ao passar o mouse. */
+function ResumoMatriculaPill({ slot, materias }: { slot: AgendaSlotOutputType; materias: MateriaOutputType[] }) {
+  const materiaNome = materias.find((m) => m.id === slot.materiaId)?.nome ?? '—'
+  return (
+    <dl className="space-y-1.5 text-xs">
+      <p className="text-sm font-semibold text-foreground">{slot.alunoNome}</p>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Matéria</dt>
+        <dd className="text-right font-medium">{materiaNome}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Estágio</dt>
+        <dd className="text-right font-medium">{slot.estagio ?? '—'}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Atendimento</dt>
+        <dd className="text-right font-medium">{TIPO_ATENDIMENTO_LABEL[slot.tipoAtendimento]}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Professor</dt>
+        <dd className="text-right font-medium">{slot.professorNome}</dd>
+      </div>
+    </dl>
+  )
+}
+
 /**
  * Pill de um slot ocupado -- badges no fim (mesmo padrão visual do círculo
  * "C" de Connect em `aluno-card.tsx:46-49`): "30 min" pra `PRE_ESCOLAR`,
  * círculo Connect, bolinha de zona vermelha. Nome do aluno é o único
- * elemento que trunca -- os badges nunca encolhem.
+ * elemento que trunca -- os badges nunca encolhem. Hover (via `HoverCard`
+ * do Radix, delay de entrada/saída e fechamento consistentes de graça) traz
+ * um resumo da matrícula, sem precisar clicar.
  */
 function AgendaPill({
   slot,
+  materias,
   onClick,
 }: {
   slot: AgendaSlotOutputType
+  materias: MateriaOutputType[]
   onClick: (slot: AgendaSlotOutputType) => void
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onClick(slot)}
-      className="flex items-center gap-1 rounded-md px-2 py-1 text-left text-xs font-medium text-white"
-      style={{ backgroundColor: slot.professorCorAgenda }}
-      title={`${slot.alunoNome} — ${slot.professorNome}`}
-    >
-      <span className="truncate">{slot.alunoNome}</span>
-      <span className="ml-auto flex shrink-0 items-center gap-1">
-        {slot.tipoAtendimento === 'PRE_ESCOLAR' ? (
-          <span className="rounded-sm bg-white/25 px-1 py-px text-[9px] leading-tight font-semibold whitespace-nowrap">
-            30 min
+    <HoverCard openDelay={300}>
+      <HoverCardTrigger asChild>
+        <button
+          type="button"
+          onClick={() => onClick(slot)}
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-left text-xs font-medium text-white"
+          style={{ backgroundColor: slot.professorCorAgenda }}
+        >
+          <span className="truncate">{slot.alunoNome}</span>
+          <span className="ml-auto flex shrink-0 items-center gap-1">
+            {slot.tipoAtendimento === 'PRE_ESCOLAR' ? (
+              <span className="rounded-sm bg-white/25 px-1 py-px text-[9px] leading-tight font-semibold whitespace-nowrap">
+                30 min
+              </span>
+            ) : null}
+            {slot.alunoConnect ? (
+              <span
+                className="flex size-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold text-white"
+                title="Connect"
+              >
+                C
+              </span>
+            ) : null}
+            {slot.alunoZonaVermelha ? (
+              <span className="size-2 shrink-0 rounded-full bg-red-500 ring-1 ring-white" title="Zona Vermelha" />
+            ) : null}
           </span>
-        ) : null}
-        {slot.alunoConnect ? (
-          <span
-            className="flex size-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold text-white"
-            title="Connect"
-          >
-            C
-          </span>
-        ) : null}
-        {slot.alunoZonaVermelha ? (
-          <span className="size-2 shrink-0 rounded-full bg-red-500 ring-1 ring-white" title="Zona Vermelha" />
-        ) : null}
-      </span>
-    </button>
+        </button>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-56">
+        <ResumoMatriculaPill slot={slot} materias={materias} />
+      </HoverCardContent>
+    </HoverCard>
   )
 }
 
@@ -122,6 +159,7 @@ export function ScheduleGrid({
   horarios,
   slotsDaCelula,
   ocupacaoDaCelula,
+  materias,
   onSlotClick,
 }: {
   colunas: ScheduleGridColumn[]
@@ -135,6 +173,8 @@ export function ScheduleGrid({
    * porque a view está filtrada.
    */
   ocupacaoDaCelula: (colunaKey: string, horario: string) => OcupacaoCelula
+  /** Só pro nome da matéria no popup de hover da pill -- `AgendaSlotOutputType` só tem o id. */
+  materias: MateriaOutputType[]
   onSlotClick: (slot: AgendaSlotOutputType) => void
 }) {
   const [celulaInfo, setCelulaInfo] = useState<{ coluna: ScheduleGridColumn; horario: string } | null>(null)
@@ -184,7 +224,9 @@ export function ScheduleGrid({
                       {slots.length === 0 ? (
                         <span className="block px-1 text-muted-foreground">—</span>
                       ) : (
-                        slots.map((slot) => <AgendaPill key={slot.horarioId} slot={slot} onClick={onSlotClick} />)
+                        slots.map((slot) => (
+                          <AgendaPill key={slot.horarioId} slot={slot} materias={materias} onClick={onSlotClick} />
+                        ))
                       )}
                     </div>
                   </td>

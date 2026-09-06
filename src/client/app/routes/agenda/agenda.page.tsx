@@ -230,6 +230,7 @@ export function AgendaPage() {
           horarios={horarios}
           slotsDaCelula={slotsDaCelula}
           ocupacaoDaCelula={ocupacaoDaCelula}
+          materias={materias ?? []}
           onSlotClick={(slot) => setAlunoSelecionado(slot.alunoId)}
         />
       )}
