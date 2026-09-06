@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
-import { derivarAgendaSlots, type AgendaSlotOutputType } from '@shared/dto'
+import { calcularOcupacaoCelula, derivarAgendaSlots, type AgendaSlotOutputType } from '@shared/dto'
 
 import { AlunoInspectorSheet } from '../../components/common/aluno-inspector-sheet'
 import { DIAS_SEMANA } from '../../components/common/dias-semana'
@@ -113,6 +113,15 @@ export function AgendaPage() {
     return slotsFiltrados.filter((slot) => slot.diaSemana === diaSemana && slot.horario === horario)
   }
 
+  // Ocupacao "de verdade" (ignora os filtros da toolbar, ver comentario em
+  // ScheduleGrid) -- coluna aqui e sempre o dia, o professor e fixo (o
+  // selecionado no <Select> acima). `painel!`: o early-return de
+  // `loading || !painel` acima ja garante isso, mas o narrowing nao
+  // atravessa o limite dessa function declaration.
+  function ocupacaoDaCelula(diaSemana: string, horario: string) {
+    return calcularOcupacaoCelula(painel!, { professorId: professorAtualId, diaSemana, horario })
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -220,6 +229,7 @@ export function AgendaPage() {
           colunas={colunas}
           horarios={horarios}
           slotsDaCelula={slotsDaCelula}
+          ocupacaoDaCelula={ocupacaoDaCelula}
           onSlotClick={(slot) => setAlunoSelecionado(slot.alunoId)}
         />
       )}

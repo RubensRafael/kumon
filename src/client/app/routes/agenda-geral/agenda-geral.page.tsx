@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 
-import { derivarAgendaSlots, type AgendaSlotOutputType } from '@shared/dto'
+import { calcularOcupacaoCelula, derivarAgendaSlots, type AgendaSlotOutputType } from '@shared/dto'
 
 import { AlunoInspectorSheet } from '../../components/common/aluno-inspector-sheet'
 import { DIAS_SEMANA } from '../../components/common/dias-semana'
@@ -87,6 +87,13 @@ export function AgendaGeralPage() {
     return slotsDoDia.filter((slot) => slot.professorId === professorId && slot.horario === horario)
   }
 
+  // Coluna aqui e o professor; o dia e fixo (a aba selecionada acima).
+  // `painel!`: o early-return de `loading || !painel` acima ja garante isso,
+  // mas o narrowing nao atravessa o limite dessa function declaration.
+  function ocupacaoDaCelula(professorId: string, horario: string) {
+    return calcularOcupacaoCelula(painel!, { professorId, diaSemana: dia, horario })
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between">
@@ -112,6 +119,7 @@ export function AgendaGeralPage() {
         colunas={colunas}
         horarios={horarios}
         slotsDaCelula={slotsDaCelula}
+        ocupacaoDaCelula={ocupacaoDaCelula}
         onSlotClick={(slot) => setAlunoSelecionado(slot.alunoId)}
       />
 
