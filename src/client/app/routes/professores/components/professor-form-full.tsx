@@ -4,15 +4,12 @@ import { useForm } from 'react-hook-form'
 import { ProfessorCreateInput, type MateriaOutputType, type ProfessorCreateInputType, type ProfessorOutputType } from '@shared/dto'
 
 import { DIAS_SEMANA } from '../../../components/common/dias-semana'
+import { PillToggleGroup } from '../../../components/common/pill-toggle-group'
 import { Button } from '../../../components/ui/button'
 import { DialogClose, DialogFooter } from '../../../components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../../components/ui/form'
 import { Input } from '../../../components/ui/input'
-import { ToggleGroup, ToggleGroupItem } from '../../../components/ui/toggle-group'
 import { useApiMutation } from '../../../hooks/use-api'
-
-const PILL_ITEM_CLASSNAME =
-  'h-auto rounded-full px-3 py-1.5 font-normal data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground'
 
 export function ProfessorFormFull({
   professor,
@@ -116,20 +113,12 @@ export function ProfessorFormFull({
             <FormItem>
               <FormLabel>Matérias</FormLabel>
               <FormControl>
-                <ToggleGroup
+                <PillToggleGroup
                   type="multiple"
-                  variant="outline"
-                  spacing={2}
                   value={field.value}
                   onValueChange={field.onChange}
-                  className="flex-wrap justify-start"
-                >
-                  {materias.map((materia) => (
-                    <ToggleGroupItem key={materia.id} value={materia.id} className={PILL_ITEM_CLASSNAME}>
-                      {materia.nome}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                  items={materias.map((materia) => ({ value: materia.id, label: materia.nome }))}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -143,20 +132,12 @@ export function ProfessorFormFull({
             <FormItem>
               <FormLabel>Dias disponíveis</FormLabel>
               <FormControl>
-                <ToggleGroup
+                <PillToggleGroup
                   type="multiple"
-                  variant="outline"
-                  spacing={2}
                   value={field.value}
                   onValueChange={field.onChange}
-                  className="flex-wrap justify-start"
-                >
-                  {DIAS_SEMANA.map((dia) => (
-                    <ToggleGroupItem key={dia.valor} value={dia.valor} className={PILL_ITEM_CLASSNAME}>
-                      {dia.label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                  items={DIAS_SEMANA.map((dia) => ({ value: dia.valor, label: dia.label }))}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
