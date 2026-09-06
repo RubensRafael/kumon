@@ -3,9 +3,9 @@ import { useState } from 'react'
 import type { MateriaOutputType, MatriculaOutputType, ProfessorOutputType } from '@shared/dto'
 
 import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
+import { AccordionContent, AccordionItem, AccordionTrigger } from '../../ui/accordion'
 import { Badge } from '../../ui/badge'
 import { Button } from '../../ui/button'
-import { Card, CardContent, CardHeader } from '../../ui/card'
 import { Label } from '../../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { Textarea } from '../../ui/textarea'
@@ -114,16 +114,18 @@ export function MatriculaExistenteCard({
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <span className="font-medium">
-          {materiaNome} · {professorNome}
+    <AccordionItem value={matricula.id}>
+      <AccordionTrigger className="px-4">
+        <span className="flex flex-1 items-center justify-between gap-2 pr-2">
+          <span className="font-medium">
+            {materiaNome} · {professorNome}
+          </span>
+          <Badge variant={matricula.situacao === 'ATIVA' ? 'default' : 'secondary'}>
+            {SITUACAO_MATRICULA_LABEL[matricula.situacao]}
+          </Badge>
         </span>
-        <Badge variant={matricula.situacao === 'ATIVA' ? 'default' : 'secondary'}>
-          {SITUACAO_MATRICULA_LABEL[matricula.situacao]}
-        </Badge>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      </AccordionTrigger>
+      <AccordionContent className="space-y-4 px-4">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-xs tracking-wide text-muted-foreground uppercase">Estágio</p>
@@ -177,7 +179,7 @@ export function MatriculaExistenteCard({
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </AccordionContent>
+    </AccordionItem>
   )
 }
