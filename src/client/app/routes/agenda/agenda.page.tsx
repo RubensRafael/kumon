@@ -22,7 +22,11 @@ const TOGGLES_BINARIOS = [
 
 export function AgendaPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { data: painel, loading } = useApiQuery('obterPainel', {})
+  // `keepPreviousData`: sem isso, o `refetch()` disparado por "adicionar
+  // aluno nesse horário" (dentro do modal do `ScheduleGrid`) zera `painel`
+  // por um instante, o guard de loading abaixo desmonta a grade inteira e o
+  // modal recém-aberto fecha sozinho -- só pra reabrir com os mesmos dados.
+  const { data: painel, refetch: refetchPainel } = useApiQuery('obterPainel', {}, { keepPreviousData: true })
   const { data: professores } = useApiQuery('listarProfessores', {})
   const { data: materias } = useApiQuery('listarMaterias', { query: {} })
 
@@ -73,7 +77,11 @@ export function AgendaPage() {
     [slotsDosProfessores, materiaIds, estagios, alunoIds, connect, zonaVermelha, regular, preEscolar],
   )
 
-  if (loading || !painel) {
+  // Não gate em `loading`: com `keepPreviousData`, ele continua `true`
+  // durante um refetch em segundo plano (ex.: depois de "adicionar aluno"),
+  // e `painel` já está populado nesse momento -- só falta mesmo na
+  // primeiríssima carga da tela.
+  if (!painel) {
     return (
       <div className="space-y-4">
         <div>
@@ -114,6 +122,7 @@ export function AgendaPage() {
   const colunas: ScheduleGridColumn[] = DIAS_SEMANA_GRADE.map((dia) => ({
     key: dia.valor,
     header: <p className="font-semibold">{dia.label}</p>,
+    label: dia.label,
   }))
 
   function slotsDaCelula(diaSemana: string, horario: string): AgendaSlotOutputType[] {
@@ -229,7 +238,10 @@ export function AgendaPage() {
           slotsDaCelula={slotsDaCelula}
           ocupacaoDaCelula={ocupacaoDaCelula}
           materias={materias ?? []}
+          professores={painel.professores}
+          alunos={painel.alunos}
           onSlotClick={(slot) => setAlunoSelecionado(slot.alunoId)}
+          onAlunoAdicionado={refetchPainel}
         />
       )}
 

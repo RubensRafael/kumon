@@ -110,12 +110,22 @@ export function calcularOcupacaoCelula(
   return { ocupantes, overflow, capacidade: professor?.capacidadePorHorario ?? 0 }
 }
 
-/** Só entra na soma da unidade quem realmente atende nesse dia/horário -- senão um professor que só dá aula de manhã contaria capacidade fantasma nas células da tarde. */
-function professorDisponivel(
+/**
+ * Só entra na soma da unidade quem realmente atende nesse dia/horário --
+ * senão um professor que só dá aula de manhã contaria capacidade fantasma
+ * nas células da tarde. Exportada (não só uso interno): o formulário de
+ * "adicionar aluno nesse horário" (schedule-grid.tsx) usa exatamente essa
+ * mesma checagem pra filtrar o seletor de professor -- disponibilidade real
+ * é a única restrição que o servidor de fato aplica (`criarHorario` rejeita
+ * dia/horário fora da janela do professor), ao contrário de capacidade, que
+ * é só indicativa.
+ */
+export function professorDisponivel(
   professor: { diasDisponiveis: string[]; horarioInicial: string; horarioFinal: string },
   diaSemana: string,
-  minutosAlvo: number,
+  horario: string,
 ): boolean {
+  const minutosAlvo = minutosDoHorario(horario)
   return (
     professor.diasDisponiveis.includes(diaSemana) &&
     minutosAlvo >= minutosDoHorario(professor.horarioInicial) &&
@@ -137,9 +147,8 @@ export function calcularOcupacaoUnidadeCelula(
   dados: PainelDadosOutputType,
   { diaSemana, horario, professorIds }: { diaSemana: string; horario: string; professorIds?: string[] },
 ): OcupacaoCelula {
-  const minutosAlvo = minutosDoHorario(horario)
   const pool = professorIds ? dados.professores.filter((p) => professorIds.includes(p.id)) : dados.professores
-  const disponiveis = pool.filter((p) => professorDisponivel(p, diaSemana, minutosAlvo))
+  const disponiveis = pool.filter((p) => professorDisponivel(p, diaSemana, horario))
 
   const porProfessor = disponiveis.map((p) => calcularOcupacaoCelula(dados, { professorId: p.id, diaSemana, horario }))
 

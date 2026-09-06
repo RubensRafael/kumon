@@ -42,7 +42,11 @@ export function AgendaGeralPage() {
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { data: painel, loading } = useApiQuery('obterPainel', {})
+  // `keepPreviousData`: sem isso, o `refetch()` disparado por "adicionar
+  // aluno nesse horário" (dentro do modal do `ScheduleGrid`) zera `painel`
+  // por um instante, o guard de loading abaixo desmonta a grade inteira e o
+  // modal recém-aberto fecha sozinho -- só pra reabrir com os mesmos dados.
+  const { data: painel, refetch: refetchPainel } = useApiQuery('obterPainel', {}, { keepPreviousData: true })
   const { data: materias } = useApiQuery('listarMaterias', { query: {} })
 
   const [destaque, setDestaque] = useState<'lotado' | 'vagas' | 'baixa' | null>(null)
@@ -73,7 +77,11 @@ export function AgendaGeralPage() {
     [painel, poolProfessorIds],
   )
 
-  if (loading || !painel || !agregado) {
+  // Não gate em `loading`: com `keepPreviousData`, ele continua `true`
+  // durante um refetch em segundo plano (ex.: depois de "adicionar aluno"),
+  // e `painel`/`agregado` já estão populados nesse momento -- só falta
+  // mesmo na primeiríssima carga da tela.
+  if (!painel || !agregado) {
     return (
       <div className="space-y-6">
         <div>
@@ -101,20 +109,23 @@ export function AgendaGeralPage() {
   )
   const horarios = professoresDoPool.length > 0 ? gerarSlotsHorario(horarioInicial, horarioFinal) : []
 
-  const vagasDisponiveis = agregado.capacidadeSimultanea - agregado.totalAlunosAtivos
-  const excedida = vagasDisponiveis < 0
-  const ocupacaoPercentual =
-    agregado.capacidadeSimultanea > 0
-      ? Math.round((agregado.totalAlunosAtivos / agregado.capacidadeSimultanea) * 100)
-      : 0
-
-  // Contagem de células por estado na semana inteira -- alimenta os 3 cards
-  // clicáveis abaixo. Recalculado por completo a cada mudança de matéria ou
-  // janela de horário (dataset pequeno, sem necessidade de otimizar).
+  // Contagem de células por estado na semana inteira -- alimenta os 3 chips
+  // clicáveis abaixo -- e também o pico de ocupação simultânea (maior "total
+  // de ocupantes" visto numa única célula, com a capacidade daquela mesma
+  // célula). É esse pico, não `totalAlunosAtivos`, que é comparável com
+  // `capacidadeSimultanea`: `totalAlunosAtivos` conta alunos distintos ao
+  // longo da semana inteira (cada um só ocupa um horário por vez), enquanto
+  // `capacidadeSimultanea` é um teto por *instante* -- comparar os dois
+  // direto sempre acusa "excedida" mesmo quando nenhum horário real está de
+  // fato lotado.
+  // Recalculado por completo a cada mudança de matéria ou janela de horário
+  // (dataset pequeno, sem necessidade de otimizar).
   const estatisticas = (() => {
     let lotados = 0
     let comVagas = 0
     let baixas = 0
+    let picoOcupantes = 0
+    let picoCapacidade = 0
     for (const dia of DIAS_SEMANA_GRADE) {
       for (const horario of horarios) {
         const ocupacao = calcularOcupacaoUnidadeCelula(painel, {
@@ -126,10 +137,19 @@ export function AgendaGeralPage() {
         if (estado === 'lotado') lotados++
         if (estado === 'baixa' || estado === 'normal') comVagas++
         if (estado === 'baixa') baixas++
+
+        const total = ocupacao.ocupantes.length + ocupacao.overflow.length
+        if (total > picoOcupantes || (total === picoOcupantes && ocupacao.capacidade > picoCapacidade)) {
+          picoOcupantes = total
+          picoCapacidade = ocupacao.capacidade
+        }
       }
     }
-    return { lotados, comVagas, baixas }
+    return { lotados, comVagas, baixas, picoOcupantes, picoCapacidade }
   })()
+
+  const vagasNoPico = estatisticas.picoCapacidade - estatisticas.picoOcupantes
+  const picoExcedido = vagasNoPico < 0
 
   function alternarDestaque(valor: 'lotado' | 'vagas' | 'baixa') {
     setDestaque((atual) => (atual === valor ? null : valor))
@@ -162,10 +182,13 @@ export function AgendaGeralPage() {
   const colunas: ScheduleGridColumn[] = DIAS_SEMANA_GRADE.map((dia) => ({
     key: dia.valor,
     header: <p className="font-semibold">{dia.label}</p>,
+    label: dia.label,
   }))
 
+  // `painel!`: o early-return de `!painel || !agregado` acima já garante isso, mas o narrowing não
+  // atravessa o limite dessa function declaration (mesmo padrão em agenda.page.tsx).
   function ocupacaoDaCelula(diaSemana: string, horario: string): OcupacaoCelula {
-    return calcularOcupacaoUnidadeCelula(painel, { diaSemana, horario, professorIds: poolProfessorIds ?? undefined })
+    return calcularOcupacaoUnidadeCelula(painel!, { diaSemana, horario, professorIds: poolProfessorIds ?? undefined })
   }
 
   const emDestaque = destaque
@@ -195,26 +218,26 @@ export function AgendaGeralPage() {
         <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard titulo="Alunos" valor={agregado.totalAlunosAtivos} legenda="ativos" icon={Users} cor="azul" />
           <MetricCard
-            titulo="Capacidade"
-            valor={`${agregado.totalAlunosAtivos} / ${agregado.capacidadeSimultanea}`}
-            legenda={`máx. ${agregado.capacidadeSimultanea}`}
+            titulo="Pico de ocupação"
+            valor={`${estatisticas.picoOcupantes} / ${estatisticas.picoCapacidade}`}
+            legenda="no horário mais concorrido"
             icon={Gauge}
             cor="ambar"
           />
           <MetricCard
-            titulo="Vagas disponíveis"
-            valor={excedida ? 'Excedida' : vagasDisponiveis}
-            legenda={excedida ? `${Math.abs(vagasDisponiveis)} acima do limite` : 'disponíveis'}
+            titulo="Vagas no pico"
+            valor={picoExcedido ? 'Excedida' : vagasNoPico}
+            legenda={picoExcedido ? `${Math.abs(vagasNoPico)} acima do limite` : 'disponíveis'}
             icon={BedDouble}
-            cor={excedida ? 'vermelho' : 'verde'}
+            cor={picoExcedido ? 'vermelho' : 'verde'}
           />
           <MetricCard
             titulo="Ocupação"
-            valor={`${Math.min(100, ocupacaoPercentual)}%`}
-            legenda="da capacidade da unidade"
+            valor={`${Math.min(100, agregado.ocupacaoPercentual)}%`}
+            legenda="média semanal da unidade"
             icon={TrendingUp}
-            cor={ocupacaoPercentual >= 90 ? 'vermelho' : 'azul'}
-            progresso={ocupacaoPercentual}
+            cor={agregado.ocupacaoPercentual >= 90 ? 'vermelho' : 'azul'}
+            progresso={agregado.ocupacaoPercentual}
           />
         </div>
       </div>
@@ -260,6 +283,9 @@ export function AgendaGeralPage() {
           emDestaque={emDestaque}
           modoCelula="ocupacao"
           materias={materias ?? []}
+          professores={painel.professores}
+          alunos={painel.alunos}
+          onAlunoAdicionado={refetchPainel}
         />
       )}
     </div>

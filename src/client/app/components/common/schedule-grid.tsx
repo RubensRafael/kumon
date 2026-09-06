@@ -5,6 +5,11 @@ import { cn } from 'cn'
 
 import type { AgendaSlotOutputType, MateriaOutputType, OcupacaoCelula } from '@shared/dto'
 
+import {
+  AdicionarAlunoHorarioForm,
+  type AlunoParaMatricula,
+  type ProfessorParaMatricula,
+} from './adicionar-aluno-horario-form'
 import { TIPO_ATENDIMENTO_LABEL } from './aluno-form/enum-labels'
 import { Badge } from '../ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
@@ -13,6 +18,8 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card'
 export interface ScheduleGridColumn {
   key: string
   header: ReactNode
+  /** Nome puro-texto da coluna (ex.: "Seg") -- `header` pode ter JSX, então não dá pra reaproveitar ele no título do modal de ocupação. */
+  label: string
 }
 
 /**
@@ -265,10 +272,10 @@ function CelulaOcupacao({
 }
 
 /**
- * Grade horário×coluna reaproveitada pela Agenda Geral (colunas =
- * professores) e pela Agenda individual (colunas = dias da semana
- * selecionada) — quem chama decide o que cada coluna representa e como
- * localizar os slots de uma célula.
+ * Grade horário×coluna reaproveitada pela Agenda Geral e pela Agenda
+ * individual -- em ambas, colunas = dias da semana (`DIAS_SEMANA_GRADE`);
+ * quem chama só decide o que `slotsDaCelula`/`ocupacaoDaCelula` calculam pra
+ * cada uma.
  */
 export function ScheduleGrid({
   colunas,
@@ -276,7 +283,10 @@ export function ScheduleGrid({
   slotsDaCelula,
   ocupacaoDaCelula,
   materias,
+  professores,
+  alunos,
   onSlotClick,
+  onAlunoAdicionado,
   emDestaque,
   modoCelula = 'pills',
 }: {
@@ -294,8 +304,14 @@ export function ScheduleGrid({
   ocupacaoDaCelula: (colunaKey: string, horario: string) => OcupacaoCelula
   /** Só pro nome da matéria no popup de hover da pill -- `AgendaSlotOutputType` só tem o id. */
   materias: MateriaOutputType[]
+  /** Elenco completo (não filtrado pela toolbar da tela) -- alimenta o seletor de professor de "adicionar aluno nesse horário", sempre pela disponibilidade real, não pelo filtro em uso na tela. */
+  professores: ProfessorParaMatricula[]
+  /** Elenco completo de alunos -- alimenta o seletor de aluno de "adicionar aluno nesse horário". */
+  alunos: AlunoParaMatricula[]
   /** Só usado em `modoCelula="pills"`, mesmo motivo de `slotsDaCelula`. */
   onSlotClick?: (slot: AgendaSlotOutputType) => void
+  /** Chamado depois de criar matrícula+horário pelo formulário do modal -- tipicamente o `refetch()` da query que alimenta a tela, pra célula refletir o novo aluno. */
+  onAlunoAdicionado?: () => void
   /**
    * Quando informado, células em que retorna `false` perdem sua cor real de
    * ocupação (em `modoCelula="ocupacao"`, viram um cinza neutro -- ver
@@ -371,18 +387,18 @@ export function ScheduleGrid({
                         })()}
                         {/* Espaço reservado no fim da célula pro ícone de info -- sempre presente (mesmo
                             sem ocupação) pra o hover nunca causar layout shift; não é `absolute` de
-                            propósito, pra nunca flutuar por cima de uma pill. */}
+                            propósito, pra nunca flutuar por cima de uma pill. Clicável mesmo em célula
+                            vazia -- é por aqui que se abre "adicionar aluno nesse horário", não só o
+                            detalhe de quem já está nele. */}
                         <div className="flex h-4 items-center justify-end">
-                          {temOcupacao ? (
-                            <button
-                              type="button"
-                              onClick={() => setCelulaInfo({ coluna, horario })}
-                              className="flex items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground"
-                              title="Ver detalhes da ocupação"
-                            >
-                              <Info className="size-3.5" />
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setCelulaInfo({ coluna, horario })}
+                            className="flex items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground"
+                            title={temOcupacao ? 'Ver detalhes da ocupação' : 'Adicionar aluno nesse horário'}
+                          >
+                            <Info className="size-3.5" />
+                          </button>
                         </div>
                       </div>
                     )}
@@ -397,13 +413,25 @@ export function ScheduleGrid({
       <Dialog open={celulaInfo !== null} onOpenChange={(open) => !open && setCelulaInfo(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ocupação às {celulaInfo?.horario}</DialogTitle>
+            <DialogTitle>
+              Ocupação às {celulaInfo?.horario} - {celulaInfo?.coluna.label}
+            </DialogTitle>
           </DialogHeader>
           {celulaInfo ? (
-            <ListaOcupacaoCelula
-              ocupacao={ocupacaoDaCelula(celulaInfo.coluna.key, celulaInfo.horario)}
-              materias={materias}
-            />
+            <>
+              <ListaOcupacaoCelula
+                ocupacao={ocupacaoDaCelula(celulaInfo.coluna.key, celulaInfo.horario)}
+                materias={materias}
+              />
+              <AdicionarAlunoHorarioForm
+                diaSemana={celulaInfo.coluna.key}
+                horario={celulaInfo.horario}
+                professores={professores}
+                materias={materias}
+                alunos={alunos}
+                onCriado={() => onAlunoAdicionado?.()}
+              />
+            </>
           ) : null}
         </DialogContent>
       </Dialog>
