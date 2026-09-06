@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, X } from 'lucide-react'
+import { Check, ChevronsUpDown } from 'lucide-react'
 import { useState } from 'react'
 
 import { cn } from 'cn'
@@ -9,6 +9,36 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 export interface MultiSelectOption {
   value: string
   label: string
+}
+
+function ItemLinha({
+  marcado,
+  destaque,
+  onClick,
+  children,
+}: {
+  marcado: boolean
+  destaque?: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+    >
+      <span
+        className={cn(
+          'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input',
+          marcado && 'border-primary bg-primary text-primary-foreground',
+        )}
+      >
+        {marcado ? <Check className="size-3.5" /> : null}
+      </span>
+      <span className={cn('truncate', destaque && 'font-medium')}>{children}</span>
+    </button>
+  )
 }
 
 /**
@@ -92,42 +122,27 @@ export function MultiSelectCombobox({
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
+        <div className="p-1">
+          <ItemLinha marcado={value.length === 0} destaque onClick={() => onValueChange([])}>
+            Todos
+          </ItemLinha>
+        </div>
+        <div className="h-px bg-border" />
         <div className="max-h-60 overflow-y-auto p-1">
           {opcoesFiltradas.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">{emptyText}</p>
           ) : (
             opcoesFiltradas.map((opcao) => (
-              <button
+              <ItemLinha
                 key={opcao.value}
-                type="button"
+                marcado={value.includes(opcao.value)}
                 onClick={() => alternar(opcao.value)}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
               >
-                <span
-                  className={cn(
-                    'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input',
-                    value.includes(opcao.value) && 'border-primary bg-primary text-primary-foreground',
-                  )}
-                >
-                  {value.includes(opcao.value) ? <Check className="size-3.5" /> : null}
-                </span>
-                <span className="truncate">{opcao.label}</span>
-              </button>
+                {opcao.label}
+              </ItemLinha>
             ))
           )}
         </div>
-        {value.length > 0 ? (
-          <div className="border-t p-1">
-            <button
-              type="button"
-              onClick={() => onValueChange([])}
-              className="flex w-full items-center justify-center gap-1 rounded-sm px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
-            >
-              <X className="size-3" />
-              Limpar seleção
-            </button>
-          </div>
-        ) : null}
       </PopoverContent>
     </Popover>
   )
