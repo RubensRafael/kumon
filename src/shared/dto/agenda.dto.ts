@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { DiaSemanaEnum, HorarioDoDia, TipoAtendimentoEnum } from './enums'
-import { horariosOcupados } from './ocupacao'
+import { horariosOcupados, minutosDoHorario } from './ocupacao'
 import type { PainelDadosOutputType } from './painel.dto'
 
 export const AgendaSlotOutput = z.object({
@@ -108,4 +108,44 @@ export function calcularOcupacaoCelula(
   )
 
   return { ocupantes, overflow, capacidade: professor?.capacidadePorHorario ?? 0 }
+}
+
+/** Só entra na soma da unidade quem realmente atende nesse dia/horário -- senão um professor que só dá aula de manhã contaria capacidade fantasma nas células da tarde. */
+function professorDisponivel(
+  professor: { diasDisponiveis: string[]; horarioInicial: string; horarioFinal: string },
+  diaSemana: string,
+  minutosAlvo: number,
+): boolean {
+  return (
+    professor.diasDisponiveis.includes(diaSemana) &&
+    minutosAlvo >= minutosDoHorario(professor.horarioInicial) &&
+    minutosAlvo < minutosDoHorario(professor.horarioFinal)
+  )
+}
+
+/**
+ * Ocupação de uma célula (dia x horário) somando todos os professores da
+ * unidade disponíveis nesse horário -- ou só o subconjunto de
+ * `professorIds`, quando informado (ex.: pool de quem leciona uma matéria,
+ * filtro da Agenda Geral). Ao contrário de `calcularOcupacaoCelula`
+ * (escopada a 1 professor), aqui a capacidade É somada de propósito: é
+ * exatamente essa soma que representa "quantas vagas simultâneas a unidade
+ * tem nesse horário" -- cada professor supervisiona seu próprio grupo, a
+ * capacidade deles não é compartilhada nem exclusiva entre si.
+ */
+export function calcularOcupacaoUnidadeCelula(
+  dados: PainelDadosOutputType,
+  { diaSemana, horario, professorIds }: { diaSemana: string; horario: string; professorIds?: string[] },
+): OcupacaoCelula {
+  const minutosAlvo = minutosDoHorario(horario)
+  const pool = professorIds ? dados.professores.filter((p) => professorIds.includes(p.id)) : dados.professores
+  const disponiveis = pool.filter((p) => professorDisponivel(p, diaSemana, minutosAlvo))
+
+  const porProfessor = disponiveis.map((p) => calcularOcupacaoCelula(dados, { professorId: p.id, diaSemana, horario }))
+
+  return {
+    ocupantes: porProfessor.flatMap((o) => o.ocupantes),
+    overflow: porProfessor.flatMap((o) => o.overflow),
+    capacidade: porProfessor.reduce((soma, o) => soma + o.capacidade, 0),
+  }
 }

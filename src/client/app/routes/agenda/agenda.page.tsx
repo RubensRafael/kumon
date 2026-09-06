@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router'
 import { calcularOcupacaoCelula, derivarAgendaSlots, type AgendaSlotOutputType, type OcupacaoCelula } from '@shared/dto'
 
 import { AlunoInspectorSheet } from '../../components/common/aluno-inspector-sheet'
-import { DIAS_SEMANA } from '../../components/common/dias-semana'
+import { DIAS_SEMANA_GRADE } from '../../components/common/dias-semana'
 import { MultiSelectCombobox } from '../../components/common/multi-select-combobox'
 import { PillToggleGroup } from '../../components/common/pill-toggle-group'
 import { ScheduleGrid, type ScheduleGridColumn } from '../../components/common/schedule-grid'
@@ -111,7 +111,7 @@ export function AgendaPage() {
   // recorrente (dia + horario), sem data propria -- toda semana mostra
   // exatamente a mesma programacao, entao navegar semana so trocaria um
   // rotulo de data sem nenhum efeito na grade (ver docs/pr-fe-06-agenda.md).
-  const colunas: ScheduleGridColumn[] = DIAS_SEMANA.map((dia) => ({
+  const colunas: ScheduleGridColumn[] = DIAS_SEMANA_GRADE.map((dia) => ({
     key: dia.valor,
     header: <p className="font-semibold">{dia.label}</p>,
   }))

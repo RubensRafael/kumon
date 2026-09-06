@@ -1,6 +1,8 @@
 import { Info } from 'lucide-react'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 
+import { cn } from 'cn'
+
 import type { AgendaSlotOutputType, MateriaOutputType, OcupacaoCelula } from '@shared/dto'
 
 import { TIPO_ATENDIMENTO_LABEL } from './aluno-form/enum-labels'
@@ -14,18 +16,19 @@ export interface ScheduleGridColumn {
 }
 
 /**
- * Verde claro → amarelo claro → vermelho claro conforme a célula se
- * aproxima (ou passa) da capacidade do professor -- interpolação contínua
- * de matiz (hue), não faixas fixas, pra dar a sensação de gradiente pedida.
- * `undefined` quando não há o que colorir (célula vazia ou professor sem
- * capacidade cadastrada) -- mantém o fundo padrão da tabela.
+ * Verde → amarelo → vermelho conforme a célula se aproxima (ou passa) da
+ * capacidade do professor -- 3 faixas fixas, não gradiente contínuo (a
+ * interpolação de matiz antiga passava por tons de laranja entre ~75% e
+ * ~95%, o que lia como "nem amarelo nem vermelho"). `undefined` quando não
+ * há o que colorir (célula vazia ou professor sem capacidade cadastrada) --
+ * mantém o fundo padrão da tabela.
  */
 function estiloOcupacao(ocupacao: OcupacaoCelula): CSSProperties | undefined {
   const total = ocupacao.ocupantes.length + ocupacao.overflow.length
   if (total === 0 || ocupacao.capacidade <= 0) return undefined
 
-  const razao = Math.min(1, total / ocupacao.capacidade)
-  const hue = razao <= 0.5 ? 142 - (142 - 48) * (razao / 0.5) : 48 - 48 * ((razao - 0.5) / 0.5)
+  const razao = total / ocupacao.capacidade
+  const hue = razao >= 0.8 ? 0 : razao >= 0.5 ? 55 : 142
   return { backgroundColor: `hsl(${hue} 70% 92%)` }
 }
 
@@ -203,6 +206,65 @@ function AgendaPill({
 }
 
 /**
+ * Resumo "X / capacidade" de uma célula, usado no lugar das pills quando
+ * `modoCelula="ocupacao"` -- o que a Agenda Geral quer responder é "quantas
+ * vagas sobram aqui", não "quem está aqui" (isso já é o modal, aberto pelo
+ * clique na própria célula). Sem professor disponível nesse horário
+ * (`capacidade <= 0`) não é uma vaga, é ausência de atendimento -- só um
+ * traço, sem clique.
+ */
+function CelulaOcupacao({
+  ocupacao,
+  onClick,
+  destacada,
+}: {
+  ocupacao: OcupacaoCelula
+  onClick: () => void
+  /**
+   * `false` quando um dos chips de estado (lotado/com vagas/baixa) está
+   * ativo e essa célula não bate com ele -- vira um cinza neutro fixo em
+   * vez da cor real de ocupação, pra não competir visualmente com as que
+   * batem. Cinza sólido, não opacidade -- opacidade deixava a cor de fundo
+   * ainda "vazando" por trás, parecendo que a célula ainda contava.
+   */
+  destacada: boolean
+}) {
+  const total = ocupacao.ocupantes.length + ocupacao.overflow.length
+
+  if (ocupacao.capacidade <= 0) {
+    return <p className="py-2 text-center text-muted-foreground">—</p>
+  }
+
+  const lotado = total >= ocupacao.capacidade
+  const vagas = ocupacao.capacidade - total
+  const razao = total / ocupacao.capacidade
+
+  const cores = !destacada
+    ? 'border-slate-300 bg-slate-200 text-slate-400'
+    : lotado
+      ? 'border-rose-300 bg-rose-50 text-rose-700'
+      : total === 0
+        ? 'border-slate-200 bg-slate-50 text-slate-500'
+        : razao >= 0.5
+          ? 'border-amber-200 bg-amber-50 text-amber-700'
+          : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn('w-full rounded-lg border px-2 py-2 text-center transition-all hover:shadow-sm hover:-translate-y-px', cores)}
+      title="Ver detalhes da ocupação"
+    >
+      <div className="text-sm leading-tight font-semibold">
+        {total} / {ocupacao.capacidade}
+      </div>
+      <div className="mt-0.5 text-[10px] opacity-80">{lotado ? 'LOTADO' : `${vagas} vaga${vagas === 1 ? '' : 's'}`}</div>
+    </button>
+  )
+}
+
+/**
  * Grade horário×coluna reaproveitada pela Agenda Geral (colunas =
  * professores) e pela Agenda individual (colunas = dias da semana
  * selecionada) — quem chama decide o que cada coluna representa e como
@@ -215,10 +277,13 @@ export function ScheduleGrid({
   ocupacaoDaCelula,
   materias,
   onSlotClick,
+  emDestaque,
+  modoCelula = 'pills',
 }: {
   colunas: ScheduleGridColumn[]
   horarios: string[]
-  slotsDaCelula: (colunaKey: string, horario: string) => AgendaSlotOutputType[]
+  /** Só usado em `modoCelula="pills"` -- a Agenda Geral (`modoCelula="ocupacao"`) não lista ocupante por célula, pode omitir. */
+  slotsDaCelula?: (colunaKey: string, horario: string) => AgendaSlotOutputType[]
   /**
    * Ocupação "real" da célula (não filtrada pelos toggles da Agenda, ao
    * contrário de `slotsDaCelula`) -- inclui o spillover de `REGULAR` do
@@ -229,7 +294,24 @@ export function ScheduleGrid({
   ocupacaoDaCelula: (colunaKey: string, horario: string) => OcupacaoCelula
   /** Só pro nome da matéria no popup de hover da pill -- `AgendaSlotOutputType` só tem o id. */
   materias: MateriaOutputType[]
-  onSlotClick: (slot: AgendaSlotOutputType) => void
+  /** Só usado em `modoCelula="pills"`, mesmo motivo de `slotsDaCelula`. */
+  onSlotClick?: (slot: AgendaSlotOutputType) => void
+  /**
+   * Quando informado, células em que retorna `false` perdem sua cor real de
+   * ocupação (em `modoCelula="ocupacao"`, viram um cinza neutro -- ver
+   * `CelulaOcupacao`) -- usado pelos chips de estado (lotado/com vagas/baixa
+   * ocupação) da Agenda Geral pra realçar só as que batem com o escolhido.
+   * `undefined` (padrão, caso da Agenda individual) não afeta nada.
+   */
+  emDestaque?: (colunaKey: string, horario: string) => boolean
+  /**
+   * `'pills'` (padrão, usado pela Agenda individual) lista cada ocupante.
+   * `'ocupacao'` (Agenda Geral) troca isso por um resumo "X / capacidade" +
+   * vagas restantes -- o que importa ali é quantas vagas sobram, não quem
+   * está em cada uma; célula inteira vira o clique pra abrir o modal de
+   * detalhe (mesmo modal, só muda o gatilho).
+   */
+  modoCelula?: 'pills' | 'ocupacao'
 }) {
   const [celulaInfo, setCelulaInfo] = useState<{ coluna: ScheduleGridColumn; horario: string } | null>(null)
 
@@ -255,39 +337,55 @@ export function ScheduleGrid({
                 {horario}
               </td>
               {colunas.map((coluna) => {
-                const slots = slotsDaCelula(coluna.key, horario)
                 const ocupacao = ocupacaoDaCelula(coluna.key, horario)
                 const temOcupacao = ocupacao.ocupantes.length + ocupacao.overflow.length > 0
+                const destacada = emDestaque ? emDestaque(coluna.key, horario) : true
                 return (
                   <td
                     key={coluna.key}
                     className="group border-l px-2 py-1 align-top"
-                    style={estiloOcupacao(ocupacao)}
+                    style={modoCelula === 'ocupacao' ? undefined : estiloOcupacao(ocupacao)}
                   >
-                    <div className="flex flex-col gap-1">
-                      {slots.length === 0 ? (
-                        <span className="block px-1 text-muted-foreground">—</span>
-                      ) : (
-                        slots.map((slot) => (
-                          <AgendaPill key={slot.horarioId} slot={slot} materias={materias} onClick={onSlotClick} />
-                        ))
-                      )}
-                      {/* Espaço reservado no fim da célula pro ícone de info -- sempre presente (mesmo
-                          sem ocupação) pra o hover nunca causar layout shift; não é `absolute` de
-                          propósito, pra nunca flutuar por cima de uma pill. */}
-                      <div className="flex h-4 items-center justify-end">
-                        {temOcupacao ? (
-                          <button
-                            type="button"
-                            onClick={() => setCelulaInfo({ coluna, horario })}
-                            className="flex items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground"
-                            title="Ver detalhes da ocupação"
-                          >
-                            <Info className="size-3.5" />
-                          </button>
-                        ) : null}
+                    {modoCelula === 'ocupacao' ? (
+                      <CelulaOcupacao
+                        ocupacao={ocupacao}
+                        destacada={destacada}
+                        onClick={() => setCelulaInfo({ coluna, horario })}
+                      />
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {(() => {
+                          const slots = slotsDaCelula ? slotsDaCelula(coluna.key, horario) : []
+                          return slots.length === 0 ? (
+                            <span className="block px-1 text-muted-foreground">—</span>
+                          ) : (
+                            slots.map((slot) => (
+                              <AgendaPill
+                                key={slot.horarioId}
+                                slot={slot}
+                                materias={materias}
+                                onClick={onSlotClick ?? (() => {})}
+                              />
+                            ))
+                          )
+                        })()}
+                        {/* Espaço reservado no fim da célula pro ícone de info -- sempre presente (mesmo
+                            sem ocupação) pra o hover nunca causar layout shift; não é `absolute` de
+                            propósito, pra nunca flutuar por cima de uma pill. */}
+                        <div className="flex h-4 items-center justify-end">
+                          {temOcupacao ? (
+                            <button
+                              type="button"
+                              onClick={() => setCelulaInfo({ coluna, horario })}
+                              className="flex items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground"
+                              title="Ver detalhes da ocupação"
+                            >
+                              <Info className="size-3.5" />
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </td>
                 )
               })}

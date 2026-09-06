@@ -130,7 +130,14 @@ const PROFESSORES: ProfessorSeed[] = [
     email: 'ilana@kflow.local',
     diasDisponiveis: ['SEG', 'TER', 'QUA', 'QUI', 'SEX'],
     horarioInicial: '07:00',
-    horarioFinal: '17:30',
+    // So ate meio-dia (era 17:30) -- ela e a unica que da Japones alem do
+    // Wesley (13:00-18:30), entao com esse corte sobra um buraco real de
+    // 12:00-13:00 SEM NENHUM professor disponivel quando a Agenda Geral e
+    // filtrada por Japones (demonstra a celula "-" de calcularOcupacaoUnidadeCelula).
+    // Nao afeta a janela padrao "Todos" (Ilana so era a fronteira do inicio,
+    // 07:00, que continua igual; o fim do dia continua vindo de Serena/
+    // Bianca/Manuela/Wesley).
+    horarioFinal: '12:00',
     capacidadePorHorario: 5,
     corAgenda: '#81b076',
     materias: ['Matemática', 'Português', 'Inglês', 'Japonês'],
@@ -192,7 +199,7 @@ const SLOTS_POR_PROFESSOR: Record<string, string[]> = {
   Serena: ['09:00', '10:30', '14:00'],
   Bianca: ['09:00', '11:00', '15:00'],
   Manuela: ['08:30', '10:00', '16:00'],
-  Ilana: ['07:30', '09:30', '13:00'],
+  Ilana: ['07:30', '09:30', '11:00'],
   Paulo: ['09:00', '11:30', '14:30'],
   Wesley: ['13:30', '15:30', '17:00'],
 }
@@ -322,6 +329,34 @@ const ALUNOS_DEMO_AGENDA: AlunoDemoAgendaSeed[] = [
     tipoAtendimento: 'REGULAR',
     horario: '11:30',
   },
+]
+
+interface AlunoDemoLotadoSeed {
+  nome: string
+  responsavel: string
+  telefone: string
+}
+
+/**
+ * 6 alunos só na Ilana, SEG 07:00 -- o único horário do dia em que a
+ * unidade inteira depende de um professor só (07:00-08:30, antes de
+ * Serena/Bianca/Manuela/Paulo abrirem às 08:30 e Wesley às 13:00), então a
+ * capacidade da UNIDADE nessa célula é exatamente a capacidade dela (5).
+ * Existem pra Agenda Geral ter uma célula "Lotado" de verdade na visão
+ * agregada por unidade (`calcularOcupacaoUnidadeCelula`) -- o "Demo Cheio"
+ * acima só lota a coluna do Paulo sozinho, o que nesse cálculo (soma de
+ * vários professores) não basta pra estourar a capacidade da unidade.
+ * 6 > 5 de propósito, pra também demonstrar o caso "acima da capacidade".
+ * Todos PRE_ESCOLAR (30min, sem spillover) pra não vazar pra 07:30 e
+ * confundir a demonstração.
+ */
+const ALUNOS_DEMO_LOTADO_UNIDADE: AlunoDemoLotadoSeed[] = [
+  { nome: 'Demo Lotado A', responsavel: 'QA Agenda Geral', telefone: '(11) 90000-0010' },
+  { nome: 'Demo Lotado B', responsavel: 'QA Agenda Geral', telefone: '(11) 90000-0011' },
+  { nome: 'Demo Lotado C', responsavel: 'QA Agenda Geral', telefone: '(11) 90000-0012' },
+  { nome: 'Demo Lotado D', responsavel: 'QA Agenda Geral', telefone: '(11) 90000-0013' },
+  { nome: 'Demo Lotado E', responsavel: 'QA Agenda Geral', telefone: '(11) 90000-0014' },
+  { nome: 'Demo Lotado F', responsavel: 'QA Agenda Geral', telefone: '(11) 90000-0015' },
 ]
 
 async function main() {
@@ -566,6 +601,40 @@ async function main() {
       )
     }
     console.log(`${ALUNOS_DEMO_AGENDA.length} alunos de demonstracao da Agenda criados (Paulo, QUI, 09:00-11:30).`)
+
+    // -- Alunos de demonstracao "lotado" na Agenda Geral (ver ALUNOS_DEMO_LOTADO_UNIDADE acima) --
+    const ilanaId = professorIdPorNome.get('Ilana')!
+    const materiaMatematicaId = materiaIdPorNome.get('Matemática')!
+
+    for (const demo of ALUNOS_DEMO_LOTADO_UNIDADE) {
+      const alunoId = randomUUID()
+      const dataNascimento = new Date()
+      dataNascimento.setFullYear(dataNascimento.getFullYear() - 5)
+
+      await client.query(
+        `INSERT INTO "alunos"
+           ("id", "nome", "responsavel", "telefone", "whatsapp", "dataNascimento", "dataMatricula",
+            "situacao", "zonaVermelha", "connect", "criadoEm", "atualizadoEm")
+         VALUES ($1, $2, $3, $4, $4, $5, now(), 'ATIVO'::"SituacaoAluno", false, false, now(), now())`,
+        [alunoId, demo.nome, demo.responsavel, demo.telefone, dataNascimento],
+      )
+
+      const matriculaId = randomUUID()
+      await client.query(
+        `INSERT INTO "matriculas"
+           ("id", "alunoId", "professorId", "materiaId", "estagio", "tipoAtendimento",
+            "situacao", "criadoEm", "atualizadoEm")
+         VALUES ($1, $2, $3, $4, NULL, 'PRE_ESCOLAR'::"TipoAtendimento", 'ATIVA'::"SituacaoMatricula", now(), now())`,
+        [matriculaId, alunoId, ilanaId, materiaMatematicaId],
+      )
+
+      await client.query(
+        `INSERT INTO "matricula_horarios" ("id", "matriculaId", "diaSemana", "horario", "ativo", "criadoEm")
+         VALUES ($1, $2, 'SEG'::"DiaSemana", '07:00', true, now())`,
+        [randomUUID(), matriculaId],
+      )
+    }
+    console.log(`${ALUNOS_DEMO_LOTADO_UNIDADE.length} alunos de demonstracao "lotado" criados (Ilana, SEG, 07:00).`)
   } finally {
     await client.end()
   }

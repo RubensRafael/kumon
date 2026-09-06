@@ -123,27 +123,30 @@ export interface PainelAgregacoes {
  * Agregacoes que antes vinham prontas do backend (`GET /painel` da PR 10
  * original) -- agora calculadas aqui, em cima do snapshot bruto de
  * `PainelDadosOutput`. `professorId` e so um filtro de conveniencia
- * (dashboard do professor mostrando so o proprio): omitido, agrega a
+ * (dashboard do professor mostrando so o proprio, ou um pool de professores
+ * -- ex.: os que lecionam uma materia, na Agenda Geral): omitido, agrega a
  * unidade inteira. `totalProfessores` nunca e filtrado por ele -- mesma
  * logica de `GET /professores`, que ja e um diretorio nao-escopado.
  */
 export function calcularAgregacoesPainel(
   dados: PainelDadosOutputType,
-  professorId: string | null = null,
+  professorId: string | string[] | null = null,
 ): PainelAgregacoes {
-  const matriculasEscopadas = professorId
-    ? dados.matriculas.filter((matricula) => matricula.professorId === professorId)
+  const professorIds = professorId === null ? null : Array.isArray(professorId) ? professorId : [professorId]
+
+  const matriculasEscopadas = professorIds
+    ? dados.matriculas.filter((matricula) => professorIds.includes(matricula.professorId))
     : dados.matriculas
 
   const alunoIdsEscopados = new Set(matriculasEscopadas.map((matricula) => matricula.alunoId))
-  const alunosEscopados = professorId
+  const alunosEscopados = professorIds
     ? dados.alunos.filter((aluno) => alunoIdsEscopados.has(aluno.id))
     : dados.alunos
 
   const matriculasAtivas = matriculasEscopadas.filter((matricula) => matricula.situacao === 'ATIVA')
 
-  const professoresParaCapacidade = professorId
-    ? dados.professores.filter((professor) => professor.id === professorId)
+  const professoresParaCapacidade = professorIds
+    ? dados.professores.filter((professor) => professorIds.includes(professor.id))
     : dados.professores
   const capacidadeTeorica = professoresParaCapacidade.reduce(
     (soma, professor) => soma + capacidadeSemanal(professor),

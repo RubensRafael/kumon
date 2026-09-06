@@ -15,6 +15,15 @@ export const DIAS_SEMANA = [
   { valor: 'SAB', label: 'Sáb' },
 ] as const
 
+/**
+ * Colunas das grades da Agenda (individual e Geral) -- sem Sábado, raro
+ * o bastante pra não valer a largura extra numa grade semanal inteira. Só
+ * afeta o que a grade renderiza; cadastro de professor/matrícula continua
+ * oferecendo Sábado normalmente via `DIAS_SEMANA`, então um atendimento de
+ * sábado cadastrado existe, só não aparece nessas duas telas.
+ */
+export const DIAS_SEMANA_GRADE = DIAS_SEMANA.filter((dia) => dia.valor !== 'SAB')
+
 const ORDEM_DIA: Record<string, number> = { DOM: 0, SEG: 1, TER: 2, QUA: 3, QUI: 4, SEX: 5, SAB: 6 }
 const LABEL_DIA: Record<string, string> = Object.fromEntries(DIAS_SEMANA.map((dia) => [dia.valor, dia.label]))
 
