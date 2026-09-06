@@ -9,8 +9,8 @@ import {
   DesempenhoEnum,
   FocoEnum,
   HorarioDoDia,
-} from '../../../shared/dto/enums'
-import { VIRTUAL_REGISTRO_ID } from '../../../shared/dto/registro.dto'
+} from './enums'
+import { VIRTUAL_REGISTRO_ID } from './registro.dto'
 
 /**
  * `data` como `Date`, nao string -- mesmo raciocinio de `alunos.dto.ts`:
