@@ -20,12 +20,19 @@ import { Input } from '../../../components/ui/input'
 import { Skeleton } from '../../../components/ui/skeleton'
 import { Switch } from '../../../components/ui/switch'
 import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
+import { usePainelSnapshot } from '../../../hooks/use-painel-snapshot'
 import { ConteudosDaMateria } from './conteudos-da-materia'
 
 export function MateriasTab() {
   const { data: materias, loading, refetch } = useApiQuery('listarMaterias', {
     query: { incluirInativas: 'true' },
   })
+  const { refetch: refetchPainel } = usePainelSnapshot()
+
+  function aoAtualizar() {
+    refetch()
+    refetchPainel()
+  }
 
   return (
     <div className="space-y-4">
@@ -35,7 +42,7 @@ export function MateriasTab() {
         ) : (
           <Skeleton className="h-4 w-24" />
         )}
-        <NovaMateriaDialog onCriada={refetch} />
+        <NovaMateriaDialog onCriada={aoAtualizar} />
       </div>
 
       {loading ? (
@@ -49,7 +56,7 @@ export function MateriasTab() {
       {materias && materias.length > 0 ? (
         <Accordion type="multiple" className="rounded-lg border">
           {materias.map((materia) => (
-            <MateriaAccordionItem key={materia.id} materia={materia} onAtualizada={refetch} />
+            <MateriaAccordionItem key={materia.id} materia={materia} onAtualizada={aoAtualizar} />
           ))}
         </Accordion>
       ) : null}

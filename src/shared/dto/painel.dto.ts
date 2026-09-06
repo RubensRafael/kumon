@@ -74,7 +74,10 @@ export const PainelDadosOutput = z.object({
 })
 export type PainelDadosOutputType = z.infer<typeof PainelDadosOutput>
 
-const DIAS_BANCO = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
+// Sem 'DOM': o cadastro de professor (fe-03) so oferece Seg-Sab no toggle
+// de dias disponiveis -- nenhuma unidade Kumon abre aos domingos, entao
+// essa coluna nunca teria valor no grafico "Aulas por dia da semana".
+const DIAS_BANCO = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
 
 /** Mesmo grid de 30min que `HorarioDoDia` forca em todo `MatriculaHorario.horario`. */
 const DURACAO_SLOT_MIN = 30
@@ -123,7 +126,17 @@ export interface PainelAgregacoes {
   totalMatriculasAtivas: number
   totalProfessores: number
   ocupacaoPercentual: number
+  /**
+   * Soma de `capacidadePorHorario` de cada professor -- teto de quantos
+   * alunos cabem em atendimento ao mesmo tempo na unidade (Kumon não é aula
+   * 1:1: um professor supervisiona vários alunos por slot). Alimenta o
+   * card "Capacidade" do painel (`totalAlunosAtivos / capacidadeSimultanea`)
+   * -- não há config de limite de alunos por unidade, então este é o único
+   * proxy de "capacidade máxima" que já existe no modelo.
+   */
+  capacidadeSimultanea: number
   matriculasPorMateria: { materiaId: string; materiaNome: string; total: number }[]
+  matriculasPorProfessor: { professorId: string; professorNome: string; total: number }[]
   aulasPorDiaSemana: { diaSemana: string; total: number }[]
   alertas: { tipo: string; alunoId: string; mensagem: string }[]
 }
@@ -158,6 +171,16 @@ export function calcularAgregacoesPainel(
     (soma, professor) => soma + capacidadeSemanal(professor),
     0,
   )
+  // Soma simples de capacidadePorHorario -- teto de quantos alunos cabem em
+  // atendimento ao mesmo tempo (cada professor supervisiona varios alunos
+  // por slot, Kumon nao e aula 1:1). Diferente de capacidadeTeorica (que
+  // multiplica por dias x slots-semana e por isso sempre da uma ordem de
+  // grandeza muito maior que headcount de aluno) -- este e o numero
+  // comparavel com totalAlunosAtivos pro card "Capacidade" do painel.
+  const capacidadeSimultanea = professoresParaCapacidade.reduce(
+    (soma, professor) => soma + professor.capacidadePorHorario,
+    0,
+  )
 
   const horariosEscopados = matriculasEscopadas.flatMap((matricula) =>
     matricula.horarios.map((horario) => ({ ...horario, tipoAtendimento: matricula.tipoAtendimento })),
@@ -180,6 +203,17 @@ export function calcularAgregacoesPainel(
     total,
   }))
 
+  const nomeDoProfessor = new Map(dados.professores.map((professor) => [professor.id, professor.nome]))
+  const porProfessor = new Map<string, number>()
+  for (const matricula of matriculasAtivas) {
+    porProfessor.set(matricula.professorId, (porProfessor.get(matricula.professorId) ?? 0) + 1)
+  }
+  const matriculasPorProfessor = [...porProfessor.entries()].map(([professorId, total]) => ({
+    professorId,
+    professorNome: nomeDoProfessor.get(professorId) ?? '',
+    total,
+  }))
+
   const porDia = new Map<string, number>()
   for (const horario of horariosEscopados) {
     porDia.set(horario.diaSemana, (porDia.get(horario.diaSemana) ?? 0) + 1)
@@ -192,7 +226,9 @@ export function calcularAgregacoesPainel(
     .map((aluno) => ({
       tipo: 'zona_vermelha',
       alunoId: aluno.id,
-      mensagem: `${aluno.nome} esta marcado como zona vermelha.`,
+      // Formulacao neutra de proposito -- "esta marcado" nao concorda com
+      // o genero do nome, e o sistema nao tem como saber isso.
+      mensagem: `${aluno.nome} está na zona vermelha.`,
     }))
 
   return {
@@ -200,7 +236,9 @@ export function calcularAgregacoesPainel(
     totalMatriculasAtivas: matriculasAtivas.length,
     totalProfessores: dados.professores.length,
     ocupacaoPercentual,
+    capacidadeSimultanea,
     matriculasPorMateria,
+    matriculasPorProfessor,
     aulasPorDiaSemana,
     alertas,
   }

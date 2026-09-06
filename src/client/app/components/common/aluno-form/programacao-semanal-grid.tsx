@@ -1,7 +1,7 @@
 import { cn } from 'cn'
 
 import { DIAS_SEMANA } from '../dias-semana'
-import { Input } from '../../ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { Switch } from '../../ui/switch'
 
 type DiaValor = typeof DIAS_SEMANA[number]['valor']
@@ -10,6 +10,45 @@ interface DisponibilidadeProfessor {
   diasDisponiveis: string[]
   horarioInicial: string
   horarioFinal: string
+}
+
+const SLOT_MINUTOS = 30
+
+// Sem professor informado (ex.: matrícula existente sem disponibilidade
+// carregada), cai numa janela ampla o bastante pra cobrir qualquer horário
+// comercial -- só existe pra nunca deixar `valor.horario` fora das opções.
+const JANELA_PADRAO = { horarioInicial: '07:00', horarioFinal: '21:00' }
+
+function minutosDoHorario(hhmm: string): number {
+  const [horas, minutos] = hhmm.split(':').map(Number)
+  return (horas ?? 0) * 60 + (minutos ?? 0)
+}
+
+function formatarHorario(minutos: number): string {
+  const horas = Math.floor(minutos / 60)
+    .toString()
+    .padStart(2, '0')
+  const min = (minutos % 60).toString().padStart(2, '0')
+  return `${horas}:${min}`
+}
+
+/**
+ * Opções de horário em grade de 30min, no mesmo intervalo `[inicio, fim)`
+ * que `horarioDentroDaJanela` valida no servidor
+ * (`src/server/lib/horario.ts`) -- escolher aqui já garante que o backend
+ * nunca vai rejeitar por estar fora de grade. Sempre inclui `valorAtual`
+ * mesmo que caia fora da janela do professor (ex.: professor mudou de
+ * horário depois que a aula foi marcada), pra não sumir com o valor salvo.
+ */
+function opcoesDeHorario(horarioInicial: string, horarioFinal: string, valorAtual: string): string[] {
+  const inicio = minutosDoHorario(horarioInicial)
+  const fim = minutosDoHorario(horarioFinal)
+  const opcoes = new Set<string>()
+  for (let minutos = inicio; minutos < fim; minutos += SLOT_MINUTOS) {
+    opcoes.add(formatarHorario(minutos))
+  }
+  opcoes.add(valorAtual)
+  return [...opcoes].sort()
 }
 
 export interface ProgramacaoDia {
@@ -76,16 +115,26 @@ export function ProgramacaoSemanalGrid({
                   />
                 </td>
                 <td className="px-3 py-2">
-                  <Input
-                    type="time"
-                    step={1800}
-                    className="w-32"
-                    min={professor?.horarioInicial}
-                    max={professor?.horarioFinal}
-                    disabled={disabled || !diaDisponivel || !valor.frequenta}
+                  <Select
                     value={valor.horario}
-                    onChange={(e) => onChange(dia.valor, { ...valor, horario: e.target.value })}
-                  />
+                    onValueChange={(horario) => onChange(dia.valor, { ...valor, horario })}
+                    disabled={disabled || !diaDisponivel || !valor.frequenta}
+                  >
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {opcoesDeHorario(
+                        professor?.horarioInicial ?? JANELA_PADRAO.horarioInicial,
+                        professor?.horarioFinal ?? JANELA_PADRAO.horarioFinal,
+                        valor.horario,
+                      ).map((horario) => (
+                        <SelectItem key={horario} value={horario}>
+                          {horario}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </td>
               </tr>
             )

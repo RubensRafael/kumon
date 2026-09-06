@@ -80,9 +80,18 @@ export function MatriculaDraftCard({
             <Select
               value={draft.professorId}
               onValueChange={(professorId) => onChange({ ...draft, professorId })}
+              disabled={Boolean(draft.materiaId) && professoresDaMateria.length === 0}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={draft.materiaId ? 'Selecione' : 'Escolha a disciplina primeiro'} />
+                <SelectValue
+                  placeholder={
+                    !draft.materiaId
+                      ? 'Escolha a disciplina primeiro'
+                      : professoresDaMateria.length === 0
+                        ? 'Nenhum professor para essa disciplina'
+                        : 'Selecione'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {professoresDaMateria.map((professor) => (

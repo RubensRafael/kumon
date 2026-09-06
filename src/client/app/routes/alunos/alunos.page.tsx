@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Skeleton } from '../../components/ui/skeleton'
 import { useApiQuery } from '../../hooks/use-api'
+import { usePainelSnapshot } from '../../hooks/use-painel-snapshot'
 import { AlunoCard } from './components/aluno-card'
 import { AlunoFormDialog } from './components/aluno-form-dialog'
 
@@ -13,10 +14,15 @@ export function AlunosPage() {
   const { data: alunos, loading, refetch } = useApiQuery('listarAlunos', {})
   const { data: professores } = useApiQuery('listarProfessores', {})
   const { data: materias } = useApiQuery('listarMaterias', { query: {} })
-  const { data: painel } = useApiQuery('obterPainel', {})
+  const { dados: painel, refetch: refetchPainel } = usePainelSnapshot()
   const [busca, setBusca] = useState('')
   const [materiaFiltro, setMateriaFiltro] = useState('')
   const [dialogAberto, setDialogAberto] = useState(false)
+
+  function aoAtualizar() {
+    refetch()
+    refetchPainel()
+  }
 
   // Matrículas ativas por aluno, a partir do snapshot bruto do painel --
   // exatamente o cruzamento que a fe-04 original tinha deixado de fora (pra
@@ -124,7 +130,8 @@ export function AlunosPage() {
             professores={professores ?? []}
             materias={materias ?? []}
             matriculas={matriculasPorAluno.get(aluno.id) ?? []}
-            onAtualizado={refetch}
+            onAtualizado={aoAtualizar}
+            onPainelAtualizado={refetchPainel}
           />
         ))}
       </div>
@@ -134,7 +141,8 @@ export function AlunosPage() {
         onOpenChange={setDialogAberto}
         professores={professores ?? []}
         materias={materias ?? []}
-        onSalvo={refetch}
+        onSalvo={aoAtualizar}
+        onPainelAtualizado={refetchPainel}
       />
     </div>
   )

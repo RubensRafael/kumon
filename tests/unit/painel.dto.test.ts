@@ -64,7 +64,7 @@ describe('calcularAgregacoesPainel', () => {
     expect(agregado.totalMatriculasAtivas).toBe(2)
     expect(agregado.totalProfessores).toBe(2)
     expect(agregado.matriculasPorMateria).toEqual([{ materiaId: 'm1', materiaNome: 'Materia', total: 2 }])
-    expect(agregado.aulasPorDiaSemana.length).toBe(7)
+    expect(agregado.aulasPorDiaSemana.length).toBe(6)
     expect(agregado.aulasPorDiaSemana.find((dia) => dia.diaSemana === 'SEG')?.total).toBe(1)
   })
 
@@ -141,6 +141,17 @@ describe('calcularAgregacoesPainel', () => {
 
   it('ocupacaoPercentual e 0 quando nao ha capacidade nem horarios', () => {
     expect(calcularAgregacoesPainel(dados()).ocupacaoPercentual).toBe(0)
+  })
+
+  it('capacidadeSimultanea soma capacidadePorHorario dos professores (nao multiplica por dias/slots)', () => {
+    const snapshot = dados({
+      professores: [
+        { id: 'p1', nome: 'Professor 1', ...PROFESSOR_PADRAO },
+        { id: 'p2', nome: 'Professor 2', ...PROFESSOR_PADRAO },
+      ],
+    })
+    expect(calcularAgregacoesPainel(snapshot, 'p1').capacidadeSimultanea).toBe(4)
+    expect(calcularAgregacoesPainel(snapshot).capacidadeSimultanea).toBe(8)
   })
 
   it('ocupacaoPercentual pesa REGULAR (2 slots de 30min) o dobro de PRE_ESCOLAR (1 slot)', () => {
