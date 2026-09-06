@@ -197,6 +197,128 @@ const SLOTS_POR_PROFESSOR: Record<string, string[]> = {
   Wesley: ['13:30', '15:30', '17:00'],
 }
 
+interface AlunoDemoAgendaSeed {
+  nome: string
+  responsavel: string
+  telefone: string
+  idadeAnos: number
+  zonaVermelha?: boolean
+  connect?: boolean
+  estagio: string | null
+  tipoAtendimento: 'REGULAR' | 'PRE_ESCOLAR'
+  horario: string
+}
+
+/**
+ * Alunos extras, todos no Paulo, todos na QUI (dia que o loop genérico
+ * acima não usa pra ele -- só SEG/QUA) -- existem só pra dar exemplo visual
+ * de cada caso que a fe-06 cobre (cor de célula por ocupação, spillover de
+ * REGULAR "vazando" pro horário seguinte, badges combinados), sem depender
+ * de decorar qual combinação de alunos do elenco "narrativo" acima calhou
+ * de cair em qual célula. Ficam fora do loop genérico de propósito: aqui
+ * dia/horário/tipoAtendimento de cada um é exato, não cíclico por índice.
+ *
+ * Sequência horário a horário na coluna do Paulo (capacidadePorHorario = 4,
+ * QUI) -- combina com `estiloOcupacao` em `schedule-grid.tsx`:
+ *   09:00 verde claro   -- 1 ocupante (1/4 = 0.25)
+ *   09:30 amarelo       -- 1 ocupante (pré-escolar + zona vermelha) + 1 de
+ *                          overflow do REGULAR de 09:00 (2/4 = 0.5)
+ *   10:00 amarelo       -- 2 ocupantes novos: Connect / Connect+Zona
+ *                          Vermelha (2/4 = 0.5)
+ *   10:30 laranja       -- 1 ocupante novo + 2 de overflow do par de 10:00
+ *                          (3/4 = 0.75)
+ *   11:00 verde claro   -- só overflow do REGULAR de 10:30, nenhuma pill
+ *                          real na célula (1/4 = 0.25)
+ *   11:30 vermelho      -- 4 ocupantes novos, capacidade exata (4/4 = 1)
+ */
+const ALUNOS_DEMO_AGENDA: AlunoDemoAgendaSeed[] = [
+  {
+    nome: 'Demo Verde',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0001',
+    idadeAnos: 10,
+    estagio: 'Nível 1A',
+    tipoAtendimento: 'REGULAR',
+    horario: '09:00',
+  },
+  {
+    nome: 'Demo Pré-escolar + Zona Vermelha',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0002',
+    idadeAnos: 5,
+    zonaVermelha: true,
+    estagio: 'Nível 1A',
+    tipoAtendimento: 'PRE_ESCOLAR',
+    horario: '09:30',
+  },
+  {
+    nome: 'Demo Connect',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0003',
+    idadeAnos: 10,
+    connect: true,
+    estagio: 'Nível 2A',
+    tipoAtendimento: 'REGULAR',
+    horario: '10:00',
+  },
+  {
+    nome: 'Demo Connect + Zona Vermelha',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0004',
+    idadeAnos: 10,
+    connect: true,
+    zonaVermelha: true,
+    estagio: 'Nível 2A',
+    tipoAtendimento: 'REGULAR',
+    horario: '10:00',
+  },
+  {
+    nome: 'Demo Overflow Triplo',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0005',
+    idadeAnos: 10,
+    estagio: null,
+    tipoAtendimento: 'REGULAR',
+    horario: '10:30',
+  },
+  {
+    nome: 'Demo Cheio A',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0006',
+    idadeAnos: 10,
+    estagio: 'Nível 3A',
+    tipoAtendimento: 'REGULAR',
+    horario: '11:30',
+  },
+  {
+    nome: 'Demo Cheio B',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0007',
+    idadeAnos: 10,
+    estagio: 'Nível 3A',
+    tipoAtendimento: 'REGULAR',
+    horario: '11:30',
+  },
+  {
+    nome: 'Demo Cheio C',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0008',
+    idadeAnos: 10,
+    estagio: 'Nível 3A',
+    tipoAtendimento: 'REGULAR',
+    horario: '11:30',
+  },
+  {
+    nome: 'Demo Cheio D',
+    responsavel: 'QA Agenda',
+    telefone: '(11) 90000-0009',
+    idadeAnos: 10,
+    estagio: 'Nível 3A',
+    tipoAtendimento: 'REGULAR',
+    horario: '11:30',
+  },
+]
+
 async function main() {
   const databaseUrl = process.env.BACKEND_DATABASE_URL
   if (!databaseUrl) {
@@ -405,6 +527,40 @@ async function main() {
       }
     }
     console.log(`${totalMatriculas} matriculas, ${totalHorarios} horarios, ${totalRegistros} registros de aula criados.`)
+
+    // -- Alunos de demonstracao da Agenda (ver ALUNOS_DEMO_AGENDA acima) ----
+    const pauloId = professorIdPorNome.get('Paulo')!
+    const matematicaId = materiaIdPorNome.get('Matemática')!
+
+    for (const demo of ALUNOS_DEMO_AGENDA) {
+      const alunoId = randomUUID()
+      const dataNascimento = new Date()
+      dataNascimento.setFullYear(dataNascimento.getFullYear() - demo.idadeAnos)
+
+      await client.query(
+        `INSERT INTO "alunos"
+           ("id", "nome", "responsavel", "telefone", "whatsapp", "dataNascimento", "dataMatricula",
+            "situacao", "zonaVermelha", "connect", "criadoEm", "atualizadoEm")
+         VALUES ($1, $2, $3, $4, $4, $5, now(), 'ATIVO'::"SituacaoAluno", $6, $7, now(), now())`,
+        [alunoId, demo.nome, demo.responsavel, demo.telefone, dataNascimento, demo.zonaVermelha ?? false, demo.connect ?? false],
+      )
+
+      const matriculaId = randomUUID()
+      await client.query(
+        `INSERT INTO "matriculas"
+           ("id", "alunoId", "professorId", "materiaId", "estagio", "tipoAtendimento",
+            "situacao", "criadoEm", "atualizadoEm")
+         VALUES ($1, $2, $3, $4, $5, $6::"TipoAtendimento", 'ATIVA'::"SituacaoMatricula", now(), now())`,
+        [matriculaId, alunoId, pauloId, matematicaId, demo.estagio, demo.tipoAtendimento],
+      )
+
+      await client.query(
+        `INSERT INTO "matricula_horarios" ("id", "matriculaId", "diaSemana", "horario", "ativo", "criadoEm")
+         VALUES ($1, $2, 'QUI'::"DiaSemana", $3, true, now())`,
+        [randomUUID(), matriculaId, demo.horario],
+      )
+    }
+    console.log(`${ALUNOS_DEMO_AGENDA.length} alunos de demonstracao da Agenda criados (Paulo, QUI, 09:00-11:30).`)
   } finally {
     await client.end()
   }
