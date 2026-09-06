@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Skeleton } from '../../components/ui/skeleton'
 import { usePainelSnapshot } from '../../hooks/use-painel-snapshot'
 import { MetricCard } from './components/metric-card'
+import { ProfessoresTabela } from './components/professores-tabela'
 
 const DIA_LABEL: Record<string, string> = {
   SEG: 'Seg',
@@ -120,6 +121,9 @@ export function PainelPage() {
           />
         </div>
       </div>
+
+      {/* `data` já está garantido aqui pelo guard de loading/agregado acima. */}
+      <ProfessoresTabela dados={data!} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
