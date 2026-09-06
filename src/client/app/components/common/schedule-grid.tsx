@@ -4,6 +4,8 @@ import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { AgendaSlotOutputType, MateriaOutputType, OcupacaoCelula } from '@shared/dto'
 
 import { TIPO_ATENDIMENTO_LABEL } from './aluno-form/enum-labels'
+import { corDaMateria } from './materia-cores'
+import { Badge } from '../ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card'
 
@@ -28,8 +30,48 @@ function estiloOcupacao(ocupacao: OcupacaoCelula): CSSProperties | undefined {
   return { backgroundColor: `hsl(${hue} 70% 92%)` }
 }
 
+/** Card de um ocupante real da célula (aluno que começa naquele horário). */
+function OcupanteCard({ slot, materias }: { slot: AgendaSlotOutputType; materias: MateriaOutputType[] }) {
+  const materiaNome = materias.find((m) => m.id === slot.materiaId)?.nome ?? '—'
+  return (
+    <li className="flex items-center gap-3 rounded-xl border p-3">
+      <span
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+        style={{ backgroundColor: corDaMateria(slot.materiaId, materias) }}
+      >
+        {materiaNome.charAt(0).toUpperCase()}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{slot.alunoNome}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {materiaNome} · {slot.professorNome}
+          {slot.estagio ? ` · ${slot.estagio}` : ''}
+        </p>
+      </div>
+      <Badge variant="secondary" className="shrink-0">
+        {TIPO_ATENDIMENTO_LABEL[slot.tipoAtendimento]}
+      </Badge>
+    </li>
+  )
+}
+
+/** Card de um aluno presente só por spillover (aula anterior ainda não terminou). */
+function OverflowCard({ slot }: { slot: AgendaSlotOutputType }) {
+  return (
+    <li className="flex items-center gap-3 rounded-xl bg-muted/50 p-3">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+        {slot.alunoNome.charAt(0).toUpperCase()}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{slot.alunoNome}</p>
+        <p className="text-xs text-muted-foreground">Ainda em sala desde {slot.horario}</p>
+      </div>
+    </li>
+  )
+}
+
 /** Lista read-only exibida no modal de detalhe da célula (ícone ⓘ no hover). */
-function ListaOcupacaoCelula({ ocupacao }: { ocupacao: OcupacaoCelula }) {
+function ListaOcupacaoCelula({ ocupacao, materias }: { ocupacao: OcupacaoCelula; materias: MateriaOutputType[] }) {
   if (ocupacao.ocupantes.length === 0 && ocupacao.overflow.length === 0) {
     return <p className="text-sm text-muted-foreground">Nenhum aluno nesse horário.</p>
   }
@@ -37,12 +79,9 @@ function ListaOcupacaoCelula({ ocupacao }: { ocupacao: OcupacaoCelula }) {
   return (
     <div className="space-y-3 text-sm">
       {ocupacao.ocupantes.length > 0 ? (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {ocupacao.ocupantes.map((slot) => (
-            <li key={slot.horarioId} className="flex items-center justify-between gap-2">
-              <span className="font-medium">{slot.alunoNome}</span>
-              <span className="text-xs text-muted-foreground">{TIPO_ATENDIMENTO_LABEL[slot.tipoAtendimento]}</span>
-            </li>
+            <OcupanteCard key={slot.horarioId} slot={slot} materias={materias} />
           ))}
         </ul>
       ) : (
@@ -50,16 +89,13 @@ function ListaOcupacaoCelula({ ocupacao }: { ocupacao: OcupacaoCelula }) {
       )}
 
       {ocupacao.overflow.length > 0 ? (
-        <div className="space-y-1.5 border-t border-dashed pt-3">
+        <div className="space-y-2 border-t border-dashed pt-3">
           <p className="text-xs text-muted-foreground">
             Ainda em sala (aula anterior de 50min, ainda não terminou):
           </p>
-          <ul className="space-y-1.5">
+          <ul className="space-y-2">
             {ocupacao.overflow.map((slot) => (
-              <li key={slot.horarioId} className="flex items-center justify-between gap-2 text-muted-foreground">
-                <span className="font-medium text-foreground">{slot.alunoNome}</span>
-                <span className="text-xs">desde {slot.horario}</span>
-              </li>
+              <OverflowCard key={slot.horarioId} slot={slot} />
             ))}
           </ul>
         </div>
@@ -207,19 +243,9 @@ export function ScheduleGrid({
                 return (
                   <td
                     key={coluna.key}
-                    className="group relative border-l px-2 py-1 align-top"
+                    className="group border-l px-2 py-1 align-top"
                     style={estiloOcupacao(ocupacao)}
                   >
-                    {temOcupacao ? (
-                      <button
-                        type="button"
-                        onClick={() => setCelulaInfo({ coluna, horario })}
-                        className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground"
-                        title="Ver detalhes da ocupação"
-                      >
-                        <Info className="size-3.5" />
-                      </button>
-                    ) : null}
                     <div className="flex flex-col gap-1">
                       {slots.length === 0 ? (
                         <span className="block px-1 text-muted-foreground">—</span>
@@ -228,6 +254,21 @@ export function ScheduleGrid({
                           <AgendaPill key={slot.horarioId} slot={slot} materias={materias} onClick={onSlotClick} />
                         ))
                       )}
+                      {/* Espaço reservado no fim da célula pro ícone de info -- sempre presente (mesmo
+                          sem ocupação) pra o hover nunca causar layout shift; não é `absolute` de
+                          propósito, pra nunca flutuar por cima de uma pill. */}
+                      <div className="flex h-4 items-center justify-end">
+                        {temOcupacao ? (
+                          <button
+                            type="button"
+                            onClick={() => setCelulaInfo({ coluna, horario })}
+                            className="flex items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground"
+                            title="Ver detalhes da ocupação"
+                          >
+                            <Info className="size-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   </td>
                 )
@@ -242,7 +283,12 @@ export function ScheduleGrid({
           <DialogHeader>
             <DialogTitle>Ocupação às {celulaInfo?.horario}</DialogTitle>
           </DialogHeader>
-          {celulaInfo ? <ListaOcupacaoCelula ocupacao={ocupacaoDaCelula(celulaInfo.coluna.key, celulaInfo.horario)} /> : null}
+          {celulaInfo ? (
+            <ListaOcupacaoCelula
+              ocupacao={ocupacaoDaCelula(celulaInfo.coluna.key, celulaInfo.horario)}
+              materias={materias}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>
