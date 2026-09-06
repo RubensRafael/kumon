@@ -14,6 +14,7 @@ import {
 
 import { paraInputDate } from '../../../lib/format-date'
 import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
+import { Accordion } from '../../ui/accordion'
 import { Button } from '../../ui/button'
 import { DialogFooter } from '../../ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../ui/form'
@@ -392,18 +393,22 @@ export function AlunoForm({
             </div>
           ) : (
             <div className="space-y-3">
-              {matriculasExistentes?.map((matricula) => (
-                <MatriculaExistenteCard
-                  key={matricula.id}
-                  matricula={matricula}
-                  professores={professores}
-                  materias={materias}
-                  onAtualizada={() => {
-                    void refetchMatriculas()
-                    onPainelAtualizado?.()
-                  }}
-                />
-              ))}
+              {matriculasExistentes && matriculasExistentes.length > 0 ? (
+                <Accordion type="multiple" className="rounded-lg border">
+                  {matriculasExistentes.map((matricula) => (
+                    <MatriculaExistenteCard
+                      key={matricula.id}
+                      matricula={matricula}
+                      professores={professores}
+                      materias={materias}
+                      onAtualizada={() => {
+                        void refetchMatriculas()
+                        onPainelAtualizado?.()
+                      }}
+                    />
+                  ))}
+                </Accordion>
+              ) : null}
               {adicionandoMatricula ? (
                 <NovaMatriculaForm
                   alunoId={alunoPersistido.id}

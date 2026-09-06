@@ -1,0 +1,149 @@
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { useState } from 'react'
+
+import { cn } from 'cn'
+
+import { Button } from '../ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
+
+export interface MultiSelectOption {
+  value: string
+  label: string
+}
+
+function ItemLinha({
+  marcado,
+  destaque,
+  onClick,
+  children,
+}: {
+  marcado: boolean
+  destaque?: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+    >
+      <span
+        className={cn(
+          'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input',
+          marcado && 'border-primary bg-primary text-primary-foreground',
+        )}
+      >
+        {marcado ? <Check className="size-3.5" /> : null}
+      </span>
+      <span className={cn('truncate', destaque && 'font-medium')}>{children}</span>
+    </button>
+  )
+}
+
+/**
+ * Combobox de múltipla seleção com busca (baseado no padrão Combobox do
+ * shadcn/ui: https://ui.shadcn.com/docs/components/radix/combobox).
+ * Composto aqui com o Popover já usado no projeto (via `radix-ui`) em vez do
+ * pacote `@base-ui/react` que o registry oficial usa por baixo, pra não
+ * introduzir uma segunda lib de primitivos só pra isso; a filtragem por
+ * busca é um `.filter()` simples, sem precisar de `cmdk`. O indicador de
+ * selecionado é um ícone de check, não um `Checkbox` de verdade -- a linha
+ * inteira já é o `<button>` clicável, um Checkbox (que o Radix renderiza
+ * como `<button>`) aninhado dentro dela é HTML inválido (botão dentro de
+ * botão).
+ */
+export function MultiSelectCombobox({
+  options,
+  value,
+  onValueChange,
+  placeholder,
+  searchPlaceholder = 'Buscar...',
+  emptyText = 'Nenhum resultado.',
+  className,
+}: {
+  options: MultiSelectOption[]
+  value: string[]
+  onValueChange: (value: string[]) => void
+  placeholder: string
+  searchPlaceholder?: string
+  emptyText?: string
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [busca, setBusca] = useState('')
+
+  const opcoesFiltradas = options.filter((opcao) => opcao.label.toLowerCase().includes(busca.toLowerCase()))
+
+  function alternar(optionValue: string) {
+    onValueChange(
+      value.includes(optionValue) ? value.filter((v) => v !== optionValue) : [...value, optionValue],
+    )
+  }
+
+  const rotulo =
+    value.length === 0
+      ? placeholder
+      : value.length === 1
+        ? (options.find((o) => o.value === value[0])?.label ?? placeholder)
+        : `${value.length} selecionados`
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(proximoAberto) => {
+        setOpen(proximoAberto)
+        if (!proximoAberto) setBusca('')
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            'h-9 justify-between font-normal',
+            value.length === 0 && 'text-muted-foreground',
+            className,
+          )}
+        >
+          <span className="truncate">{rotulo}</span>
+          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="start">
+        <div className="border-b p-2">
+          <input
+            autoFocus
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder={searchPlaceholder}
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+        <div className="p-1">
+          <ItemLinha marcado={value.length === 0} destaque onClick={() => onValueChange([])}>
+            Todos
+          </ItemLinha>
+        </div>
+        <div className="h-px bg-border" />
+        <div className="max-h-60 overflow-y-auto p-1">
+          {opcoesFiltradas.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">{emptyText}</p>
+          ) : (
+            opcoesFiltradas.map((opcao) => (
+              <ItemLinha
+                key={opcao.value}
+                marcado={value.includes(opcao.value)}
+                onClick={() => alternar(opcao.value)}
+              >
+                {opcao.label}
+              </ItemLinha>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}

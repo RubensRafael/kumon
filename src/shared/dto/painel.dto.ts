@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { DiaSemanaEnum, HorarioDoDia, SituacaoAlunoEnum, SituacaoMatriculaEnum, TipoAtendimentoEnum } from './enums'
+import { DURACAO_SLOT_MIN, minutosDoHorario, slotsOcupados } from './ocupacao'
 
 /**
  * Snapshot bruto da unidade inteira: `GET /painel` devolve isto, sem
@@ -30,6 +31,9 @@ export const PainelDadosOutput = z.object({
       horarioFinal: HorarioDoDia,
       capacidadePorHorario: z.number().int(),
       materiaIds: z.array(z.uuid()),
+      // Adicionado na fe-06 (frontend) -- a Agenda usa a cor de verdade
+      // escolhida no cadastro do professor, em vez de calcular um hash por id.
+      corAgenda: z.string(),
     }),
   ),
   alunos: z.array(
@@ -38,6 +42,8 @@ export const PainelDadosOutput = z.object({
       nome: z.string(),
       situacao: SituacaoAlunoEnum,
       zonaVermelha: z.boolean(),
+      // Adicionado na fe-06 -- filtro "Connect" da Agenda.
+      connect: z.boolean(),
     }),
   ),
   materias: z.array(
@@ -59,6 +65,7 @@ export const PainelDadosOutput = z.object({
       alunoId: z.uuid(),
       professorId: z.uuid(),
       materiaId: z.uuid(),
+      // Adicionado na fe-06 -- filtro "Estágio" da Agenda.
       estagio: z.string().nullable(),
       situacao: SituacaoMatriculaEnum,
       tipoAtendimento: TipoAtendimentoEnum,
@@ -78,35 +85,6 @@ export type PainelDadosOutputType = z.infer<typeof PainelDadosOutput>
 // de dias disponiveis -- nenhuma unidade Kumon abre aos domingos, entao
 // essa coluna nunca teria valor no grafico "Aulas por dia da semana".
 const DIAS_BANCO = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
-
-/** Mesmo grid de 30min que `HorarioDoDia` forca em todo `MatriculaHorario.horario`. */
-const DURACAO_SLOT_MIN = 30
-
-/** Duracao real de uma aula, por `tipoAtendimento` da matricula -- nao do professor. */
-const DURACAO_AULA_MIN: Record<z.infer<typeof TipoAtendimentoEnum>, number> = {
-  REGULAR: 50,
-  PRE_ESCOLAR: 30,
-}
-
-function minutosDoHorario(hhmm: string): number {
-  const [horas, minutos] = hhmm.split(':').map(Number)
-  return (horas ?? 0) * 60 + (minutos ?? 0)
-}
-
-/**
- * Quantos slots de `DURACAO_SLOT_MIN` uma aula desse `tipoAtendimento`
- * ocupa, arredondado pra cima. `REGULAR` (50min) ocupa 2 -- o proprio
- * horario mais um "spillover" informativo no slot seguinte. `PRE_ESCOLAR`
- * (30min) ocupa exatamente 1.
- *
- * Caso raro e deliberadamente nao tratado aqui: um aluno com 2 matriculas
- * (mesmo professor) em horarios adjacentes pode contar 2x no mesmo slot --
- * ver plan.md, "Coisas pra fazer". So faz sentido resolver isso na UI, nao
- * no calculo agregado.
- */
-function slotsOcupados(tipoAtendimento: z.infer<typeof TipoAtendimentoEnum>): number {
-  return Math.ceil(DURACAO_AULA_MIN[tipoAtendimento] / DURACAO_SLOT_MIN)
-}
 
 /** Vagas-horario que um professor abre por semana -- base de `ocupacaoPercentual`. */
 function capacidadeSemanal(professor: {
@@ -145,27 +123,30 @@ export interface PainelAgregacoes {
  * Agregacoes que antes vinham prontas do backend (`GET /painel` da PR 10
  * original) -- agora calculadas aqui, em cima do snapshot bruto de
  * `PainelDadosOutput`. `professorId` e so um filtro de conveniencia
- * (dashboard do professor mostrando so o proprio): omitido, agrega a
+ * (dashboard do professor mostrando so o proprio, ou um pool de professores
+ * -- ex.: os que lecionam uma materia, na Agenda Geral): omitido, agrega a
  * unidade inteira. `totalProfessores` nunca e filtrado por ele -- mesma
  * logica de `GET /professores`, que ja e um diretorio nao-escopado.
  */
 export function calcularAgregacoesPainel(
   dados: PainelDadosOutputType,
-  professorId: string | null = null,
+  professorId: string | string[] | null = null,
 ): PainelAgregacoes {
-  const matriculasEscopadas = professorId
-    ? dados.matriculas.filter((matricula) => matricula.professorId === professorId)
+  const professorIds = professorId === null ? null : Array.isArray(professorId) ? professorId : [professorId]
+
+  const matriculasEscopadas = professorIds
+    ? dados.matriculas.filter((matricula) => professorIds.includes(matricula.professorId))
     : dados.matriculas
 
   const alunoIdsEscopados = new Set(matriculasEscopadas.map((matricula) => matricula.alunoId))
-  const alunosEscopados = professorId
+  const alunosEscopados = professorIds
     ? dados.alunos.filter((aluno) => alunoIdsEscopados.has(aluno.id))
     : dados.alunos
 
   const matriculasAtivas = matriculasEscopadas.filter((matricula) => matricula.situacao === 'ATIVA')
 
-  const professoresParaCapacidade = professorId
-    ? dados.professores.filter((professor) => professor.id === professorId)
+  const professoresParaCapacidade = professorIds
+    ? dados.professores.filter((professor) => professorIds.includes(professor.id))
     : dados.professores
   const capacidadeTeorica = professoresParaCapacidade.reduce(
     (soma, professor) => soma + capacidadeSemanal(professor),

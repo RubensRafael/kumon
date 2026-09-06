@@ -6,20 +6,10 @@ import type { AlunoOutputType, MateriaOutputType, PainelDadosOutputType, Profess
 import { Badge } from '../../../components/ui/badge'
 import { Button } from '../../../components/ui/button'
 import { Card } from '../../../components/ui/card'
-import { DIAS_SEMANA } from '../../../components/common/dias-semana'
+import { horariosTexto } from '../../../components/common/dias-semana'
 import { corDaMateria } from '../../../components/common/materia-cores'
 import { SITUACAO_ALUNO_LABEL } from '../../../components/common/aluno-form/enum-labels'
-import { AlunoFormDialog } from './aluno-form-dialog'
-
-const ORDEM_DIA: Record<string, number> = { DOM: 0, SEG: 1, TER: 2, QUA: 3, QUI: 4, SEX: 5, SAB: 6 }
-const LABEL_DIA: Record<string, string> = Object.fromEntries(DIAS_SEMANA.map((dia) => [dia.valor, dia.label]))
-
-function horariosTexto(horarios: { diaSemana: string; horario: string }[]): string {
-  return [...horarios]
-    .sort((a, b) => (ORDEM_DIA[a.diaSemana] ?? 0) - (ORDEM_DIA[b.diaSemana] ?? 0) || a.horario.localeCompare(b.horario))
-    .map((h) => `${LABEL_DIA[h.diaSemana] ?? h.diaSemana} ${h.horario}`)
-    .join('  ·  ')
-}
+import { AlunoFormDialog } from '../../../components/common/aluno-form/aluno-form-dialog'
 
 export function AlunoCard({
   aluno,

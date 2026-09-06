@@ -111,7 +111,11 @@ async function callApi<TName extends ApiEndpointName>(
 
 type QueryState<TName extends ApiEndpointName> =
   | { status: 'idle'; data: undefined; error: null }
-  | { status: 'loading'; data: undefined; error: null }
+  // `data` aceita o valor anterior de propósito -- só fica populado quando
+  // `keepPreviousData` está ligado (ver abaixo); nos demais casos quem seta
+  // o estado sempre manda `undefined` aqui, então o tipo externo de `data`
+  // (`ApiResponse<TName> | undefined`) não muda pra ninguém.
+  | { status: 'loading'; data: ApiResponse<TName> | undefined; error: null }
   | { status: 'success'; data: ApiResponse<TName>; error: null }
   | { status: 'error'; data: undefined; error: ApiError }
 
@@ -121,20 +125,31 @@ type QueryState<TName extends ApiEndpointName> =
  * `JSON.stringify`, suficiente pros argumentos simples que a API recebe) ou
  * quando `refetch()` é chamado à mão, tipicamente depois de uma
  * `useApiMutation` bem-sucedida na mesma tela.
+ *
+ * `keepPreviousData` (padrão `false`, preserva o comportamento de sempre):
+ * mantém `data` da rodada anterior visível enquanto um `refetch()` está em
+ * voo, em vez de zerar pra `undefined` -- sem isso, uma tela que gate seu
+ * render inteiro em `!data` desmonta e perde qualquer estado local (ex.: um
+ * modal aberto) toda vez que chama `refetch()` depois de uma mutação, só pra
+ * mostrar exatamente os mesmos dados um instante depois.
  */
 export function useApiQuery<TName extends ApiEndpointName>(
   name: TName,
   args: ApiRequestArgs<TName>,
-  options: { enabled?: boolean } = {},
+  options: { enabled?: boolean; keepPreviousData?: boolean } = {},
 ) {
-  const { enabled = true } = options
+  const { enabled = true, keepPreviousData = false } = options
   const [state, setState] = useState<QueryState<TName>>({ status: 'loading', data: undefined, error: null })
   const argsKey = JSON.stringify(args)
 
   const refetch = useCallback(
     async (signal?: AbortSignal) => {
       if (!enabled) return
-      setState({ status: 'loading', data: undefined, error: null })
+      setState((atual) => ({
+        status: 'loading',
+        data: keepPreviousData ? atual.data : undefined,
+        error: null,
+      }))
       try {
         const data = await callApi(name, { ...args, signal } as ApiRequestArgs<TName> & { signal?: AbortSignal })
         setState({ status: 'success', data, error: null })
@@ -144,7 +159,7 @@ export function useApiQuery<TName extends ApiEndpointName>(
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- argsKey representa `args` de forma estavel
-    [name, argsKey, enabled],
+    [name, argsKey, enabled, keepPreviousData],
   )
 
   useEffect(() => {

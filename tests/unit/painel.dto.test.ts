@@ -10,6 +10,7 @@ const PROFESSOR_PADRAO = {
   horarioFinal: '18:00',
   capacidadePorHorario: 4,
   materiaIds: [] as string[],
+  corAgenda: '#2563eb',
 }
 
 function dados(overrides: Partial<PainelDadosOutputType> = {}): PainelDadosOutputType {
@@ -30,8 +31,8 @@ describe('calcularAgregacoesPainel', () => {
         { id: 'p2', nome: 'Professor 2', ...PROFESSOR_PADRAO },
       ],
       alunos: [
-        { id: 'a1', nome: 'Aluno 1', situacao: 'ATIVO', zonaVermelha: false },
-        { id: 'a2', nome: 'Aluno 2', situacao: 'ATIVO', zonaVermelha: false },
+        { id: 'a1', nome: 'Aluno 1', situacao: 'ATIVO', zonaVermelha: false, connect: false },
+        { id: 'a2', nome: 'Aluno 2', situacao: 'ATIVO', zonaVermelha: false, connect: false },
       ],
       materias: [{ id: 'm1', nome: 'Materia', conteudos: [] }],
       matriculas: [
@@ -75,8 +76,8 @@ describe('calcularAgregacoesPainel', () => {
         { id: 'p2', nome: 'Professor 2', ...PROFESSOR_PADRAO },
       ],
       alunos: [
-        { id: 'a1', nome: 'Meu Aluno', situacao: 'ATIVO', zonaVermelha: false },
-        { id: 'a2', nome: 'Aluno de Outro', situacao: 'ATIVO', zonaVermelha: false },
+        { id: 'a1', nome: 'Meu Aluno', situacao: 'ATIVO', zonaVermelha: false, connect: false },
+        { id: 'a2', nome: 'Aluno de Outro', situacao: 'ATIVO', zonaVermelha: false, connect: false },
       ],
       materias: [{ id: 'm1', nome: 'Materia', conteudos: [] }],
       matriculas: [
@@ -114,8 +115,8 @@ describe('calcularAgregacoesPainel', () => {
     const snapshot = dados({
       professores: [{ id: 'p1', nome: 'Professor 1', ...PROFESSOR_PADRAO }],
       alunos: [
-        { id: 'a1', nome: 'Aluno Vermelho', situacao: 'ATIVO', zonaVermelha: true },
-        { id: 'a2', nome: 'Vermelho de Outro', situacao: 'ATIVO', zonaVermelha: true },
+        { id: 'a1', nome: 'Aluno Vermelho', situacao: 'ATIVO', zonaVermelha: true, connect: false },
+        { id: 'a2', nome: 'Vermelho de Outro', situacao: 'ATIVO', zonaVermelha: true, connect: false },
       ],
       materias: [{ id: 'm1', nome: 'Materia', conteudos: [] }],
       matriculas: [
@@ -158,7 +159,7 @@ describe('calcularAgregacoesPainel', () => {
     function ocupacaoCom(tipoAtendimento: 'REGULAR' | 'PRE_ESCOLAR') {
       const snapshot = dados({
         professores: [{ id: 'p1', nome: 'Professor', ...PROFESSOR_PADRAO }],
-        alunos: [{ id: 'a1', nome: 'Aluno', situacao: 'ATIVO', zonaVermelha: false }],
+        alunos: [{ id: 'a1', nome: 'Aluno', situacao: 'ATIVO', zonaVermelha: false, connect: false }],
         materias: [{ id: 'm1', nome: 'Materia', conteudos: [] }],
         matriculas: [
           {
