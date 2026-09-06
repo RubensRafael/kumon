@@ -1,3 +1,4 @@
+import { BedDouble, Gauge, TrendingUp, Users } from 'lucide-react'
 import { useMemo } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts'
 
@@ -52,6 +53,13 @@ export function PainelPage() {
     )
   }
 
+  const vagasDisponiveis = agregado.capacidadeSimultanea - agregado.totalAlunosAtivos
+  const excedida = vagasDisponiveis < 0
+  const ocupacaoAlunosPercentual =
+    agregado.capacidadeSimultanea > 0
+      ? Math.round((agregado.totalAlunosAtivos / agregado.capacidadeSimultanea) * 100)
+      : 0
+
   const dadosDonut = agregado.matriculasPorMateria.map((item) => ({
     name: item.materiaNome,
     value: item.total,
@@ -78,11 +86,39 @@ export function PainelPage() {
         <p className="text-sm text-muted-foreground">Visão geral e indicadores em tempo real</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard titulo="Alunos" valor={agregado.totalAlunosAtivos} legenda="matriculados ativos" />
-        <MetricCard titulo="Matrículas Ativas" valor={agregado.totalMatriculasAtivas} legenda="matrículas em curso" />
-        <MetricCard titulo="Professores" valor={agregado.totalProfessores} legenda="ativos" />
-        <MetricCard titulo="Ocupação" valor={`${agregado.ocupacaoPercentual}%`} legenda="da capacidade semanal" />
+      <div>
+        <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Visão da unidade</h2>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            titulo="Total de alunos"
+            valor={agregado.totalAlunosAtivos}
+            legenda="ativos"
+            icon={Users}
+            cor="azul"
+          />
+          <MetricCard
+            titulo="Capacidade"
+            valor={`${agregado.totalAlunosAtivos} / ${agregado.capacidadeSimultanea}`}
+            legenda={`máx. ${agregado.capacidadeSimultanea}`}
+            icon={Gauge}
+            cor="ambar"
+          />
+          <MetricCard
+            titulo="Vagas disponíveis"
+            valor={excedida ? 'Excedida' : vagasDisponiveis}
+            legenda={excedida ? `${Math.abs(vagasDisponiveis)} acima do limite` : 'disponíveis'}
+            icon={BedDouble}
+            cor={excedida ? 'vermelho' : 'verde'}
+          />
+          <MetricCard
+            titulo="Ocupação"
+            valor={`${Math.min(100, ocupacaoAlunosPercentual)}%`}
+            legenda="da capacidade da unidade"
+            icon={TrendingUp}
+            cor={ocupacaoAlunosPercentual >= 90 ? 'vermelho' : 'azul'}
+            progresso={ocupacaoAlunosPercentual}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

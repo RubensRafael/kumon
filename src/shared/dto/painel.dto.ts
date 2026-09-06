@@ -126,6 +126,15 @@ export interface PainelAgregacoes {
   totalMatriculasAtivas: number
   totalProfessores: number
   ocupacaoPercentual: number
+  /**
+   * Soma de `capacidadePorHorario` de cada professor -- teto de quantos
+   * alunos cabem em atendimento ao mesmo tempo na unidade (Kumon não é aula
+   * 1:1: um professor supervisiona vários alunos por slot). Alimenta o
+   * card "Capacidade" do painel (`totalAlunosAtivos / capacidadeSimultanea`)
+   * -- não há config de limite de alunos por unidade, então este é o único
+   * proxy de "capacidade máxima" que já existe no modelo.
+   */
+  capacidadeSimultanea: number
   matriculasPorMateria: { materiaId: string; materiaNome: string; total: number }[]
   matriculasPorProfessor: { professorId: string; professorNome: string; total: number }[]
   aulasPorDiaSemana: { diaSemana: string; total: number }[]
@@ -160,6 +169,16 @@ export function calcularAgregacoesPainel(
     : dados.professores
   const capacidadeTeorica = professoresParaCapacidade.reduce(
     (soma, professor) => soma + capacidadeSemanal(professor),
+    0,
+  )
+  // Soma simples de capacidadePorHorario -- teto de quantos alunos cabem em
+  // atendimento ao mesmo tempo (cada professor supervisiona varios alunos
+  // por slot, Kumon nao e aula 1:1). Diferente de capacidadeTeorica (que
+  // multiplica por dias x slots-semana e por isso sempre da uma ordem de
+  // grandeza muito maior que headcount de aluno) -- este e o numero
+  // comparavel com totalAlunosAtivos pro card "Capacidade" do painel.
+  const capacidadeSimultanea = professoresParaCapacidade.reduce(
+    (soma, professor) => soma + professor.capacidadePorHorario,
     0,
   )
 
@@ -217,6 +236,7 @@ export function calcularAgregacoesPainel(
     totalMatriculasAtivas: matriculasAtivas.length,
     totalProfessores: dados.professores.length,
     ocupacaoPercentual,
+    capacidadeSimultanea,
     matriculasPorMateria,
     matriculasPorProfessor,
     aulasPorDiaSemana,

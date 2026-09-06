@@ -143,6 +143,17 @@ describe('calcularAgregacoesPainel', () => {
     expect(calcularAgregacoesPainel(dados()).ocupacaoPercentual).toBe(0)
   })
 
+  it('capacidadeSimultanea soma capacidadePorHorario dos professores (nao multiplica por dias/slots)', () => {
+    const snapshot = dados({
+      professores: [
+        { id: 'p1', nome: 'Professor 1', ...PROFESSOR_PADRAO },
+        { id: 'p2', nome: 'Professor 2', ...PROFESSOR_PADRAO },
+      ],
+    })
+    expect(calcularAgregacoesPainel(snapshot, 'p1').capacidadeSimultanea).toBe(4)
+    expect(calcularAgregacoesPainel(snapshot).capacidadeSimultanea).toBe(8)
+  })
+
   it('ocupacaoPercentual pesa REGULAR (2 slots de 30min) o dobro de PRE_ESCOLAR (1 slot)', () => {
     function ocupacaoCom(tipoAtendimento: 'REGULAR' | 'PRE_ESCOLAR') {
       const snapshot = dados({
