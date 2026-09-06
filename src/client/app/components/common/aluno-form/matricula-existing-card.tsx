@@ -31,7 +31,8 @@ export function MatriculaExistenteCard({
   materias: MateriaOutputType[]
   onAtualizada: () => void
 }) {
-  const professorNome = professores.find((p) => p.id === matricula.professorId)?.nome ?? '—'
+  const professor = professores.find((p) => p.id === matricula.professorId)
+  const professorNome = professor?.nome ?? '—'
   const materiaNome = materias.find((m) => m.id === matricula.materiaId)?.nome ?? '—'
 
   const { data: horarios, refetch: refetchHorarios } = useApiQuery('listarHorariosDaMatricula', {
@@ -159,7 +160,12 @@ export function MatriculaExistenteCard({
 
         <div className="space-y-2">
           <Label>Programação semanal</Label>
-          <ProgramacaoSemanalGrid valores={valores} onChange={aoMudarDia} disabled={salvandoProgramacao} />
+          <ProgramacaoSemanalGrid
+            valores={valores}
+            onChange={aoMudarDia}
+            disabled={salvandoProgramacao}
+            professor={professor}
+          />
           <div className="flex justify-end">
             <Button
               type="button"
