@@ -4,10 +4,12 @@ import type { MateriaOutputType, MatriculaOutputType, ProfessorOutputType } from
 
 import { useApiMutation, useApiQuery } from '../../../hooks/use-api'
 import { Badge } from '../../ui/badge'
+import { Button } from '../../ui/button'
 import { Card, CardContent, CardHeader } from '../../ui/card'
 import { Label } from '../../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { Textarea } from '../../ui/textarea'
+import { DIAS_SEMANA } from '../dias-semana'
 import { SITUACAO_MATRICULA_LABEL, TIPO_ATENDIMENTO_LABEL } from './enum-labels'
 import { ProgramacaoSemanalGrid, programacaoSemanalVazia, type ProgramacaoSemanal } from './programacao-semanal-grid'
 
@@ -39,13 +41,18 @@ export function MatriculaExistenteCard({
   const { mutate: criarHorario } = useApiMutation('criarHorario')
   const { mutate: atualizarHorario } = useApiMutation('atualizarHorario')
   const [observacoes, setObservacoes] = useState(matricula.observacoes ?? '')
+  const [rascunho, setRascunho] = useState<ProgramacaoSemanal | null>(null)
+  const [salvandoProgramacao, setSalvandoProgramacao] = useState(false)
 
-  const valores: ProgramacaoSemanal = { ...programacaoSemanalVazia() }
+  const valoresServidor: ProgramacaoSemanal = { ...programacaoSemanalVazia() }
   for (const horario of horarios ?? []) {
-    if (horario.ativo && horario.diaSemana in valores) {
-      valores[horario.diaSemana as keyof ProgramacaoSemanal] = { frequenta: true, horario: horario.horario }
+    if (horario.ativo && horario.diaSemana in valoresServidor) {
+      valoresServidor[horario.diaSemana as keyof ProgramacaoSemanal] = { frequenta: true, horario: horario.horario }
     }
   }
+  const valores = rascunho ?? valoresServidor
+  const programacaoAlterada =
+    rascunho !== null && JSON.stringify(rascunho) !== JSON.stringify(valoresServidor)
 
   async function aoMudarSituacao(situacao: string) {
     await atualizarMatricula({
@@ -61,19 +68,48 @@ export function MatriculaExistenteCard({
     onAtualizada()
   }
 
-  async function aoMudarDia(dia: keyof ProgramacaoSemanal, valor: { frequenta: boolean; horario: string }) {
-    const existente = horarios?.find((h) => h.ativo && h.diaSemana === dia)
+  function aoMudarDia(dia: keyof ProgramacaoSemanal, valor: { frequenta: boolean; horario: string }) {
+    setRascunho({ ...valores, [dia]: valor })
+  }
 
-    if (valor.frequenta && !existente) {
-      await criarHorario({ params: { matriculaId: matricula.id }, body: { diaSemana: dia, horario: valor.horario } })
-    } else if (!valor.frequenta && existente) {
-      await atualizarHorario({ params: { id: existente.id }, body: { ativo: false } })
-    } else if (valor.frequenta && existente && existente.horario !== valor.horario) {
-      // Trocar o horário de um dia já ativo: desativa o antigo e cria o novo (mesmo padrão de `plan.md` seção 6).
-      await atualizarHorario({ params: { id: existente.id }, body: { ativo: false } })
-      await criarHorario({ params: { matriculaId: matricula.id }, body: { diaSemana: dia, horario: valor.horario } })
+  /**
+   * Só persiste no clique de "Salvar" -- antes, cada toggle da grade
+   * disparava `criarHorario`/`atualizarHorario` na hora, uma chamada por
+   * dia mexido, sem loading nem forma de o usuário ver "uma atualização só"
+   * quando mexia em vários dias.
+   */
+  async function aoSalvarProgramacao() {
+    if (!rascunho) return
+    setSalvandoProgramacao(true)
+    try {
+      for (const dia of DIAS_SEMANA) {
+        const valorNovo = rascunho[dia.valor]
+        const valorAntigo = valoresServidor[dia.valor]
+        if (valorNovo.frequenta === valorAntigo.frequenta && valorNovo.horario === valorAntigo.horario) continue
+
+        const existente = horarios?.find((h) => h.ativo && h.diaSemana === dia.valor)
+        if (valorNovo.frequenta && !existente) {
+          await criarHorario({
+            params: { matriculaId: matricula.id },
+            body: { diaSemana: dia.valor, horario: valorNovo.horario },
+          })
+        } else if (!valorNovo.frequenta && existente) {
+          await atualizarHorario({ params: { id: existente.id }, body: { ativo: false } })
+        } else if (valorNovo.frequenta && existente && existente.horario !== valorNovo.horario) {
+          // Trocar o horário de um dia já ativo: desativa o antigo e cria o novo (mesmo padrão de `plan.md` seção 6).
+          await atualizarHorario({ params: { id: existente.id }, body: { ativo: false } })
+          await criarHorario({
+            params: { matriculaId: matricula.id },
+            body: { diaSemana: dia.valor, horario: valorNovo.horario },
+          })
+        }
+      }
+      setRascunho(null)
+      await refetchHorarios()
+      onAtualizada()
+    } finally {
+      setSalvandoProgramacao(false)
     }
-    void refetchHorarios()
   }
 
   return (
@@ -123,7 +159,17 @@ export function MatriculaExistenteCard({
 
         <div className="space-y-2">
           <Label>Programação semanal</Label>
-          <ProgramacaoSemanalGrid valores={valores} onChange={(dia, valor) => void aoMudarDia(dia, valor)} />
+          <ProgramacaoSemanalGrid valores={valores} onChange={aoMudarDia} disabled={salvandoProgramacao} />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              disabled={!programacaoAlterada || salvandoProgramacao}
+              onClick={() => void aoSalvarProgramacao()}
+            >
+              {salvandoProgramacao ? 'Salvando...' : 'Salvar programação'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
