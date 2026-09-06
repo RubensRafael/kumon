@@ -5,7 +5,6 @@ import { calcularOcupacaoCelula, derivarAgendaSlots, type AgendaSlotOutputType }
 
 import { AlunoInspectorSheet } from '../../components/common/aluno-inspector-sheet'
 import { DIAS_SEMANA } from '../../components/common/dias-semana'
-import { gerarSlotsHorario } from '../../components/common/gerar-slots-horario'
 import { ScheduleGrid, type ScheduleGridColumn } from '../../components/common/schedule-grid'
 import { WeekdayTabs } from '../../components/common/weekday-tabs'
 import { Button } from '../../components/ui/button'
@@ -13,6 +12,7 @@ import { Input } from '../../components/ui/input'
 import { Skeleton } from '../../components/ui/skeleton'
 import { useAuth } from '../../hooks/use-auth'
 import { useApiQuery } from '../../hooks/use-api'
+import { gerarSlotsHorario } from '../../lib/gerar-slots-horario'
 
 type DiaSemana6 = (typeof DIAS_SEMANA)[number]['valor']
 

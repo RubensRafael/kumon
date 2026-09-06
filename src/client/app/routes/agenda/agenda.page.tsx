@@ -5,13 +5,13 @@ import { calcularOcupacaoCelula, derivarAgendaSlots, type AgendaSlotOutputType }
 
 import { AlunoInspectorSheet } from '../../components/common/aluno-inspector-sheet'
 import { DIAS_SEMANA } from '../../components/common/dias-semana'
-import { gerarSlotsHorario } from '../../components/common/gerar-slots-horario'
 import { MultiSelectCombobox } from '../../components/common/multi-select-combobox'
 import { PillToggleGroup } from '../../components/common/pill-toggle-group'
 import { ScheduleGrid, type ScheduleGridColumn } from '../../components/common/schedule-grid'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Skeleton } from '../../components/ui/skeleton'
 import { useApiQuery } from '../../hooks/use-api'
+import { gerarSlotsHorario } from '../../lib/gerar-slots-horario'
 import { comFiltroAtualizado, comFiltroListaAtualizado, lerFiltrosDaUrl } from './agenda-filtros'
 
 const TOGGLES_BINARIOS = [
