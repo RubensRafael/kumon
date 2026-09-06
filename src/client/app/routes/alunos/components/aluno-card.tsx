@@ -27,12 +27,14 @@ export function AlunoCard({
   materias,
   matriculas,
   onAtualizado,
+  onPainelAtualizado,
 }: {
   aluno: AlunoOutputType
   professores: ProfessorOutputType[]
   materias: MateriaOutputType[]
   matriculas: PainelDadosOutputType['matriculas']
   onAtualizado: () => void
+  onPainelAtualizado?: () => void
 }) {
   const [editando, setEditando] = useState(false)
 
@@ -101,6 +103,7 @@ export function AlunoCard({
         professores={professores}
         materias={materias}
         onSalvo={onAtualizado}
+        onPainelAtualizado={onPainelAtualizado}
       />
     </Card>
   )

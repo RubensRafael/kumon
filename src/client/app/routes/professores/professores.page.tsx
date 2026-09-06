@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
 import { useAuth } from '../../hooks/use-auth'
 import { useApiQuery } from '../../hooks/use-api'
+import { usePainelSnapshot } from '../../hooks/use-painel-snapshot'
 import { ProfessorCard } from './components/professor-card'
 import { ProfessorFormDialog } from './components/professor-form-dialog'
 
@@ -14,8 +15,13 @@ export function ProfessoresPage() {
   const { isAdmin } = useAuth()
   const { data: professores, loading, refetch } = useApiQuery('listarProfessores', {})
   const { data: materias } = useApiQuery('listarMaterias', { query: {} })
-  const { data: painel } = useApiQuery('obterPainel', {})
+  const { dados: painel, refetch: refetchPainel } = usePainelSnapshot()
   const [dialogAberto, setDialogAberto] = useState(false)
+
+  function aoAtualizar() {
+    refetch()
+    refetchPainel()
+  }
 
   return (
     <div className="space-y-6">
@@ -49,7 +55,7 @@ export function ProfessoresPage() {
             professor={professor}
             materias={materias ?? []}
             alunosAtivos={painel ? calcularAgregacoesPainel(painel, professor.id).totalAlunosAtivos : undefined}
-            onAtualizado={refetch}
+            onAtualizado={aoAtualizar}
           />
         ))}
       </div>
@@ -59,7 +65,7 @@ export function ProfessoresPage() {
           open={dialogAberto}
           onOpenChange={setDialogAberto}
           materias={materias ?? []}
-          onSalvo={refetch}
+          onSalvo={aoAtualizar}
         />
       ) : null}
     </div>

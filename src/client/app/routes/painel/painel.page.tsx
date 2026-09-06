@@ -13,7 +13,7 @@ import {
 } from '../../components/ui/chart'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Skeleton } from '../../components/ui/skeleton'
-import { useApiQuery } from '../../hooks/use-api'
+import { usePainelSnapshot } from '../../hooks/use-painel-snapshot'
 import { MetricCard } from './components/metric-card'
 
 const DIA_LABEL: Record<string, string> = {
@@ -28,7 +28,7 @@ const DIA_LABEL: Record<string, string> = {
 const CORES_DONUT = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
 
 export function PainelPage() {
-  const { data, loading } = useApiQuery('obterPainel', {})
+  const { dados: data, loading } = usePainelSnapshot()
   const agregado = useMemo(() => (data ? calcularAgregacoesPainel(data) : null), [data])
 
   if (loading || !agregado) {

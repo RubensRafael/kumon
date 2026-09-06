@@ -70,11 +70,18 @@ export function AlunoForm({
   professores,
   materias,
   onSalvo,
+  onPainelAtualizado,
 }: {
   aluno?: AlunoOutputType
   professores: ProfessorOutputType[]
   materias: MateriaOutputType[]
   onSalvo: () => void
+  /**
+   * Mutação de matrícula/horário numa matrícula já existente -- não fecha o
+   * dialog (diferente de `onSalvo`), só avisa quem tem o snapshot bruto do
+   * painel montado (`usePainelSnapshot`) que ele ficou desatualizado.
+   */
+  onPainelAtualizado?: () => void
 }) {
   // Depois que `criarAluno` responde (modo criação), a mesma tela passa a se
   // comportar como edição desse aluno recém-criado — inclusive se a criação
@@ -391,7 +398,10 @@ export function AlunoForm({
                   matricula={matricula}
                   professores={professores}
                   materias={materias}
-                  onAtualizada={refetchMatriculas}
+                  onAtualizada={() => {
+                    void refetchMatriculas()
+                    onPainelAtualizado?.()
+                  }}
                 />
               ))}
               {adicionandoMatricula ? (
@@ -402,6 +412,7 @@ export function AlunoForm({
                   onCriada={() => {
                     setAdicionandoMatricula(false)
                     void refetchMatriculas()
+                    onPainelAtualizado?.()
                   }}
                   onCancelar={() => setAdicionandoMatricula(false)}
                 />

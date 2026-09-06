@@ -10,6 +10,7 @@ export function AlunoFormDialog({
   professores,
   materias,
   onSalvo,
+  onPainelAtualizado,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -17,6 +18,7 @@ export function AlunoFormDialog({
   professores: ProfessorOutputType[]
   materias: MateriaOutputType[]
   onSalvo: () => void
+  onPainelAtualizado?: () => void
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -34,6 +36,7 @@ export function AlunoFormDialog({
             onOpenChange(false)
             onSalvo()
           }}
+          onPainelAtualizado={onPainelAtualizado}
         />
       </DialogContent>
     </Dialog>
