@@ -1,7 +1,7 @@
 import type { AlunoOutputType, MateriaOutputType, ProfessorOutputType } from '@shared/dto'
 
-import { AlunoForm } from '../../../components/common/aluno-form/aluno-form'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog'
+import { AlunoForm } from './aluno-form'
 
 export function AlunoFormDialog({
   open,

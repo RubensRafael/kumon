@@ -10,3 +10,11 @@ export function paraInputDate(valor: Date | string | null | undefined): string {
   if (Number.isNaN(data.getTime())) return ''
   return data.toISOString().slice(0, 10)
 }
+
+/** "AAAA-MM-DD" -> "DD/MM/AAAA" pra exibição -- mesma tolerância a `Date`/string de `paraInputDate`. */
+export function paraExibicao(valor: Date | string | null | undefined): string {
+  const iso = paraInputDate(valor)
+  if (!iso) return '—'
+  const [ano, mes, dia] = iso.split('-')
+  return `${dia}/${mes}/${ano}`
+}

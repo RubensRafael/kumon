@@ -8,7 +8,7 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { useApiQuery } from '../../hooks/use-api'
 import { usePainelSnapshot } from '../../hooks/use-painel-snapshot'
 import { AlunoCard } from './components/aluno-card'
-import { AlunoFormDialog } from './components/aluno-form-dialog'
+import { AlunoFormDialog } from '../../components/common/aluno-form/aluno-form-dialog'
 
 export function AlunosPage() {
   const { data: alunos, loading, refetch } = useApiQuery('listarAlunos', {})
