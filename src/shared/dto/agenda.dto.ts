@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { DiaSemanaEnum, HorarioDoDia, TipoAtendimentoEnum } from './enums'
+import { horariosOcupados } from './ocupacao'
 import type { PainelDadosOutputType } from './painel.dto'
 
 export const AgendaSlotOutput = z.object({
@@ -69,4 +70,42 @@ export function derivarAgendaSlots(
       (a, b) =>
         ORDEM_DIAS.indexOf(a.diaSemana) - ORDEM_DIAS.indexOf(b.diaSemana) || a.horario.localeCompare(b.horario),
     )
+}
+
+export interface OcupacaoCelula {
+  /** Slots que realmente comecam nesse horario -- as pills que a celula renderiza. */
+  ocupantes: AgendaSlotOutputType[]
+  /**
+   * Slots de um horario anterior cuja aula (por `tipoAtendimento`, ver
+   * `horariosOcupados`) ainda "vaza" pra esse horario -- ex.: um `REGULAR`
+   * as 14:00 aparece aqui na celula de 14:30. Nao vira pill propria, so
+   * conta pra ocupacao/cor da celula.
+   */
+  overflow: AgendaSlotOutputType[]
+  /** `capacidadePorHorario` do professor da celula, ou 0 se o professor nao existir mais. */
+  capacidade: number
+}
+
+/**
+ * Ocupacao de uma celula (professor x dia x horario) da Agenda, considerando
+ * o spillover de aulas `REGULAR` do horario anterior -- mesma regra de
+ * duracao que `calcularAgregacoesPainel` usa pro percentual agregado
+ * (`horariosOcupados`), so que aqui resolvida por celula em vez de somada
+ * pra unidade inteira.
+ */
+export function calcularOcupacaoCelula(
+  dados: PainelDadosOutputType,
+  { professorId, diaSemana, horario }: { professorId: string; diaSemana: string; horario: string },
+): OcupacaoCelula {
+  const professor = dados.professores.find((p) => p.id === professorId)
+  const slotsDoProfessorNoDia = derivarAgendaSlots(dados, { professorId }).filter(
+    (slot) => slot.diaSemana === diaSemana,
+  )
+
+  const ocupantes = slotsDoProfessorNoDia.filter((slot) => slot.horario === horario)
+  const overflow = slotsDoProfessorNoDia.filter(
+    (slot) => slot.horario !== horario && horariosOcupados(slot.horario, slot.tipoAtendimento).includes(horario),
+  )
+
+  return { ocupantes, overflow, capacidade: professor?.capacidadePorHorario ?? 0 }
 }

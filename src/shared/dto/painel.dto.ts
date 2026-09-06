@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { DiaSemanaEnum, HorarioDoDia, SituacaoAlunoEnum, SituacaoMatriculaEnum, TipoAtendimentoEnum } from './enums'
+import { DURACAO_SLOT_MIN, minutosDoHorario, slotsOcupados } from './ocupacao'
 
 /**
  * Snapshot bruto da unidade inteira: `GET /painel` devolve isto, sem
@@ -84,35 +85,6 @@ export type PainelDadosOutputType = z.infer<typeof PainelDadosOutput>
 // de dias disponiveis -- nenhuma unidade Kumon abre aos domingos, entao
 // essa coluna nunca teria valor no grafico "Aulas por dia da semana".
 const DIAS_BANCO = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const
-
-/** Mesmo grid de 30min que `HorarioDoDia` forca em todo `MatriculaHorario.horario`. */
-const DURACAO_SLOT_MIN = 30
-
-/** Duracao real de uma aula, por `tipoAtendimento` da matricula -- nao do professor. */
-const DURACAO_AULA_MIN: Record<z.infer<typeof TipoAtendimentoEnum>, number> = {
-  REGULAR: 50,
-  PRE_ESCOLAR: 30,
-}
-
-function minutosDoHorario(hhmm: string): number {
-  const [horas, minutos] = hhmm.split(':').map(Number)
-  return (horas ?? 0) * 60 + (minutos ?? 0)
-}
-
-/**
- * Quantos slots de `DURACAO_SLOT_MIN` uma aula desse `tipoAtendimento`
- * ocupa, arredondado pra cima. `REGULAR` (50min) ocupa 2 -- o proprio
- * horario mais um "spillover" informativo no slot seguinte. `PRE_ESCOLAR`
- * (30min) ocupa exatamente 1.
- *
- * Caso raro e deliberadamente nao tratado aqui: um aluno com 2 matriculas
- * (mesmo professor) em horarios adjacentes pode contar 2x no mesmo slot --
- * ver plan.md, "Coisas pra fazer". So faz sentido resolver isso na UI, nao
- * no calculo agregado.
- */
-function slotsOcupados(tipoAtendimento: z.infer<typeof TipoAtendimentoEnum>): number {
-  return Math.ceil(DURACAO_AULA_MIN[tipoAtendimento] / DURACAO_SLOT_MIN)
-}
 
 /** Vagas-horario que um professor abre por semana -- base de `ocupacaoPercentual`. */
 function capacidadeSemanal(professor: {
