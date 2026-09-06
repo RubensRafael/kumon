@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Skeleton } from '../../components/ui/skeleton'
 import { useApiQuery } from '../../hooks/use-api'
+import { HistoricoSheet } from './components/historico-sheet'
 import { RegistrarAulaDialog } from './components/registrar-aula-dialog'
 import { RegistroRow } from './components/registro-row'
 
@@ -21,6 +22,7 @@ export function AcompanhamentoPage() {
   const [data, setData] = useState(() => paraISO(new Date()))
   const [busca, setBusca] = useState('')
   const [linhaAtiva, setLinhaAtiva] = useState<RegistroResumoOutputType | null>(null)
+  const [alunoHistorico, setAlunoHistorico] = useState<{ id: string; nome: string } | null>(null)
 
   const { data: registros, loading, refetch } = useApiQuery('listarRegistrosDoDia', {
     query: { data } as unknown as { data: Date },
@@ -115,7 +117,8 @@ export function AcompanhamentoPage() {
               key={registro.horarioId}
               registro={registro}
               bloqueadoFuturo={bloqueadoFuturo}
-              onAbrir={() => setLinhaAtiva(registro)}
+              onRegistrarAula={() => setLinhaAtiva(registro)}
+              onVerHistorico={() => setAlunoHistorico({ id: registro.alunoId, nome: registro.alunoNome })}
             />
           ))}
       </div>
@@ -127,6 +130,13 @@ export function AcompanhamentoPage() {
         resumo={linhaAtiva}
         bloqueadoFuturo={bloqueadoFuturo}
         onSalvo={refetch}
+      />
+
+      <HistoricoSheet
+        open={Boolean(alunoHistorico)}
+        onOpenChange={(open) => !open && setAlunoHistorico(null)}
+        alunoId={alunoHistorico?.id ?? null}
+        alunoNome={alunoHistorico?.nome ?? ''}
       />
     </div>
   )

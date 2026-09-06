@@ -642,6 +642,44 @@ export const PainelDadosOutput = z.object({
 
 ---
 
+## 9. Histórico de acompanhamento (agregação por período)
+
+Adicionado durante a construção do frontend (fe-08, ver
+`docs/pr-fe-08-historico.md`) pra alimentar o botão "Ver acompanhamento"
+de um aluno — agregação por período sobre `RegistroAula` já existente,
+sem nenhuma migration.
+
+### Endpoint
+
+| Método | Rota | Papel | Input | Output |
+|---|---|---|---|---|
+| GET | `/alunos/:alunoId/registros/historico?periodo=DIA\|SEMANA\|MES\|TUDO` | qualquer (escopo aplicado) | — | `HistoricoAcompanhamentoOutput` |
+
+`HistoricoAcompanhamentoOutput`: `previstas`/`realizadas` (contagem de
+`MatriculaHorario` ativos vs. `RegistroAula` com `chegada` preenchida no
+período), `presencaPercentual`, `tarefasFeitasPercentual`, médias de
+Foco/Autonomia/Comportamento/Desempenho (escala 1–4, derivada da ordem
+já existente de cada enum) e `evolucao` (delta de cada média contra o
+período imediatamente anterior de mesmo tamanho; `null` pra `periodo=TUDO`,
+que não tem "anterior").
+
+### Regras de negócio / decisões
+
+- **Sem atraso em minutos.** `Chegada` é só o enum `PRESENTE/ATRASADO/
+  FALTOU`, sem valor numérico — não ganhou campo novo pra isso; "Média de
+  atraso" do print original não é reproduzida.
+- **Sem "Feedback semana"/IA** — é a feature da
+  [issue #17](https://github.com/RubensRafael/kumon/issues/17), fora do
+  escopo deste endpoint.
+- `previstas` conta quantas vezes cada dia da semana de um horário ativo
+  ocorre dentro da janela (`[início, fim)`), não simplesmente o número de
+  `MatriculaHorario` — pra `periodo=MES` isso já multiplica corretamente
+  por ~4 semanas, por exemplo.
+- Escopo por professor aplicado do mesmo jeito que `GET /registros`
+  (`scopeToProfessor` + filtro por `Matricula.professorId`).
+
+---
+
 ## Erros preveníveis pela UI
 
 Casos que existem por causa da forma do produto, não por regra de integridade — a defesa real é desabilitar/esconder o controle na tela, e o backend foi deliberadamente deixado leniente (sem `.strict()`, sem checagem extra) nesses pontos, porque adicionar validação rígida ali só duplicaria uma garantia que já devia existir na UI:
@@ -1056,9 +1094,8 @@ Ações futuras já discutidas mas não implementadas — anotadas aqui pra não
 - **Issue: tipografia/mensagens de erro da API estão muito técnicas**: [#15 — API: revisar tipografia/clareza das mensagens de erro](https://github.com/RubensRafael/kumon/issues/15).
 - **Issue de UI**: [#27 — UI: implementar busca de verdade no topo (Buscar aluno...)](https://github.com/RubensRafael/kumon/issues/27). O input decorativo do `AppShell` foi removido na fe-01 (QA manual da PR #26) até a busca real existir.
 - **Issue de backend**: [#28 — Backend: constraint de unicidade em Materia.nome (e Conteudo.nome por matéria)](https://github.com/RubensRafael/kumon/issues/28). Levantado no QA manual da PR #26 (fe-02): decisão foi não corrigir agora, só quando o app ganhar suporte a multi-tenant (ver a migração multi-tenant logo abaixo).
-- **`ApiContract`/`apiEndpoints` (`src/shared/api/contract.ts`) só tem `health` cadastrado.** Esse é o mecanismo que dá tipagem ponta a ponta pro front (`callApi` em `src/client/config/api.ts` infere método/path/tipo de resposta a partir do contrato) — mas nenhuma das features já implementadas (professores, matérias, alunos, matrículas, horários, registros) foi cadastrada nele ainda, então hoje só o health check tem tipagem real do lado do client. Duas formas de resolver, sem decisão tomada:
-  - Mover o `*.dto.ts` inteiro de cada feature de `src/server/features/*/` pra `src/shared/dto/` — mecânico, mas mexe em todo PR já mergeado em `main`. Zod não é server-only (roda no browser), então não há impedimento técnico, só reorganização.
-  - Manter os DTOs onde estão e `contract.ts` importar só o tipo via `import type { XOutputType } from '../../server/features/x/x.dto'` — mudança pequena (import erasa em runtime, não vaza nada pro bundle), mas quebra a convenção atual de "só o que está em `shared/dto/` é compartilhado".
+- ~~`ApiContract`/`apiEndpoints` só tem `health` cadastrado~~ — **resolvido** durante o frontend (fe-01 em diante): cada PR moveu o `*.dto.ts` da feature correspondente pra `shared/dto/` e registrou suas rotas em `contract.ts`, na ordem fe-01 (auth + painel, adiantado pra fundação do `PainelSnapshotProvider`) → fe-02 (matérias/conteúdos) → fe-03 (professores/usuários) → fe-04 (alunos/matrículas/horários) → fe-07 (registros) → fe-08 (histórico). Opção A da dúvida original (mover o DTO inteiro) venceu.
 - **UI: mostrar quando um aluno "ainda está na sala" por spillover de aula `REGULAR` (50min).** Levantado na revisão da PR 10 (painel): `ocupacaoPercentual` conta uma matrícula `REGULAR` como ocupando o próprio slot de 30min mais um "spillover" informativo no seguinte (ver `docs/pr-10-painel.md`, "Atualizações pós-revisão"). Caso raro e não tratado no cálculo: um aluno com 2 matrículas (mesmo professor) em horários adjacentes pode ser contado 2x no mesmo slot — spillover de uma matrícula + reserva nova da outra. Não é bug de cálculo, é sintoma de um conflito de agenda real (o professor não pode atender o mesmo aluno em 2 matérias ao mesmo tempo, e hoje nada no sistema impede esse overlap). Decisão de revisão: não vale a pena validar sobreposição de horário por aluno agora — só deixar isso visualmente claro na UI quando/se aparecer (ex.: distinguir "continuando aula anterior" de "reserva nova" numa view de agenda por horário).
-- **UI: construir as telas de agenda e painel.** `GET /painel` (seção 8) e os helpers `calcularAgregacoesPainel`/`derivarAgendaSlots` (`src/shared/dto/`) já existem e têm cobertura de teste, mas nenhuma tela consome isso ainda — o front-end de fato fica pra uma sessão futura.
+- ~~UI: construir as telas de agenda e painel~~ — **resolvido**, junto com o resto do frontend (`plan-frontend.md`, PRs fe-01 a fe-08: setup/auth, Configurações, Professores, Alunos, Painel, Agenda, Acompanhamento, Histórico).
+- **UI: reeditar as notas de um registro já concluído.** Desde a fe-08, uma linha `CONCLUIDO` na lista diária abre só a agregação (`HistoricoSheet`), não mais o formulário read-only por registro que a fe-07 usava como interino — não sobrou nenhum caminho na UI pra voltar e corrigir uma nota específica de um dia já fechado (o backend nunca bloqueou isso, é só falta de entry point na tela). Ver "Pontos para revisão" de `docs/pr-fe-08-historico.md`.
 - **Migração multi-tenant (sessão futura, ainda sem nenhum código pra isso).** Discutido na revisão da PR 10: hoje não existe conceito de unidade/tenant no schema — tudo é implicitamente "uma unidade só". Se um dia precisar suportar múltiplas unidades, o padrão mais barato pro tamanho do projeto é "tenant por coluna": uma tabela `Unidade` e um `unidadeId` em `Professor`/`Aluno`/`Materia`/`Matricula` etc. (banco e schema compartilhados) — schema/banco por tenant só valeria a pena com exigência forte de isolamento (compliance), que não é o caso aqui. Ponto de atenção sobre performance: o número total de linhas somando todos os tenants não importa por si só, desde que exista índice liderando por `unidadeId` (composto, `unidadeId` primeiro) — o Postgres salta direto pro pedaço daquele tenant, custo escala com as linhas *daquele* tenant, não com a tabela inteira. Sem esse índice, vira scan completo e piora conforme a soma de todos os tenants cresce. Diferente do escopo por professor (que virou só filtro de UI nesta revisão, sem risco de segurança por ser leitura), o escopo por tenant **não pode** virar opcional do mesmo jeito: é limite de isolamento entre clientes diferentes, não preferência de UX — toda query (inclusive as que hoje são deliberadamente "sem escopo", tipo `totalProfessores`) precisaria de `unidadeId` obrigatório. Se `GET /painel` centralizar a busca bruta nesse cenário, o filtro de tenant deveria ser injetado por construção (ex.: um `prisma` já escopado por `unidadeId` no contexto da request), não algo que cada feature lembra de adicionar na mão.
