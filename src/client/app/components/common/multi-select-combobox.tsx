@@ -1,10 +1,9 @@
-import { ChevronsUpDown, X } from 'lucide-react'
+import { Check, ChevronsUpDown, X } from 'lucide-react'
 import { useState } from 'react'
 
 import { cn } from 'cn'
 
 import { Button } from '../ui/button'
-import { Checkbox } from '../ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 
 export interface MultiSelectOption {
@@ -15,10 +14,14 @@ export interface MultiSelectOption {
 /**
  * Combobox de múltipla seleção com busca (baseado no padrão Combobox do
  * shadcn/ui: https://ui.shadcn.com/docs/components/radix/combobox).
- * Composto aqui com os primitivos Radix já usados no projeto -- Popover +
- * Checkbox -- em vez do pacote `@base-ui/react` que o registry oficial usa
- * por baixo, pra não introduzir uma segunda lib de primitivos só pra isso;
- * a filtragem por busca é um `.filter()` simples, sem precisar de `cmdk`.
+ * Composto aqui com o Popover já usado no projeto (via `radix-ui`) em vez do
+ * pacote `@base-ui/react` que o registry oficial usa por baixo, pra não
+ * introduzir uma segunda lib de primitivos só pra isso; a filtragem por
+ * busca é um `.filter()` simples, sem precisar de `cmdk`. O indicador de
+ * selecionado é um ícone de check, não um `Checkbox` de verdade -- a linha
+ * inteira já é o `<button>` clicável, um Checkbox (que o Radix renderiza
+ * como `<button>`) aninhado dentro dela é HTML inválido (botão dentro de
+ * botão).
  */
 export function MultiSelectCombobox({
   options,
@@ -100,7 +103,14 @@ export function MultiSelectCombobox({
                 onClick={() => alternar(opcao.value)}
                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
               >
-                <Checkbox checked={value.includes(opcao.value)} className="pointer-events-none" />
+                <span
+                  className={cn(
+                    'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input',
+                    value.includes(opcao.value) && 'border-primary bg-primary text-primary-foreground',
+                  )}
+                >
+                  {value.includes(opcao.value) ? <Check className="size-3.5" /> : null}
+                </span>
                 <span className="truncate">{opcao.label}</span>
               </button>
             ))
