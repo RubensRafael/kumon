@@ -68,6 +68,50 @@ function ListaOcupacaoCelula({ ocupacao }: { ocupacao: OcupacaoCelula }) {
 }
 
 /**
+ * Pill de um slot ocupado -- badges no fim (mesmo padrão visual do círculo
+ * "C" de Connect em `aluno-card.tsx:46-49`): "30 min" pra `PRE_ESCOLAR`,
+ * círculo Connect, bolinha de zona vermelha. Nome do aluno é o único
+ * elemento que trunca -- os badges nunca encolhem.
+ */
+function AgendaPill({
+  slot,
+  onClick,
+}: {
+  slot: AgendaSlotOutputType
+  onClick: (slot: AgendaSlotOutputType) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(slot)}
+      className="flex items-center gap-1 rounded-md px-2 py-1 text-left text-xs font-medium text-white"
+      style={{ backgroundColor: slot.professorCorAgenda }}
+      title={`${slot.alunoNome} — ${slot.professorNome}`}
+    >
+      <span className="truncate">{slot.alunoNome}</span>
+      <span className="ml-auto flex shrink-0 items-center gap-1">
+        {slot.tipoAtendimento === 'PRE_ESCOLAR' ? (
+          <span className="rounded-sm bg-white/25 px-1 py-px text-[9px] leading-tight font-semibold whitespace-nowrap">
+            30 min
+          </span>
+        ) : null}
+        {slot.alunoConnect ? (
+          <span
+            className="flex size-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold text-white"
+            title="Connect"
+          >
+            C
+          </span>
+        ) : null}
+        {slot.alunoZonaVermelha ? (
+          <span className="size-2 shrink-0 rounded-full bg-red-500 ring-1 ring-white" title="Zona Vermelha" />
+        ) : null}
+      </span>
+    </button>
+  )
+}
+
+/**
  * Grade horário×coluna reaproveitada pela Agenda Geral (colunas =
  * professores) e pela Agenda individual (colunas = dias da semana
  * selecionada) — quem chama decide o que cada coluna representa e como
@@ -140,18 +184,7 @@ export function ScheduleGrid({
                       {slots.length === 0 ? (
                         <span className="block px-1 text-muted-foreground">—</span>
                       ) : (
-                        slots.map((slot) => (
-                          <button
-                            key={slot.horarioId}
-                            type="button"
-                            onClick={() => onSlotClick(slot)}
-                            className="truncate rounded-md px-2 py-1 text-left text-xs font-medium text-white"
-                            style={{ backgroundColor: slot.professorCorAgenda }}
-                            title={`${slot.alunoNome} — ${slot.professorNome}`}
-                          >
-                            {slot.alunoNome}
-                          </button>
-                        ))
+                        slots.map((slot) => <AgendaPill key={slot.horarioId} slot={slot} onClick={onSlotClick} />)
                       )}
                     </div>
                   </td>
