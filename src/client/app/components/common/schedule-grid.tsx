@@ -4,7 +4,6 @@ import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { AgendaSlotOutputType, MateriaOutputType, OcupacaoCelula } from '@shared/dto'
 
 import { TIPO_ATENDIMENTO_LABEL } from './aluno-form/enum-labels'
-import { corDaMateria } from './materia-cores'
 import { Badge } from '../ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '../ui/hover-card'
@@ -30,6 +29,20 @@ function estiloOcupacao(ocupacao: OcupacaoCelula): CSSProperties | undefined {
   return { backgroundColor: `hsl(${hue} 70% 92%)` }
 }
 
+/**
+ * Pill com o nome do professor, mesma cor de fundo da pill dele no grid
+ * (`slot.professorCorAgenda`) -- decodifica de quem é o aluno sem precisar
+ * de texto corrido, útil principalmente com vários professores juntos numa
+ * célula da Agenda individual.
+ */
+function ProfessorPill({ slot }: { slot: AgendaSlotOutputType }) {
+  return (
+    <Badge className="shrink-0 border-transparent text-white" style={{ backgroundColor: slot.professorCorAgenda }}>
+      {slot.professorNome}
+    </Badge>
+  )
+}
+
 /** Card de um ocupante real da célula (aluno que começa naquele horário). */
 function OcupanteCard({ slot, materias }: { slot: AgendaSlotOutputType; materias: MateriaOutputType[] }) {
   const materiaNome = materias.find((m) => m.id === slot.materiaId)?.nome ?? '—'
@@ -37,20 +50,21 @@ function OcupanteCard({ slot, materias }: { slot: AgendaSlotOutputType; materias
     <li className="flex items-center gap-3 rounded-xl border p-3">
       <span
         className="flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-        style={{ backgroundColor: corDaMateria(slot.materiaId, materias) }}
+        style={{ backgroundColor: slot.professorCorAgenda }}
       >
-        {materiaNome.charAt(0).toUpperCase()}
+        {slot.professorNome.charAt(0).toUpperCase()}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{slot.alunoNome}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {materiaNome} · {slot.professorNome}
+          {materiaNome}
           {slot.estagio ? ` · ${slot.estagio}` : ''}
         </p>
       </div>
-      <Badge variant="secondary" className="shrink-0">
-        {TIPO_ATENDIMENTO_LABEL[slot.tipoAtendimento]}
-      </Badge>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <Badge variant="secondary">{TIPO_ATENDIMENTO_LABEL[slot.tipoAtendimento]}</Badge>
+        <ProfessorPill slot={slot} />
+      </div>
     </li>
   )
 }
@@ -59,13 +73,17 @@ function OcupanteCard({ slot, materias }: { slot: AgendaSlotOutputType; materias
 function OverflowCard({ slot }: { slot: AgendaSlotOutputType }) {
   return (
     <li className="flex items-center gap-3 rounded-xl bg-muted/50 p-3">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-        {slot.alunoNome.charAt(0).toUpperCase()}
+      <span
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+        style={{ backgroundColor: slot.professorCorAgenda }}
+      >
+        {slot.professorNome.charAt(0).toUpperCase()}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{slot.alunoNome}</p>
         <p className="text-xs text-muted-foreground">Ainda em sala desde {slot.horario}</p>
       </div>
+      <ProfessorPill slot={slot} />
     </li>
   )
 }

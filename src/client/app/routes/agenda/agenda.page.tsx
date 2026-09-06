@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
-import { calcularOcupacaoCelula, derivarAgendaSlots, type AgendaSlotOutputType } from '@shared/dto'
+import { calcularOcupacaoCelula, derivarAgendaSlots, type AgendaSlotOutputType, type OcupacaoCelula } from '@shared/dto'
 
 import { AlunoInspectorSheet } from '../../components/common/aluno-inspector-sheet'
 import { DIAS_SEMANA } from '../../components/common/dias-semana'
 import { MultiSelectCombobox } from '../../components/common/multi-select-combobox'
 import { PillToggleGroup } from '../../components/common/pill-toggle-group'
 import { ScheduleGrid, type ScheduleGridColumn } from '../../components/common/schedule-grid'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Skeleton } from '../../components/ui/skeleton'
 import { useApiQuery } from '../../hooks/use-api'
 import { gerarSlotsHorario } from '../../lib/gerar-slots-horario'
@@ -32,10 +31,6 @@ export function AgendaPage() {
   const filtros = lerFiltrosDaUrl(searchParams)
   const { materiaIds, estagios, alunoIds, connect, zonaVermelha, regular, preEscolar } = filtros
 
-  function atualizarFiltro(chave: Parameters<typeof comFiltroAtualizado>[1], valor: string | boolean) {
-    setSearchParams(comFiltroAtualizado(searchParams, chave, valor), { replace: true })
-  }
-
   function atualizarFiltroLista(chave: Parameters<typeof comFiltroListaAtualizado>[1], valores: string[]) {
     setSearchParams(comFiltroListaAtualizado(searchParams, chave, valores), { replace: true })
   }
@@ -50,21 +45,21 @@ export function AgendaPage() {
     setSearchParams(proximo, { replace: true })
   }
 
-  // Padrao quando a URL nao especifica professor: o primeiro em ordem
-  // alfabetica (mesmo criterio que a Agenda Geral ja usa) -- nunca "o que
-  // calhar de vir primeiro" na resposta bruta da API, que ja causou a tela
-  // abrir vazia num professor com horario invalido.
+  // Lista vazia (nenhum professorId na URL, inclusive "Todos" no combobox)
+  // significa todos os professores -- mesmo criterio de Disciplina/Estagio/
+  // Aluno, pra "Todos" ter o mesmo efeito em todo filtro da tela.
   const professoresOrdenados = [...(painel?.professores ?? [])].sort((a, b) => a.nome.localeCompare(b.nome))
-  const professorAtualId = filtros.professorId || professoresOrdenados[0]?.id || ''
+  const professorAtualIds =
+    filtros.professorIds.length > 0 ? filtros.professorIds : professoresOrdenados.map((p) => p.id)
 
-  const slotsDoProfessor = useMemo(() => {
-    if (!painel || !professorAtualId) return []
-    return derivarAgendaSlots(painel, { professorId: professorAtualId })
-  }, [painel, professorAtualId])
+  const slotsDosProfessores = useMemo(() => {
+    if (!painel) return []
+    return professorAtualIds.flatMap((professorId) => derivarAgendaSlots(painel, { professorId }))
+  }, [painel, professorAtualIds])
 
   const slotsFiltrados = useMemo(
     () =>
-      slotsDoProfessor.filter(
+      slotsDosProfessores.filter(
         (slot) =>
           (materiaIds.length === 0 || materiaIds.includes(slot.materiaId)) &&
           (estagios.length === 0 || (slot.estagio !== null && estagios.includes(slot.estagio))) &&
@@ -75,7 +70,7 @@ export function AgendaPage() {
             (regular && slot.tipoAtendimento === 'REGULAR') ||
             (preEscolar && slot.tipoAtendimento === 'PRE_ESCOLAR')),
       ),
-    [slotsDoProfessor, materiaIds, estagios, alunoIds, connect, zonaVermelha, regular, preEscolar],
+    [slotsDosProfessores, materiaIds, estagios, alunoIds, connect, zonaVermelha, regular, preEscolar],
   )
 
   if (loading || !painel) {
@@ -91,14 +86,24 @@ export function AgendaPage() {
     )
   }
 
-  const professor = painel.professores.find((p) => p.id === professorAtualId)
-  const horarios = professor ? gerarSlotsHorario(professor.horarioInicial, professor.horarioFinal) : []
+  const professoresSelecionados = painel.professores.filter((p) => professorAtualIds.includes(p.id))
+  // Uniao das janelas de atendimento dos professores selecionados (mesmo
+  // criterio que a Agenda Geral ja usa pra unir professores diferentes).
+  const horarioInicial = professoresSelecionados.reduce(
+    (min, p) => (p.horarioInicial < min ? p.horarioInicial : min),
+    professoresSelecionados[0]?.horarioInicial ?? '08:00',
+  )
+  const horarioFinal = professoresSelecionados.reduce(
+    (max, p) => (p.horarioFinal > max ? p.horarioFinal : max),
+    professoresSelecionados[0]?.horarioFinal ?? '18:00',
+  )
+  const horarios = professoresSelecionados.length > 0 ? gerarSlotsHorario(horarioInicial, horarioFinal) : []
 
-  const materiasDoProfessor = [...new Set(slotsDoProfessor.map((s) => s.materiaId))]
+  const materiasDoProfessor = [...new Set(slotsDosProfessores.map((s) => s.materiaId))]
     .map((id) => materias?.find((m) => m.id === id))
     .filter((m): m is NonNullable<typeof m> => Boolean(m))
-  const estagiosDoProfessor = [...new Set(slotsDoProfessor.map((s) => s.estagio).filter(Boolean))] as string[]
-  const alunosDoProfessor = [...new Map(slotsDoProfessor.map((s) => [s.alunoId, s.alunoNome])).entries()]
+  const estagiosDoProfessor = [...new Set(slotsDosProfessores.map((s) => s.estagio).filter(Boolean))] as string[]
+  const alunosDoProfessor = [...new Map(slotsDosProfessores.map((s) => [s.alunoId, s.alunoNome])).entries()]
     .map(([value, label]) => ({ value, label }))
     .sort((a, b) => a.label.localeCompare(b.label))
 
@@ -116,12 +121,31 @@ export function AgendaPage() {
   }
 
   // Ocupacao "de verdade" (ignora os filtros da toolbar, ver comentario em
-  // ScheduleGrid) -- coluna aqui e sempre o dia, o professor e fixo (o
-  // selecionado no <Select> acima). `painel!`: o early-return de
-  // `loading || !painel` acima ja garante isso, mas o narrowing nao
+  // ScheduleGrid) -- coluna aqui e sempre o dia. `painel!`: o early-return
+  // de `loading || !painel` acima ja garante isso, mas o narrowing nao
   // atravessa o limite dessa function declaration.
-  function ocupacaoDaCelula(diaSemana: string, horario: string) {
-    return calcularOcupacaoCelula(painel!, { professorId: professorAtualId, diaSemana, horario })
+  //
+  // Com 1 professor so, e exatamente o calculo de sempre (gradiente normal
+  // de cor). Com 2+, ocupantes/overflow de todos os professores selecionados
+  // se juntam numa lista so (cada card ja mostra o nome do professor, ver
+  // `OcupanteCard` em schedule-grid.tsx) mas `capacidade` fica 0 de proposito
+  // -- somar `capacidadePorHorario` de professores diferentes num so
+  // percentual sugeriria que eles dividem uma capacidade em comum, o que nao
+  // e real (cada um tem sua propria capacidade de atendimento). `capacidade
+  // <= 0` ja faz `estiloOcupacao` (schedule-grid.tsx) nao colorir o fundo,
+  // sem precisar mudar nada no componente compartilhado com a Agenda Geral.
+  function ocupacaoDaCelula(diaSemana: string, horario: string): OcupacaoCelula {
+    const porProfessor = professorAtualIds.map((professorId) =>
+      calcularOcupacaoCelula(painel!, { professorId, diaSemana, horario }),
+    )
+    if (porProfessor.length <= 1) {
+      return porProfessor[0] ?? { ocupantes: [], overflow: [], capacidade: 0 }
+    }
+    return {
+      ocupantes: porProfessor.flatMap((o) => o.ocupantes),
+      overflow: porProfessor.flatMap((o) => o.overflow),
+      capacidade: 0,
+    }
   }
 
   return (
@@ -132,21 +156,19 @@ export function AgendaPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Select
-          value={professorAtualId}
-          onValueChange={(v) => atualizarFiltro('professorId', v)}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {professoresOrdenados.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* `value` e o cru da URL (`filtros.professorIds`), nao o resolvido
+            (`professorAtualIds`) -- senao com "Todos" o combobox reabriria
+            com cada professor marcado individualmente em vez de só o
+            "Todos" (mesmo comportamento visual de Disciplina/Estágio/Aluno
+            quando vazio = sem filtro). */}
+        <MultiSelectCombobox
+          className="w-48"
+          placeholder="Professor"
+          searchPlaceholder="Buscar professor..."
+          options={professoresOrdenados.map((p) => ({ value: p.id, label: p.nome }))}
+          value={filtros.professorIds}
+          onValueChange={(v) => atualizarFiltroLista('professorIds', v)}
+        />
 
         <MultiSelectCombobox
           className="w-40"
@@ -181,9 +203,24 @@ export function AgendaPage() {
         />
       </div>
 
+      {/* Legenda de cor por professor -- só faz sentido com 2+ selecionados
+          (com 1 só, a cor da pill é óbvia/redundante com o combobox acima).
+          As pills já usam `professorCorAgenda` como fundo (schedule-grid.tsx),
+          então isso é só a decodificação cor -> nome. */}
+      {professoresSelecionados.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          {professoresSelecionados.map((p) => (
+            <span key={p.id} className="flex items-center gap-1.5">
+              <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.corAgenda }} />
+              {p.nome}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       {horarios.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Este professor não tem janela de atendimento configurada.
+          Nenhum professor selecionado tem janela de atendimento configurada.
         </p>
       ) : (
         <ScheduleGrid

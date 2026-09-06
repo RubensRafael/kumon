@@ -7,7 +7,6 @@
  * primeiro").
  */
 export const AGENDA_FILTRO_PARAMS = {
-  professorId: 'professorId',
   connect: 'connect',
   zonaVermelha: 'zonaVermelha',
   regular: 'regular',
@@ -15,6 +14,7 @@ export const AGENDA_FILTRO_PARAMS = {
 } as const
 
 export const AGENDA_FILTRO_LISTA_PARAMS = {
+  professorIds: 'professorIds',
   materiaIds: 'materiaIds',
   estagios: 'estagios',
   alunoIds: 'alunoIds',
@@ -24,7 +24,7 @@ export type AgendaFiltroChave = keyof typeof AGENDA_FILTRO_PARAMS
 export type AgendaFiltroListaChave = keyof typeof AGENDA_FILTRO_LISTA_PARAMS
 
 export interface AgendaFiltros {
-  professorId: string
+  professorIds: string[]
   materiaIds: string[]
   estagios: string[]
   alunoIds: string[]
@@ -40,10 +40,10 @@ function lerLista(searchParams: URLSearchParams, paramKey: string): string[] {
   return valor ? valor.split(',').filter(Boolean) : []
 }
 
-/** Lê os 7 filtros da querystring — string vazia/lista vazia/`false` quando ausentes (nunca `undefined`). */
+/** Lê os 8 filtros da querystring — lista vazia/`false` quando ausentes (nunca `undefined`). */
 export function lerFiltrosDaUrl(searchParams: URLSearchParams): AgendaFiltros {
   return {
-    professorId: searchParams.get(AGENDA_FILTRO_PARAMS.professorId) ?? '',
+    professorIds: lerLista(searchParams, AGENDA_FILTRO_LISTA_PARAMS.professorIds),
     materiaIds: lerLista(searchParams, AGENDA_FILTRO_LISTA_PARAMS.materiaIds),
     estagios: lerLista(searchParams, AGENDA_FILTRO_LISTA_PARAMS.estagios),
     alunoIds: lerLista(searchParams, AGENDA_FILTRO_LISTA_PARAMS.alunoIds),
