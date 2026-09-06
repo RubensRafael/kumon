@@ -8,32 +8,45 @@
  */
 export const AGENDA_FILTRO_PARAMS = {
   professorId: 'professorId',
-  materiaId: 'materiaId',
-  estagio: 'estagio',
   connect: 'connect',
   zonaVermelha: 'zonaVermelha',
   regular: 'regular',
   preEscolar: 'preEscolar',
 } as const
 
+export const AGENDA_FILTRO_LISTA_PARAMS = {
+  materiaIds: 'materiaIds',
+  estagios: 'estagios',
+  alunoIds: 'alunoIds',
+} as const
+
 export type AgendaFiltroChave = keyof typeof AGENDA_FILTRO_PARAMS
+export type AgendaFiltroListaChave = keyof typeof AGENDA_FILTRO_LISTA_PARAMS
 
 export interface AgendaFiltros {
   professorId: string
-  materiaId: string
-  estagio: string
+  materiaIds: string[]
+  estagios: string[]
+  alunoIds: string[]
   connect: boolean
   zonaVermelha: boolean
   regular: boolean
   preEscolar: boolean
 }
 
-/** Lê os 7 filtros da querystring — string vazia/`false` quando ausentes (nunca `undefined`). */
+/** CSV num único parâmetro (`a,b,c`) -- lista vazia quando o parâmetro está ausente. */
+function lerLista(searchParams: URLSearchParams, paramKey: string): string[] {
+  const valor = searchParams.get(paramKey)
+  return valor ? valor.split(',').filter(Boolean) : []
+}
+
+/** Lê os 7 filtros da querystring — string vazia/lista vazia/`false` quando ausentes (nunca `undefined`). */
 export function lerFiltrosDaUrl(searchParams: URLSearchParams): AgendaFiltros {
   return {
     professorId: searchParams.get(AGENDA_FILTRO_PARAMS.professorId) ?? '',
-    materiaId: searchParams.get(AGENDA_FILTRO_PARAMS.materiaId) ?? '',
-    estagio: searchParams.get(AGENDA_FILTRO_PARAMS.estagio) ?? '',
+    materiaIds: lerLista(searchParams, AGENDA_FILTRO_LISTA_PARAMS.materiaIds),
+    estagios: lerLista(searchParams, AGENDA_FILTRO_LISTA_PARAMS.estagios),
+    alunoIds: lerLista(searchParams, AGENDA_FILTRO_LISTA_PARAMS.alunoIds),
     connect: searchParams.get(AGENDA_FILTRO_PARAMS.connect) === 'true',
     zonaVermelha: searchParams.get(AGENDA_FILTRO_PARAMS.zonaVermelha) === 'true',
     regular: searchParams.get(AGENDA_FILTRO_PARAMS.regular) === 'true',
@@ -41,7 +54,7 @@ export function lerFiltrosDaUrl(searchParams: URLSearchParams): AgendaFiltros {
   }
 }
 
-/** Devolve uma cópia de `searchParams` com um filtro atualizado (removido da URL quando volta ao vazio). */
+/** Devolve uma cópia de `searchParams` com um filtro escalar atualizado (removido da URL quando volta ao vazio). */
 export function comFiltroAtualizado(
   searchParams: URLSearchParams,
   chave: AgendaFiltroChave,
@@ -53,6 +66,22 @@ export function comFiltroAtualizado(
     proximo.delete(paramKey)
   } else {
     proximo.set(paramKey, String(valor))
+  }
+  return proximo
+}
+
+/** Mesma ideia de `comFiltroAtualizado`, pros filtros de múltipla seleção (lista serializada como CSV). */
+export function comFiltroListaAtualizado(
+  searchParams: URLSearchParams,
+  chave: AgendaFiltroListaChave,
+  valores: string[],
+): URLSearchParams {
+  const proximo = new URLSearchParams(searchParams)
+  const paramKey = AGENDA_FILTRO_LISTA_PARAMS[chave]
+  if (valores.length === 0) {
+    proximo.delete(paramKey)
+  } else {
+    proximo.set(paramKey, valores.join(','))
   }
   return proximo
 }
