@@ -1,3 +1,4 @@
+import { MessageCircle, Pencil, Phone } from 'lucide-react'
 import { useState } from 'react'
 
 import type { AlunoOutputType, MateriaOutputType, MatriculaOutputType, ProfessorOutputType } from '@shared/dto'
@@ -6,40 +7,64 @@ import { paraExibicao } from '../../lib/format-date'
 import { useApiQuery } from '../../hooks/use-api'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Card, CardContent, CardHeader } from '../ui/card'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet'
+import { Switch } from '../ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { AlunoFormDialog } from './aluno-form/aluno-form-dialog'
 import { SITUACAO_ALUNO_LABEL, SITUACAO_MATRICULA_LABEL, TIPO_ATENDIMENTO_LABEL } from './aluno-form/enum-labels'
-import { horariosTexto } from './dias-semana'
+import { DIAS_SEMANA } from './dias-semana'
+import { corDaMateria } from './materia-cores'
 
-function Campo({ label, valor }: { label: string; valor: string | null | undefined }) {
+function LinhaDado({ label, valor }: { label: string; valor: string | null | undefined }) {
   return (
-    <div>
-      <p className="text-xs tracking-wide text-muted-foreground uppercase">{label}</p>
-      <p>{valor || '—'}</p>
+    <div className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0">
+      <span className="shrink-0 text-xs tracking-wide text-muted-foreground uppercase">{label}</span>
+      <span className="truncate text-right text-sm">{valor || '—'}</span>
     </div>
   )
 }
 
 function AlunoDadosReadOnly({ aluno }: { aluno: AlunoOutputType }) {
   return (
-    <div className="space-y-4 py-4 text-sm">
-      <div className="grid grid-cols-2 gap-4">
-        <Campo label="Responsável" valor={aluno.responsavel} />
-        <Campo label="Telefone" valor={aluno.telefone} />
-        <Campo label="WhatsApp" valor={aluno.whatsapp} />
-        <Campo label="Email" valor={aluno.email} />
-        <Campo label="Data de nascimento" valor={paraExibicao(aluno.dataNascimento)} />
-        <Campo label="Data da matrícula" valor={paraExibicao(aluno.dataMatricula)} />
+    <div className="py-4 text-sm">
+      <LinhaDado label="Situação" valor={SITUACAO_ALUNO_LABEL[aluno.situacao]} />
+      <LinhaDado label="Nascimento" valor={paraExibicao(aluno.dataNascimento)} />
+      <LinhaDado label="Data da matrícula" valor={paraExibicao(aluno.dataMatricula)} />
+      <LinhaDado label="Responsável" valor={aluno.responsavel} />
+      <div className="flex gap-4 border-b py-2">
+        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Phone className="size-3.5" />
+          {aluno.telefone || '—'}
+        </span>
+        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <MessageCircle className="size-3.5" />
+          {aluno.whatsapp || '—'}
+        </span>
       </div>
-      <Campo label="Observações" valor={aluno.observacoes} />
-      <div className="flex flex-wrap gap-1.5">
-        <Badge variant={aluno.situacao === 'ATIVO' ? 'default' : 'secondary'}>
-          {SITUACAO_ALUNO_LABEL[aluno.situacao]}
-        </Badge>
-        {aluno.zonaVermelha ? <Badge variant="destructive">Zona Vermelha</Badge> : null}
-        {aluno.connect ? <Badge variant="secondary">Connect</Badge> : null}
+      <LinhaDado label="Email" valor={aluno.email} />
+      <LinhaDado label="Observações" valor={aluno.observacoes} />
+
+      <div className="pt-3">
+        <p className="mb-2 text-xs tracking-wide text-muted-foreground uppercase">Categorias</p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between rounded-xl border px-3 py-2">
+            <span className="flex items-center gap-1.5 text-sm">
+              <span className="size-2.5 rounded-full bg-red-500" />
+              Zona Vermelha
+            </span>
+            {/* Read-only -- refletindo o estado real, não um controle. Editar é só via "Atualizar aluno/matrícula". */}
+            <Switch checked={aluno.zonaVermelha} disabled />
+          </div>
+          <div className="flex items-center justify-between rounded-xl border px-3 py-2">
+            <span className="flex items-center gap-1.5 text-sm">
+              <span className="flex size-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+                C
+              </span>
+              Connect
+            </span>
+            <Switch checked={aluno.connect} disabled />
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -47,8 +72,11 @@ function AlunoDadosReadOnly({ aluno }: { aluno: AlunoOutputType }) {
 
 /**
  * Mesmas informações de `MatriculaExistenteCard`, só que read-only -- sem
- * `<Select>` de situação, sem editar observações, sem
- * `ProgramacaoSemanalGrid` (toggle por dia). Só consulta, nada de mutação.
+ * `<Select>` de situação, sem editar observações, sem toggle de dia. A
+ * programação semanal aparece como uma mini-grade Seg-Sáb (mesma ideia do
+ * `ProgramacaoSemanalGrid`, só que só leitura). Nenhum botão de ação
+ * (editar/duplicar/excluir por matrícula, "+ nova matrícula") -- só existem
+ * no app de referência que inspirou o visual, não fazem sentido aqui.
  */
 function MatriculaReadOnlyCard({
   matricula,
@@ -62,30 +90,51 @@ function MatriculaReadOnlyCard({
   const professorNome = professores.find((p) => p.id === matricula.professorId)?.nome ?? '—'
   const materiaNome = materias.find((m) => m.id === matricula.materiaId)?.nome ?? '—'
   const { data: horarios } = useApiQuery('listarHorariosDaMatricula', { params: { matriculaId: matricula.id } })
-  const horariosAtivos = (horarios ?? []).filter((h) => h.ativo)
+  const horarioPorDia = new Map((horarios ?? []).filter((h) => h.ativo).map((h) => [h.diaSemana, h.horario]))
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <span className="font-medium">
-          {materiaNome} · {professorNome}
-        </span>
-        <Badge variant={matricula.situacao === 'ATIVA' ? 'default' : 'secondary'}>
+    <div className="rounded-xl border p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+            style={{ backgroundColor: corDaMateria(matricula.materiaId, materias) }}
+          >
+            {materiaNome.charAt(0).toUpperCase()}
+          </span>
+          <span className="truncate font-medium">{materiaNome}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            · {TIPO_ATENDIMENTO_LABEL[matricula.tipoAtendimento]}
+          </span>
+        </div>
+        <Badge variant={matricula.situacao === 'ATIVA' ? 'default' : 'secondary'} className="shrink-0">
           {SITUACAO_MATRICULA_LABEL[matricula.situacao]}
         </Badge>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <Campo label="Estágio" valor={matricula.estagio} />
-          <Campo label="Tipo de atendimento" valor={TIPO_ATENDIMENTO_LABEL[matricula.tipoAtendimento]} />
-        </div>
-        {matricula.observacoes ? <Campo label="Observações" valor={matricula.observacoes} /> : null}
-        <Campo
-          label="Programação semanal"
-          valor={horariosAtivos.length > 0 ? horariosTexto(horariosAtivos) : 'Sem horários.'}
-        />
-      </CardContent>
-    </Card>
+      </div>
+      <p className="mt-1 truncate text-xs text-muted-foreground">
+        {professorNome}
+        {matricula.estagio ? ` · ${matricula.estagio}` : ''}
+      </p>
+      {matricula.observacoes ? <p className="mt-2 text-sm">{matricula.observacoes}</p> : null}
+      <div className="mt-2 grid grid-cols-6 gap-1 text-center text-[10px]">
+        {DIAS_SEMANA.map((dia) => {
+          const horario = horarioPorDia.get(dia.valor)
+          return (
+            <div
+              key={dia.valor}
+              className={
+                horario
+                  ? 'rounded bg-primary/10 px-1 py-1 text-primary'
+                  : 'rounded bg-muted px-1 py-1 text-muted-foreground/50'
+              }
+            >
+              <p className="font-medium">{dia.label}</p>
+              <p>{horario ?? '—'}</p>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -129,8 +178,23 @@ export function AlunoInspectorSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Aluno</SheetTitle>
+        {/* `pr-10`: reserva espaço pro X de fechar (absolute, canto superior direito do
+            SheetContent) não flutuar por cima do botão de ação. */}
+        <SheetHeader className="flex-row items-center justify-between gap-2 pr-10">
+          <SheetTitle className="flex min-w-0 items-center gap-2 text-lg">
+            <span className="truncate">{aluno ? aluno.nome : 'Aluno'}</span>
+            {aluno?.connect ? (
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+                C
+              </span>
+            ) : null}
+          </SheetTitle>
+          {aluno ? (
+            <Button size="sm" onClick={() => setEditando(true)} className="shrink-0 gap-1.5">
+              <Pencil className="size-3.5" />
+              Atualizar aluno/matrícula
+            </Button>
+          ) : null}
         </SheetHeader>
         <div className="px-4 pb-4">
           {!alunoId || !aluno ? (
@@ -139,15 +203,8 @@ export function AlunoInspectorSheet({
             </p>
           ) : (
             <>
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <h2 className="min-w-0 truncate text-lg font-semibold">{aluno.nome}</h2>
-                <Button size="sm" onClick={() => setEditando(true)}>
-                  Atualizar aluno/matrícula
-                </Button>
-              </div>
-
               <Tabs defaultValue="dados">
-                <TabsList>
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="dados">Dados do aluno</TabsTrigger>
                   <TabsTrigger value="matriculas">Matrículas</TabsTrigger>
                 </TabsList>
