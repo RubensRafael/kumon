@@ -204,6 +204,8 @@ interface AlunoDemoAgendaSeed {
   idadeAnos: number
   zonaVermelha?: boolean
   connect?: boolean
+  /** Padrão 'Matemática' quando ausente -- Paulo também dá Português, usado em alguns pra dar o que filtrar no combobox de Disciplina. */
+  materia?: 'Matemática' | 'Português'
   estagio: string | null
   tipoAtendimento: 'REGULAR' | 'PRE_ESCOLAR'
   horario: string
@@ -257,6 +259,7 @@ const ALUNOS_DEMO_AGENDA: AlunoDemoAgendaSeed[] = [
     telefone: '(11) 90000-0003',
     idadeAnos: 10,
     connect: true,
+    materia: 'Português',
     estagio: 'Nível 2A',
     tipoAtendimento: 'REGULAR',
     horario: '10:00',
@@ -304,6 +307,7 @@ const ALUNOS_DEMO_AGENDA: AlunoDemoAgendaSeed[] = [
     responsavel: 'QA Agenda',
     telefone: '(11) 90000-0008',
     idadeAnos: 10,
+    materia: 'Português',
     estagio: 'Nível 3A',
     tipoAtendimento: 'REGULAR',
     horario: '11:30',
@@ -313,6 +317,7 @@ const ALUNOS_DEMO_AGENDA: AlunoDemoAgendaSeed[] = [
     responsavel: 'QA Agenda',
     telefone: '(11) 90000-0009',
     idadeAnos: 10,
+    materia: 'Português',
     estagio: 'Nível 3A',
     tipoAtendimento: 'REGULAR',
     horario: '11:30',
@@ -530,9 +535,9 @@ async function main() {
 
     // -- Alunos de demonstracao da Agenda (ver ALUNOS_DEMO_AGENDA acima) ----
     const pauloId = professorIdPorNome.get('Paulo')!
-    const matematicaId = materiaIdPorNome.get('Matemática')!
 
     for (const demo of ALUNOS_DEMO_AGENDA) {
+      const materiaId = materiaIdPorNome.get(demo.materia ?? 'Matemática')!
       const alunoId = randomUUID()
       const dataNascimento = new Date()
       dataNascimento.setFullYear(dataNascimento.getFullYear() - demo.idadeAnos)
@@ -551,7 +556,7 @@ async function main() {
            ("id", "alunoId", "professorId", "materiaId", "estagio", "tipoAtendimento",
             "situacao", "criadoEm", "atualizadoEm")
          VALUES ($1, $2, $3, $4, $5, $6::"TipoAtendimento", 'ATIVA'::"SituacaoMatricula", now(), now())`,
-        [matriculaId, alunoId, pauloId, matematicaId, demo.estagio, demo.tipoAtendimento],
+        [matriculaId, alunoId, pauloId, materiaId, demo.estagio, demo.tipoAtendimento],
       )
 
       await client.query(
